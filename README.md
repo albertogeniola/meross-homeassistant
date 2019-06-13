@@ -61,6 +61,12 @@ In particular Bulbs, Switches and Garage Door Openers are fully supported and pe
 
 Have a look a the screenshots below...
 
+<img src="extra/general-ui.png" alt="User interface"><br/>
+<img src="extra/bulb-control.png" alt="Controlling the light bulb"><br/>
+<img src="extra/garage-control.png" alt="Controlling the garage opener"><br/>
+<img src="extra/sensor.png" alt="Power sensor feedbacks"><br/>
+<img src="extra/switch-control.png" alt="Controlling switches"><br/>
+
  
 ### Efficiency and adoption of Homeassistant best practices
 Since I'm aiming at making this component part of the official HA repo, I've put a lot of effort following 
