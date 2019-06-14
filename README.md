@@ -80,3 +80,8 @@ HomeAssistant best practices, in particular:
 ## What's next?
 - Automated test and CI/CD
 - Feedback collection
+
+## Support on Beerpay
+Hey dude! Help me out for a couple of :beers:!
+
+[![Beerpay](https://beerpay.io/albertogeniola/meross-homeassistant/badge.svg?style=beer-square)](https://beerpay.io/albertogeniola/meross-homeassistant)  [![Beerpay](https://beerpay.io/albertogeniola/meross-homeassistant/make-wish.svg?style=flat-square)](https://beerpay.io/albertogeniola/meross-homeassistant?focus=wish)
