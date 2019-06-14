@@ -1,8 +1,8 @@
-# TODO: rename poackage when publishing PR
-from custom_components.meross_cloud.common import (calculate_gerage_door_opener_id, DOMAIN, ENROLLED_DEVICES)
 from homeassistant.components.cover import CoverDevice, SUPPORT_OPEN, SUPPORT_CLOSE
 from homeassistant.const import STATE_CLOSED, STATE_OPEN, STATE_OPENING, STATE_CLOSING, STATE_UNKNOWN
 from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
+
+from .common import (calculate_gerage_door_opener_id, DOMAIN, ENROLLED_DEVICES)
 
 ATTR_DOOR_STATE = 'door_state'
 

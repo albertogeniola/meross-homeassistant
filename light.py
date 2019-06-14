@@ -1,8 +1,9 @@
 import colorsys
-# TODO: rename poackage when publishing PR
-from custom_components.meross_cloud.common import (calculate_switch_id, DOMAIN, ENROLLED_DEVICES)
+
 from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR
 from meross_iot.cloud.devices.light_bulbs import GenericBulb, to_rgb
+
+from .common import (calculate_switch_id, DOMAIN, ENROLLED_DEVICES)
 
 
 class LightEntityWrapper(Light):

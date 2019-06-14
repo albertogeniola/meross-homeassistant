@@ -1,7 +1,7 @@
-# TODO: rename poackage when publishing PR
-from custom_components.meross_cloud.common import (calculate_switch_id, DOMAIN, ENROLLED_DEVICES)
 from homeassistant.components.switch import SwitchDevice
 from meross_iot.cloud.devices.power_plugs import GenericPlug
+
+from .common import (calculate_switch_id, DOMAIN, ENROLLED_DEVICES)
 
 
 class SwitchEntityWrapper(SwitchDevice):
