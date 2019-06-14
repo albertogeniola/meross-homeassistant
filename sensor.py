@@ -1,5 +1,5 @@
-from common import *
-from homeassistant.components.meross_cloud import calculate_sensor_id, DOMAIN, SENSORS
+# TODO: rename poackage when publishing PR
+from custom_components.meross_cloud.common import (calculate_sensor_id, DOMAIN, SENSORS, ENROLLED_DEVICES)
 from homeassistant.const import ATTR_VOLTAGE
 from homeassistant.helpers.entity import Entity
 from meross_iot.cloud.device import AbstractMerossDevice

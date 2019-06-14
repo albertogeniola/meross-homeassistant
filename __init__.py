@@ -1,10 +1,11 @@
 """Meross devices platform loader"""
 import logging
 from datetime import timedelta
-
+# TODO: rename poackage when publishing PR
+from custom_components.meross_cloud.common import (DOMAIN, HA_SWITCH, HA_SENSOR, HA_LIGHT, HA_COVER, ENROLLED_DEVICES,
+                                                   notify_error, dismiss_notification, MANAGER, SENSORS)
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-from common import *
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
 from homeassistant.exceptions import PlatformNotReady
 from homeassistant.helpers import discovery
