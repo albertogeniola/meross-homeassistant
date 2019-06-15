@@ -1,6 +1,6 @@
 # Meross HomeAssistant component
 A full featured Homeassistant component to drive Meross devices. 
-This component is based on the underlying MerossIot library (here).
+This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
 
 ## Towards Homeassistant official integration
 My personal goal is to make this component fully compliant with Homeassistant, so 
@@ -61,11 +61,7 @@ In particular Bulbs, Switches and Garage Door Openers are fully supported and pe
 
 Have a look a the screenshots below...
 
-<img src="extra/general-ui.png" alt="User interface" width=400> 
-<img src="extra/bulb-control.png" alt="Controlling the light bulb" width=400> 
-<img src="extra/garage-control.png" alt="Controlling the garage opener" width=400> 
-<img src="extra/sensor.png" alt="Power sensor feedbacks" width=400> 
-<img src="extra/switch-control.png" alt="Controlling switches" width=400> 
+<img src="extra/general-ui.png" alt="User interface" width=400> <img src="extra/bulb-control.png" alt="Controlling the light bulb" width=400> <img src="extra/garage-control.png" alt="Controlling the garage opener" width=400> <img src="extra/sensor.png" alt="Power sensor feedbacks" width=400> <img src="extra/switch-control.png" alt="Controlling switches" width=400> 
 
  
 ### Efficiency and adoption of Homeassistant best practices
