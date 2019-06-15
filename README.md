@@ -9,10 +9,9 @@ However, before pushing a PullRequest to the official Homeassistant repository, 
 In this way we can test it massively, check it for any bug and make it **robust enough** to be seamlessly integrated 
 with Homeassistant. 
 
-
 ## Installation & configuration
 Install it as you would do with any homeassistant custom component:
-1. Download the latest zip release archive from here (or clone the git master branch)
+1. Download the latest zip release archive from [here](https://github.com/albertogeniola/meross-homeassistant/releases/download/0.1a/meross_cloud.zip) (or clone the git master branch)
 1. Unzip/copy the meross_cloud direcotry within the `custom_components` directory of your homeassistant installation.
 The `custom_components` directory resides within your homeassistant configuration directory.
 Usually, the configuration directory is within your home (`~/.homeassistant/`).
