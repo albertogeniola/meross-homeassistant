@@ -74,7 +74,8 @@ HomeAssistant best practices, in particular:
 - PEP8 code styling
 
 ## What's next?
-- Automated test and CI/CD
+- Automated test
+- CI/CD & GitHub release
 - Feedback collection
 
 ## Support on Beerpay
