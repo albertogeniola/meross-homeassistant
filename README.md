@@ -77,6 +77,7 @@ HomeAssistant best practices, in particular:
 - Automated test
 - CI/CD & GitHub release
 - Feedback collection
+- Refactor and improvements based on feedbacks
 
 ## Support on Beerpay
 Hey dude! Help me out for a couple of :beers:!
