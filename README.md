@@ -1,6 +1,6 @@
 # Meross HomeAssistant component
 A full featured Homeassistant component to drive Meross devices. 
-This component is based on the underlying MerossIot library (here).
+This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
 
 ## Towards Homeassistant official integration
 My personal goal is to make this component fully compliant with Homeassistant, so 
@@ -9,10 +9,9 @@ However, before pushing a PullRequest to the official Homeassistant repository, 
 In this way we can test it massively, check it for any bug and make it **robust enough** to be seamlessly integrated 
 with Homeassistant. 
 
-
 ## Installation & configuration
 Install it as you would do with any homeassistant custom component:
-1. Download the latest zip release archive from here (or clone the git master branch)
+1. Download the latest zip release archive from [here](https://github.com/albertogeniola/meross-homeassistant/releases/download/0.1a/meross_cloud.zip) (or clone the git master branch)
 1. Unzip/copy the meross_cloud direcotry within the `custom_components` directory of your homeassistant installation.
 The `custom_components` directory resides within your homeassistant configuration directory.
 Usually, the configuration directory is within your home (`~/.homeassistant/`).
@@ -78,8 +77,10 @@ HomeAssistant best practices, in particular:
 - PEP8 code styling
 
 ## What's next?
-- Automated test and CI/CD
+- Automated test
+- CI/CD & GitHub release
 - Feedback collection
+- Refactor and improvements based on feedbacks
 
 ## Support on Beerpay
 Hey dude! Help me out for a couple of :beers:!
