@@ -53,7 +53,6 @@ Those are place holders that homeassistant automatically replaces by looking at 
 1. Reboot hassio
 1. Congrats! You're all set!
 
-
 ## Features
 ### Massive support
 This library supports all the Meross devices currently exposed by the Meross IoT library.
@@ -61,7 +60,11 @@ In particular Bulbs, Switches and Garage Door Openers are fully supported and pe
 
 Have a look a the screenshots below...
 
-<img src="extra/general-ui.png" alt="User interface" width=400> <img src="extra/bulb-control.png" alt="Controlling the light bulb" width=400> <img src="extra/garage-control.png" alt="Controlling the garage opener" width=400> <img src="extra/sensor.png" alt="Power sensor feedbacks" width=400> <img src="extra/switch-control.png" alt="Controlling switches" width=400> 
+<img src="docs/source/images/components/meross_cloud/general-ui.png" alt="User interface" width=400> 
+<img src="docs/source/images/components/meross_cloud/bulb-control.png" alt="Controlling the light bulb" width=400> 
+<img src="docs/source/images/components/meross_cloud/garage-control.png" alt="Controlling the garage opener" width=400> 
+<img src="docs/source/images/components/meross_cloud/sensor.png" alt="Power sensor feedbacks" width=400> 
+<img src="docs/source/images/components/meross_cloud/switch-control.png" alt="Controlling switches" width=400> 
 
  
 ### Efficiency and adoption of Homeassistant best practices
