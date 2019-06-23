@@ -11,7 +11,7 @@ However, before pushing a PullRequest to the official Homeassistant repository, 
 In this way we can test it massively, check it for any bug and make it **robust enough** to be seamlessly integrated 
 with Homeassistant.
 
-For now, the component has been integrated as a custom component into [HACS](https://custom-components.github.io/hacs/). 
+For now, the component has been integrated as a custom component into [HACS](https://custom-components.github.io/hacs/).
 
 ## Installation & configuration
 Install it as you would do with any homeassistant custom component:
