@@ -1,3 +1,5 @@
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
+
 # Meross HomeAssistant component
 A full featured Homeassistant component to drive Meross devices. 
 This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
@@ -7,7 +9,9 @@ My personal goal is to make this component fully compliant with Homeassistant, s
 that it may be added as the official library to handle Meross devices. 
 However, before pushing a PullRequest to the official Homeassistant repository, I would like to share it to some users.
 In this way we can test it massively, check it for any bug and make it **robust enough** to be seamlessly integrated 
-with Homeassistant. 
+with Homeassistant.
+
+For now, the component has been integrated as a custom component into [HACS](https://custom-components.github.io/hacs/).
 
 ## Installation & configuration
 Install it as you would do with any homeassistant custom component:
@@ -83,6 +87,9 @@ HomeAssistant best practices, in particular:
 - Refactor and improvements based on feedbacks
 
 ## Support on Beerpay
-Hey dude! Help me out for a couple of :beers:!
+By buying me a coffee, not only you make my development more efficient, but also motivate me to further improve 
+my work. On the other hand, buying me a beer will certainly make me happier: **a toast to you, supporter**!
+
+[![Buy me a coffe!](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/albertogeniola)
 
 [![Beerpay](https://beerpay.io/albertogeniola/meross-homeassistant/badge.svg?style=beer-square)](https://beerpay.io/albertogeniola/meross-homeassistant)  [![Beerpay](https://beerpay.io/albertogeniola/meross-homeassistant/make-wish.svg?style=flat-square)](https://beerpay.io/albertogeniola/meross-homeassistant?focus=wish)
