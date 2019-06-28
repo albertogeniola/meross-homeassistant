@@ -2,7 +2,7 @@ from homeassistant.const import ATTR_VOLTAGE
 from homeassistant.helpers.entity import Entity
 from meross_iot.cloud.device import AbstractMerossDevice
 
-from .common import (calculate_sensor_id, DOMAIN, SENSORS, ENROLLED_DEVICES)
+from .common import (calculate_sensor_id, DOMAIN, SENSORS, ENROLLED_DEVICES, MANAGER)
 
 
 class PowerSensorWrapper(Entity):
@@ -106,6 +106,7 @@ class PowerSensorWrapper(Entity):
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    dev = PowerSensorWrapper(discovery_info)
+    device = hass.data[DOMAIN][MANAGER].get_device_by_uuid(discovery_info)
+    dev = PowerSensorWrapper(device)
     async_add_entities((dev,))
-    hass.data[DOMAIN][ENROLLED_DEVICES].add(discovery_info.uuid)
+    hass.data[DOMAIN][ENROLLED_DEVICES].add(device.uuid)

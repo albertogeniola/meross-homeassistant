@@ -1,7 +1,6 @@
 from homeassistant.components.switch import SwitchDevice
 from meross_iot.cloud.devices.power_plugs import GenericPlug
-
-from .common import (calculate_switch_id, DOMAIN, ENROLLED_DEVICES)
+from .common import (calculate_switch_id, DOMAIN, ENROLLED_DEVICES, MANAGER)
 
 
 class SwitchEntityWrapper(SwitchDevice):
@@ -66,9 +65,11 @@ class SwitchEntityWrapper(SwitchDevice):
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     switch_devices = []
-    for k, c in enumerate(discovery_info.get_channels()):
-        w = SwitchEntityWrapper(discovery_info, k)
+    device = hass.data[DOMAIN][MANAGER].get_device_by_uuid(discovery_info)
+
+    for k, c in enumerate(device.get_channels()):
+        w = SwitchEntityWrapper(device, k)
         switch_devices.append(w)
 
     async_add_entities(switch_devices)
-    hass.data[DOMAIN][ENROLLED_DEVICES].add(discovery_info.uuid)
+    hass.data[DOMAIN][ENROLLED_DEVICES].add(device.uuid)

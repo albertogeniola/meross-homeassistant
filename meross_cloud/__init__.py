@@ -33,21 +33,21 @@ CONFIG_SCHEMA = vol.Schema({
 def enroll_device(hass, conf, device):
     """Handle switch, light and garage openers."""
     if isinstance(device, GenericPlug):
-        hass.async_create_task(discovery.async_load_platform(hass, HA_SWITCH, DOMAIN, device, conf))
+        hass.async_create_task(discovery.async_load_platform(hass, HA_SWITCH, DOMAIN, device.uuid, conf))
 
         # Some switches also come with onboard sensors, so let's add them.
         # TODO: instead of checking the supports_power_consumption() (which is not available when the device
         #  is offline), we should retrieve this info somewhere else. The best would be to rely on some library
         #  maintained dictionary that states the capability of each device. For now that does not exist.
         if device.online and device.supports_consumption_reading():
-            hass.async_create_task(discovery.async_load_platform(hass, HA_SENSOR, DOMAIN, device, conf))
+            hass.async_create_task(discovery.async_load_platform(hass, HA_SENSOR, DOMAIN, device.uuid, conf))
 
     elif isinstance(device, GenericBulb):
-        hass.async_create_task(discovery.async_load_platform(hass, HA_LIGHT, DOMAIN, device, conf))
+        hass.async_create_task(discovery.async_load_platform(hass, HA_LIGHT, DOMAIN, device.uuid, conf))
 
     elif isinstance(device, GenericGarageDoorOpener):
         # A garage opener is sort of a switch.
-        hass.async_create_task(discovery.async_load_platform(hass, HA_COVER, DOMAIN, device, conf))
+        hass.async_create_task(discovery.async_load_platform(hass, HA_COVER, DOMAIN, device.uuid, conf))
     else:
         # TODO: log not supported devices
         pass

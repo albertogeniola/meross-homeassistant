@@ -3,7 +3,7 @@ import colorsys
 from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR
 from meross_iot.cloud.devices.light_bulbs import GenericBulb, to_rgb
 
-from .common import (calculate_switch_id, DOMAIN, ENROLLED_DEVICES)
+from .common import (calculate_switch_id, DOMAIN, ENROLLED_DEVICES, MANAGER)
 
 
 class LightEntityWrapper(Light):
@@ -91,9 +91,10 @@ class LightEntityWrapper(Light):
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     bulb_devices = []
-    for k, c in enumerate(discovery_info.get_channels()):
-        w = LightEntityWrapper(discovery_info, k)
+    device = hass.data[DOMAIN][MANAGER].get_device_by_uuid(discovery_info)
+    for k, c in enumerate(device.get_channels()):
+        w = LightEntityWrapper(device, k)
         bulb_devices.append(w)
 
     async_add_entities(bulb_devices)
-    hass.data[DOMAIN][ENROLLED_DEVICES].add(discovery_info.uuid)
+    hass.data[DOMAIN][ENROLLED_DEVICES].add(device.uuid)
