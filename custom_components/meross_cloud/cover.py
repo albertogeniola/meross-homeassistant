@@ -44,12 +44,12 @@ class OpenGarageCover(CoverDevice):
     @property
     def is_closed(self):
         """Return if the cover is closed."""
-        return not self._device.get_status().get(self._channel)
+        return self._state == STATE_CLOSED
 
     @property
     def is_open(self):
         """Return if the cover is closed."""
-        return self._device.get_status().get(self._channel)
+        return self._state == STATE_OPEN
 
     @property
     def is_opening(self):
