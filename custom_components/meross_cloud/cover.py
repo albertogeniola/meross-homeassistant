@@ -21,6 +21,14 @@ class OpenGarageCover(CoverDevice):
         device.register_event_callback(self.handler)
 
     def handler(self, evt) -> None:
+        if evt.channel == self._channel:
+            # The underlying library only exposes "open" and "closed" statuses
+            if evt.door_state == 'open':
+                self._state = STATE_OPEN
+            elif evt.door_state == 'closed':
+                self._state = STATE_CLOSED
+
+        # In cny case update the UI
         self.async_schedule_update_ha_state(False)
 
     @property
@@ -68,6 +76,19 @@ class OpenGarageCover(CoverDevice):
             self._state_before_move = self._state
             self._state = STATE_OPENING
             self._device.open_door(channel=self._channel, ensure_opened=True, callback=self._door_callback)
+
+    def open_cover(self, **kwargs):
+        if self._state not in [STATE_OPEN, STATE_OPENING]:
+            self._state_before_move = self._state
+            self._state = STATE_OPENING
+            self._device.open_door(channel=self._channel, ensure_opened=True)
+
+    def close_cover(self, **kwargs):
+        """Close the cover."""
+        if self._state not in [STATE_CLOSED, STATE_CLOSING]:
+            self._state_before_move = self._state
+            self._state = STATE_CLOSING
+            self._device.close_door(channel=self._channel, ensure_closed=True)
 
     @property
     def should_poll(self) -> bool:
