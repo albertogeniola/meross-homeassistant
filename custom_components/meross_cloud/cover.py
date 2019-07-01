@@ -20,6 +20,14 @@ class OpenGarageCover(CoverDevice):
         self._device_name = "%s (channel: %d)" % (self._device.name, self._channel)
         device.register_event_callback(self.handler)
 
+        # If the device is online, we need to update its status from STATE_UNKNOWN
+        if device.online and self._state == STATE_UNKNOWN:
+            open = device.get_status().get(self._channel)
+            if open:
+                self._state = STATE_OPEN
+            else:
+                self._state = STATE_CLOSED
+
     def handler(self, evt) -> None:
         if evt.channel == self._channel:
             # The underlying library only exposes "open" and "closed" statuses
