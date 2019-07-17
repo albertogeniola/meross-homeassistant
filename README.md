@@ -14,6 +14,8 @@ with Homeassistant.
 For now, the component has been integrated as a custom component into [HACS](https://custom-components.github.io/hacs/).
 
 ## Installation & configuration
+If you have HACS, well, it's peace of cacke: just search for the component into the HACS default repository (just search for HACS). It'll show up!
+
 Install it as you would do with any homeassistant custom component:
 1. Download the latest zip release archive from [here](https://github.com/albertogeniola/meross-homeassistant/releases/download/0.1a/meross_cloud.zip) (or clone the git master branch)
 1. Unzip/copy the meross_cloud direcotry within the `custom_components` directory of your homeassistant installation.
