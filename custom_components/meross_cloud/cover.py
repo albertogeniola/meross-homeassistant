@@ -118,6 +118,9 @@ class OpenGarageCover(CoverDevice):
         """Flag supported features."""
         return SUPPORT_OPEN | SUPPORT_CLOSE
 
+    @property
+    def unique_id(self) -> str:
+        return self._id
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     switch_devices = []
