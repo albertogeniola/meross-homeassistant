@@ -103,6 +103,12 @@ class OpenGarageCover(CoverDevice):
         return False
 
     @property
+    def unique_id(self) -> str:
+        # Since Meross plugs may have more than 1 switch, we need to provide a composed ID
+        # made of uuid and channel
+        return self._id
+
+    @property
     def device_class(self):
         """Return the class of this device, from component DEVICE_CLASSES."""
         return 'door'
