@@ -12,6 +12,15 @@ Based on pure-python library, this custom component enables full control on your
 Please note that the Meross devices are controlled via Meross Cloud. This means that homeassistant 
 should have internet access to accomplish such task.
 
+In order to enable this integration, add the following to your `configuration.yaml` file:
+
+```yaml
+# Example configuration.yaml entry
+meross_cloud:
+  username: meross_username
+  password: meross_password
+```
+
 ## Be nice!
 If you like the component, why don't you support me by buying me a beer or a coffe?
 It would certainly motivate me to further improve this work.
