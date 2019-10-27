@@ -1,10 +1,12 @@
 import colorsys
+import logging
 
 from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP, ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS
-from meross_iot.cloud.devices.light_bulbs import GenericBulb, to_rgb
+from meross_iot.cloud.devices.light_bulbs import GenericBulb
 
 from .common import (calculate_switch_id, DOMAIN, ENROLLED_DEVICES, MANAGER)
 
+_LOGGER = logging.getLogger(__name__)
 
 class LightEntityWrapper(Light):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
@@ -50,9 +52,11 @@ class LightEntityWrapper(Light):
         return self._device.get_channel_status(self._channel_id).get('onoff')
 
     def turn_off(self, **kwargs) -> None:
+        _LOGGER.debug('turn_off(chan=%r)' % self._channel_id)
         self._device.turn_off(channel=self._channel_id)
 
     def turn_on(self, **kwargs) -> None:
+        _LOGGER.debug('turn_on(chan=%r, %r)' % (self._channel_id, kwargs))
         self._device.turn_on(channel=self._channel_id)
 
         # Color is taken from either of these 2 values, but not both.
@@ -61,17 +65,21 @@ class LightEntityWrapper(Light):
         if ATTR_HS_COLOR in kwargs:
             h, s = kwargs[ATTR_HS_COLOR]
             r, g, b = colorsys.hsv_to_rgb(h/360, s/100, 255)
-            rgb = to_rgb((int(r), int(g), int(b)))
+            rgb = (int(r), int(g), int(b))
+            _LOGGER.debug("    color conversion: rgb=%r -- h=%r s=%r" % (rgb, h, s))
         elif ATTR_COLOR_TEMP in kwargs:
             mired = kwargs[ATTR_COLOR_TEMP]
-            normalised = (500.0 - mired) / 350.0 # input range from 150 -> 500, opposite direction than Meross requires.
-            temperature = max(0, min(normalised * 100, 100)) # clamp if requested temp. outside above assumptions.
+            norm_value = (mired - self.min_mireds) / (self.max_mireds - self.min_mireds)
+            temperature = 100 - (norm_value * 100)
+            _LOGGER.debug("    temperature conversion: mired=%r meross=%r" % (mired, temperature))
 
         # Brightness must always be set, so take previous luminance if not explicitly set now.
         brightness = self._device.get_light_color(self._channel_id).get('luminance')
         if ATTR_BRIGHTNESS in kwargs:
             brightness = kwargs[ATTR_BRIGHTNESS] * 100 / 255
+            _LOGGER.debug("brightness change: %r" % brightness)
 
+        _LOGGER.debug('    set_light_color(chan=%r, rgb=%r, luminance=%r, temperature=%r)' % (self._channel_id, rgb, brightness, temperature))
         self._device.set_light_color(self._channel_id, rgb=rgb, luminance=brightness, temperature=temperature)
 
     @property
@@ -79,16 +87,31 @@ class LightEntityWrapper(Light):
         # Meross bulbs support luminance between 0 and 100;
         # while the HA wants values from 0 to 255. Therefore, we need to scale the values.
         status = self._device.get_status(self._channel_id)
+        _LOGGER.debug('get_brightness status=%r' % status)
         return status.get('luminance') / 100 * 255
 
     @property
     def hs_color(self):
-        color = self._device.get_channel_status(self._channel_id).get('rgb')
-        blue = color & 255
-        green = (color >> 8) & 255
-        red = (color >> 16) & 255
-        h, s, v = colorsys.rgb_to_hsv(red, green, blue)
-        return [h*360, s*100]
+        status = self._device.get_channel_status(self._channel_id)
+        _LOGGER.debug('get_hs_color status=%r' % status)
+        if status.get('capacity') == 5: # rgb mode
+            color = status.get('rgb')
+            blue = color & 255
+            green = (color >> 8) & 255
+            red = (color >> 16) & 255
+            h, s, v = colorsys.rgb_to_hsv(red, green, blue)
+            return [h*360, s*100]
+        return None
+
+    @property
+    def color_temp(self):
+        status = self._device.get_channel_status(self._channel_id)
+        _LOGGER.debug('get_color_temp status=%r' % status)
+        if status.get('capacity') == 6: # White light mode
+            value = status.get('temperature')
+            norm_value = (100 - value) / 100.0
+            return self.min_mireds + (norm_value * (self.max_mireds - self.min_mireds))
+        return None
 
     @property
     def supported_features(self):
