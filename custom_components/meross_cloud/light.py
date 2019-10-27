@@ -1,6 +1,6 @@
 import colorsys
 
-from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR
+from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP
 from meross_iot.cloud.devices.light_bulbs import GenericBulb, to_rgb
 
 from .common import (calculate_switch_id, DOMAIN, ENROLLED_DEVICES, MANAGER)
@@ -54,17 +54,25 @@ class LightEntityWrapper(Light):
 
     def turn_on(self, **kwargs) -> None:
         self._device.turn_on(channel=self._channel_id)
-        rgb = self._device.get_light_color(self._channel_id).get('rgb')
-        brightness = self._device.get_light_color(self._channel_id).get('luminance')
 
-        if 'hs_color' in kwargs:
-            h, s = kwargs['hs_color']
+        # Color is taken from either of these 2 values, but not both.
+        rgb = None
+        temperature = -1
+        if ATTR_HS_COLOR in kwargs:
+            h, s = kwargs[ATTR_HS_COLOR]
             r, g, b = colorsys.hsv_to_rgb(h/360, s/100, 255)
             rgb = to_rgb((int(r), int(g), int(b)))
-        elif 'brightness' in kwargs:
-            brightness = kwargs['brightness'] / 255 * 100
+        elif ATTR_COLOR_TEMP in kwargs:
+            mired = kwargs[ATTR_COLOR_TEMP]
+            normalised = (500.0 - mired) / 350.0 # input range from 150 -> 500, opposite direction than Meross requires.
+            temperature = max(0, min(normalised * 100, 100)) # clamp if requested temp. outside above assumptions.
 
-        self._device.set_light_color(self._channel_id, rgb=rgb, luminance=brightness)
+        # Brightness must always be set, so take previous luminance if not explicitly set now.
+        brightness = self._device.get_light_color(self._channel_id).get('luminance')
+        if ATTR_BRIGHTNESS in kwargs:
+            brightness = kwargs[ATTR_BRIGHTNESS] * 100 / 255
+
+        self._device.set_light_color(self._channel_id, rgb=rgb, luminance=brightness, temperature=temperature)
 
     @property
     def brightness(self):
@@ -84,9 +92,7 @@ class LightEntityWrapper(Light):
 
     @property
     def supported_features(self):
-        return SUPPORT_BRIGHTNESS | SUPPORT_COLOR
-
-        # TODO: Handle temperature/luminance support.
+        return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_COLOR_TEMP
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
