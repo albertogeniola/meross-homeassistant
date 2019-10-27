@@ -1,6 +1,6 @@
 import colorsys
 
-from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR
+from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP
 from meross_iot.cloud.devices.light_bulbs import GenericBulb, to_rgb
 
 from .common import (calculate_switch_id, DOMAIN, ENROLLED_DEVICES, MANAGER)
