@@ -1,12 +1,12 @@
 import homeassistant.util.color as color_util
 import logging
-
-from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP, ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS
+from homeassistant.components.light import (Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP,
+                                            ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS)
 from meross_iot.cloud.devices.light_bulbs import GenericBulb
-
-from .common import (calculate_switch_id, DOMAIN, ENROLLED_DEVICES, MANAGER)
+from .common import calculate_switch_id, DOMAIN, ENROLLED_DEVICES, MANAGER
 
 _LOGGER = logging.getLogger(__name__)
+
 
 def rgb_int_to_tuple(color):
     blue = color & 255
@@ -14,11 +14,13 @@ def rgb_int_to_tuple(color):
     red = (color >> 16) & 255
     return (red, green, blue)
 
+
 def expand_status(status):
     "Expand the status information for readability"
     out = dict(status)
     out['rgb'] = rgb_int_to_tuple(status['rgb'])
     return out
+
 
 class LightEntityWrapper(Light):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
@@ -87,7 +89,6 @@ class LightEntityWrapper(Light):
             self._device.set_light_color(self._channel_id, temperature=temperature)
 
         # Brightness must always be set, so take previous luminance if not explicitly set now.
-        brightness = self._device.get_light_color(self._channel_id).get('luminance')
         if ATTR_BRIGHTNESS in kwargs:
             brightness = kwargs[ATTR_BRIGHTNESS] * 100 / 255
             _LOGGER.debug("    brightness change: %r" % brightness)
@@ -105,7 +106,7 @@ class LightEntityWrapper(Light):
     def hs_color(self):
         status = self._device.get_channel_status(self._channel_id)
         _LOGGER.debug('get_hs_color(name=%r status=%r)' % (self._device_name, expand_status(status)))
-        if status.get('capacity') == 5: # rgb mode
+        if status.get('capacity') == 5:  # rgb mode
             rgb = rgb_int_to_tuple(status.get('rgb'))
             return color_util.color_RGB_to_hs(*rgb)
         return None
