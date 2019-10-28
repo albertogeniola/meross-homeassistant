@@ -1,8 +1,11 @@
-from homeassistant.components.cover import CoverDevice, SUPPORT_OPEN, SUPPORT_CLOSE
-from homeassistant.const import STATE_CLOSED, STATE_OPEN, STATE_OPENING, STATE_CLOSING, STATE_UNKNOWN
+from homeassistant.components.cover import (SUPPORT_CLOSE, SUPPORT_OPEN,
+                                            CoverDevice)
+from homeassistant.const import (STATE_CLOSED, STATE_CLOSING, STATE_OPEN,
+                                 STATE_OPENING, STATE_UNKNOWN)
 from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
 
-from .common import (calculate_gerage_door_opener_id, DOMAIN, ENROLLED_DEVICES, MANAGER)
+from .common import (DOMAIN, ENROLLED_DEVICES, MANAGER,
+                     calculate_gerage_door_opener_id)
 
 ATTR_DOOR_STATE = 'door_state'
 
@@ -118,9 +121,6 @@ class OpenGarageCover(CoverDevice):
         """Flag supported features."""
         return SUPPORT_OPEN | SUPPORT_CLOSE
 
-    @property
-    def unique_id(self) -> str:
-        return self._id
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     switch_devices = []

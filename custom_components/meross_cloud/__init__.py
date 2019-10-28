@@ -4,7 +4,7 @@ from datetime import timedelta
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.exceptions import PlatformNotReady
 from homeassistant.helpers import discovery
 from homeassistant.helpers.event import async_track_time_interval
@@ -16,8 +16,9 @@ from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.manager import MerossManager
 from meross_iot.meross_event import MerossEventType
 
-from .common import (DOMAIN, HA_SWITCH, HA_SENSOR, HA_LIGHT, HA_COVER, ENROLLED_DEVICES,
-                     notify_error, dismiss_notification, MANAGER, SENSORS)
+from .common import (DOMAIN, ENROLLED_DEVICES, HA_COVER, HA_LIGHT, HA_SENSOR,
+                     HA_SWITCH, MANAGER, SENSORS, dismiss_notification,
+                     notify_error)
 
 _LOGGER = logging.getLogger(__name__)
 

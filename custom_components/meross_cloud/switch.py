@@ -1,6 +1,7 @@
 from homeassistant.components.switch import SwitchDevice
 from meross_iot.cloud.devices.power_plugs import GenericPlug
-from .common import (calculate_switch_id, DOMAIN, ENROLLED_DEVICES, MANAGER)
+
+from .common import DOMAIN, ENROLLED_DEVICES, MANAGER, calculate_switch_id
 
 
 class SwitchEntityWrapper(SwitchDevice):
