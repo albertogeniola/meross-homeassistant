@@ -1,4 +1,4 @@
-import colorsys
+import homeassistant.util.color as color_util
 import logging
 
 from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP, ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS
@@ -64,8 +64,7 @@ class LightEntityWrapper(Light):
         temperature = -1
         if ATTR_HS_COLOR in kwargs:
             h, s = kwargs[ATTR_HS_COLOR]
-            r, g, b = colorsys.hsv_to_rgb(h/360, s/100, 255)
-            rgb = (int(r), int(g), int(b))
+            rgb = color_util.color_hsv_to_RGB(h, s, 100)
             _LOGGER.debug("    color conversion: rgb=%r -- h=%r s=%r" % (rgb, h, s))
         elif ATTR_COLOR_TEMP in kwargs:
             mired = kwargs[ATTR_COLOR_TEMP]
@@ -99,8 +98,7 @@ class LightEntityWrapper(Light):
             blue = color & 255
             green = (color >> 8) & 255
             red = (color >> 16) & 255
-            h, s, v = colorsys.rgb_to_hsv(red, green, blue)
-            return [h*360, s*100]
+            return color_util.color_RGB_to_hs(red, green, blue)
         return None
 
     @property
