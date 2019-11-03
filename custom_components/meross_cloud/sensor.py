@@ -2,7 +2,8 @@ from homeassistant.const import ATTR_VOLTAGE
 from homeassistant.helpers.entity import Entity
 from meross_iot.cloud.device import AbstractMerossDevice
 
-from .common import (calculate_sensor_id, DOMAIN, SENSORS, ENROLLED_DEVICES, MANAGER)
+from .common import (DOMAIN, ENROLLED_DEVICES, MANAGER, SENSORS,
+                     calculate_sensor_id)
 
 
 class PowerSensorWrapper(Entity):
