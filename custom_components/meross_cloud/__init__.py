@@ -15,10 +15,13 @@ from meross_iot.cloud.devices.light_bulbs import GenericBulb
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.manager import MerossManager
 from meross_iot.meross_event import MerossEventType
+from homeassistant.helpers.typing import ConfigType, HomeAssistantType
 
-from .common import (DOMAIN, ENROLLED_DEVICES, HA_COVER, HA_LIGHT, HA_SENSOR,
+from .common import (DOMAIN, ATTR_CONFIG, ENROLLED_DEVICES, HA_COVER, HA_LIGHT, HA_SENSOR,
                      HA_SWITCH, MANAGER, SENSORS, dismiss_notification,
                      notify_error)
+from homeassistant import config_entries
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -107,39 +110,63 @@ class EventHandlerWrapper:
             _LOGGER.exception("Connection to the meross client failed.")
 
 
-async def async_setup(hass, config):
-    """Setup the Meross manager, register the event handler (EventHandlerWrapper) and starts it and"""
-    try:
-        conf = config.get(DOMAIN)
+async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigType):
+    """Set Meross from a config entry."""
 
+    # data = hass.data[DOMAIN]
+    # if config_entry.source == config_entries.SOURCE_IMPORT:
+    #     if data is None:
+    #         hass.async_create_task(
+    #             hass.config_entries.async_remove(config_entry.entry_id)
+    #         )
+    #     return False
+
+    conf = hass.data[DOMAIN].get(ATTR_CONFIG)
+    try:
+        # These will contain the initialized devices
         # The following call can cause am UnauthorizedException if bad login credentials are provided
         # or if a network exception occurs.
         manager = MerossManager(meross_email=conf.get(CONF_USERNAME), meross_password=conf.get(CONF_PASSWORD))
-
+    
         wrapper = EventHandlerWrapper(hass, conf)
-
-        manager.register_event_handler(wrapper.event_handler)
-
-        hass.data[DOMAIN] = {}
         hass.data[DOMAIN][MANAGER] = manager
         hass.data[DOMAIN][SENSORS] = {}
+        manager.register_event_handler(wrapper.event_handler)
 
         # Setup a set for keeping track of enrolled devices
         hass.data[DOMAIN][ENROLLED_DEVICES] = set()
-
+    
         _LOGGER.info("Starting meross manager")
         manager.start()
-
+    
         return True
 
     except UnauthorizedException as e:
         notify_error(hass, "http_connection", "Meross Cloud", "Could not connect to the Meross cloud. Please check"
                                                               " your internet connection and your Meross credentials")
-        _LOGGER.error("Your Meross login credentials are invalid or the network could not be reached "
+        _LOGGER.exception("Your Meross login credentials are invalid or the network could not be reached "
                       "at the moment.")
 
-        raise PlatformNotReady()
+        return False
 
     except Exception as e:
         _LOGGER.exception("An exception occurred while setting up the meross manager.")
         return False
+
+
+async def async_setup(hass, config):
+    """Set up this integration using yaml"""
+    conf = config.get(DOMAIN)
+
+    hass.data[DOMAIN] = {}
+    hass.data[DOMAIN][ATTR_CONFIG] = conf
+
+    if conf is not None:
+        hass.async_create_task(
+            hass.config_entries.flow.async_init(
+                DOMAIN, context={"source": config_entries.SOURCE_IMPORT}
+            )
+        )
+
+    return True
+

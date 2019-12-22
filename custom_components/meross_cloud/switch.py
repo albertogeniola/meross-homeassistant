@@ -30,7 +30,6 @@ class SwitchEntityWrapper(SwitchDevice):
     def handler(self, evt):
         self.async_schedule_update_ha_state(False)
 
-
     @property
     def unique_id(self) -> str:
         # Since Meross plugs may have more than 1 switch, we need to provide a composed ID

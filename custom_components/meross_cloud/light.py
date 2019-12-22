@@ -125,6 +125,9 @@ class LightEntityWrapper(Light):
 
     @property
     def supported_features(self):
+        if not self.available:
+            return 0
+
         flags = 0
         if self._device.supports_luminance():
            flags |= SUPPORT_BRIGHTNESS

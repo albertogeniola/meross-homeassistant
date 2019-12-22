@@ -1,5 +1,6 @@
 # Constants
 DOMAIN = 'meross_cloud'
+ATTR_CONFIG = "config"
 MANAGER = 'manager'
 ENROLLED_DEVICES = 'enrolled_devices'
 MEROSS_MANAGER = "%s.%s" % (DOMAIN, MANAGER)
