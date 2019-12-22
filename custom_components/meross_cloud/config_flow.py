@@ -1,10 +1,15 @@
 """Config flow for TP-Link."""
+from urllib.error import HTTPError
+
 from homeassistant import config_entries
 from homeassistant.core import callback
+from requests import ConnectTimeout
+
 from .common import DOMAIN
 import logging
 import voluptuous as vol
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from meross_iot.api import MerossHttpClient, UnauthorizedException
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,13 +40,17 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         username = user_input[CONF_USERNAME]
         password = user_input[CONF_PASSWORD]
 
+        # Test the connection to the Meross Cloud.
         try:
-            await self.hass.async_add_executor_job(
-                Abode, username, password, True, True, True, cache
-            )
+            client = MerossHttpClient(email=username, password=password)
+            client.get_cloud_credentials()
 
-        except (AbodeException, ConnectTimeout, HTTPError) as ex:
-            _LOGGER.error("Unable to connect to Abode: %s", str(ex))
+            #await self.hass.async_add_executor_job(
+            #    Abode, username, password, True, True, True, cache
+            #)
+
+        except (UnauthorizedException, ConnectTimeout, HTTPError) as ex:
+            _LOGGER.error("Unable to connect to Meross HTTP api: %s", str(ex))
             if ex.errcode == 400:
                 return self._show_form({"base": "invalid_credentials"})
             return self._show_form({"base": "connection_error"})

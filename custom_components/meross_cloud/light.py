@@ -2,6 +2,7 @@ import homeassistant.util.color as color_util
 import logging
 from homeassistant.components.light import (Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP,
                                             ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS)
+from meross_iot.manager import MerossManager
 from meross_iot.cloud.devices.light_bulbs import GenericBulb
 from .common import calculate_switch_id, DOMAIN, ENROLLED_DEVICES, MANAGER
 
@@ -24,22 +25,12 @@ def expand_status(status):
 
 class LightEntityWrapper(Light):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
-    _device = None
-    _channel_id = None
-    _root_id = None
-    _id = None
-    _device_name = None
 
     def __init__(self, device: GenericBulb, channel: int):
         self._device = device
         self._channel_id = channel
-        self._root_id = device.uuid
-        self._id = calculate_switch_id(self._device.uuid, channel)
-
-        if len(self._device.get_channels()) > 1:
-            self._device_name = "%s (channel: %d)" % (self._device.name, channel)
-        else:
-            self._device_name = self._device.name
+        self._id = self._device.uuid
+        self._device_name = self._device.name
 
         self._device.register_event_callback(self.handler)
 
@@ -58,8 +49,6 @@ class LightEntityWrapper(Light):
 
     @property
     def unique_id(self) -> str:
-        # Since Meross plugs may have more than 1 switch, we need to provide a composed ID
-        # made of uuid and channel
         return self._id
 
     @property
@@ -140,6 +129,7 @@ class LightEntityWrapper(Light):
     @property
     def device_info(self):
         return {
+            'identifiers': {(DOMAIN, self._device.uuid)},
             'name': self._device_name,
             'manufacturer': 'Meross',
             'model': self._device.type + " " + self._device.hwversion,
@@ -147,12 +137,20 @@ class LightEntityWrapper(Light):
         }
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+async def async_setup_entry(hass, config_entry, async_add_entities):
     bulb_devices = []
-    device = hass.data[DOMAIN][MANAGER].get_device_by_uuid(discovery_info)
-    for k, c in enumerate(device.get_channels()):
-        w = LightEntityWrapper(device, k)
+    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+    bulbs = manager.get_devices_by_kind(GenericBulb)
+
+    for bulb in bulbs:
+        w = LightEntityWrapper(device=bulb, channel=0)
         bulb_devices.append(w)
 
     async_add_entities(bulb_devices)
-    hass.data[DOMAIN][ENROLLED_DEVICES].add(device.uuid)
+
+    # hass.data[DOMAIN][ENROLLED_DEVICES].add(device.uuid)
+
+
+async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+    pass
+

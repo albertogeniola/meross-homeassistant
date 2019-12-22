@@ -110,35 +110,43 @@ class EventHandlerWrapper:
             _LOGGER.exception("Connection to the meross client failed.")
 
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigType):
-    """Set Meross from a config entry."""
+async def async_setup_entry(hass: HomeAssistantType, config_entry):
+    """
+    This class is called by the HomeAssistant framework when a configuration entry is provided.
+    For us, the configuration entry is the username-password credentials that the user
+    needs to access the Meross cloud.
+    """
 
-    # data = hass.data[DOMAIN]
-    # if config_entry.source == config_entries.SOURCE_IMPORT:
-    #     if data is None:
-    #         hass.async_create_task(
-    #             hass.config_entries.async_remove(config_entry.entry_id)
-    #         )
-    #     return False
-
-    conf = hass.data[DOMAIN].get(ATTR_CONFIG)
     try:
+
         # These will contain the initialized devices
         # The following call can cause am UnauthorizedException if bad login credentials are provided
         # or if a network exception occurs.
-        manager = MerossManager(meross_email=conf.get(CONF_USERNAME), meross_password=conf.get(CONF_PASSWORD))
-    
-        wrapper = EventHandlerWrapper(hass, conf)
+        manager = MerossManager(meross_email=config_entry.data.get(CONF_USERNAME), meross_password=config_entry.data.get(CONF_PASSWORD))
+
+        """
+        for platform in ABODE_PLATFORMS:
+            hass.async_create_task(
+                hass.config_entries.async_forward_entry_setup(config_entry, platform)
+            )
+        """
+
+        #wrapper = EventHandlerWrapper(hass, conf)
         hass.data[DOMAIN][MANAGER] = manager
         hass.data[DOMAIN][SENSORS] = {}
-        manager.register_event_handler(wrapper.event_handler)
+        #manager.register_event_handler(wrapper.event_handler)
 
         # Setup a set for keeping track of enrolled devices
         hass.data[DOMAIN][ENROLLED_DEVICES] = set()
-    
+
         _LOGGER.info("Starting meross manager")
         manager.start()
-    
+
+        for platform in ('light', 'switch', 'sensor', 'cover'):
+            hass.async_create_task(
+                hass.config_entries.async_forward_entry_setup(config_entry, platform)
+            )
+
         return True
 
     except UnauthorizedException as e:
@@ -155,9 +163,19 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigType):
 
 
 async def async_setup(hass, config):
-    """Set up this integration using yaml"""
-    conf = config.get(DOMAIN)
+    """
+    This method gets called if HomeAssistant has a valid meross_cloud: configuration entry within
+    configurations.yaml.
 
+    Thus, in this method we simply trigger the creation of a config entry.
+
+    :return:
+    """
+
+    # TODO: check whether the integration has been already configured previously via User Config Entry or
+    #       discovery
+
+    conf = config.get(DOMAIN)
     hass.data[DOMAIN] = {}
     hass.data[DOMAIN][ATTR_CONFIG] = conf
 
