@@ -26,12 +26,14 @@ class LightEntityWrapper(Light):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
     _device = None
     _channel_id = None
+    _root_id = None
     _id = None
     _device_name = None
 
     def __init__(self, device: GenericBulb, channel: int):
         self._device = device
         self._channel_id = channel
+        self._root_id = device.uuid
         self._id = calculate_switch_id(self._device.uuid, channel)
 
         if len(self._device.get_channels()) > 1:
@@ -131,6 +133,15 @@ class LightEntityWrapper(Light):
         if self._device.is_light_temperature():
            flags |= SUPPORT_COLOR_TEMP
         return flags
+
+    @property
+    def device_info(self):
+        return {
+            'name': self._device_name,
+            'manufacturer': 'Meross',
+            'model': self._device.type + " " + self._device.hwversion,
+            'sw_version': self._device.fwversion
+        }
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):

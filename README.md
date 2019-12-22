@@ -14,9 +14,16 @@ with Homeassistant.
 For now, the component has been integrated as a custom component into [HACS](https://custom-components.github.io/hacs/).
 
 ## Installation & configuration
-If you have HACS, well, it's a piece of cake! Just search for "Meross" (Full name is Meross Cloud IoT) in the default repository of HACS and It'll show up!
+You can install this component in two ways: via HACS or manually.
+HACS is a nice community-maintained components manager, which allows you to install git-hub hosted components in a few clicks.
+If you have already HACS installed on your HomeAssistant, it's better to go with that.
+On the other hand, if you don't have HACS installed or if you don't plan to install it, then you can use manual installation.
 
-Install it as you would do with any homeassistant custom component:
+### Installing via HACS
+If you have HACS, well, it's a piece of cake! Just search for "Meross" (Full name is Meross Cloud IoT) in the default repository of HACS and it'll show up!
+Clock on Install: when done, proceed with component setup.
+
+### Classic installation (custom_component)
 1. Download the latest zip release archive from [here](https://github.com/albertogeniola/meross-homeassistant/releases/download/0.1a/meross_cloud.zip) (or clone the git master branch)
 1. Unzip/copy the meross_cloud direcotry within the `custom_components` directory of your homeassistant installation.
 The `custom_components` directory resides within your homeassistant configuration directory.
@@ -36,6 +43,8 @@ After a correct installation, your configuration directory should look like the 
     ```
 
     **Note**: if the custom_components directory does not exist, you need to create it.
+
+### Component setup    
 1. Setup your meross cloud credentials. Edit/create the `secrets.yaml` file,
  which is located within the config directory as well. Add the following:
  

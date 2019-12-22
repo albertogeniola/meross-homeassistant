@@ -19,6 +19,7 @@ class OpenGarageCover(CoverDevice):
         self._state = STATE_UNKNOWN
         self._device = device
         self._channel = channel
+        self._root_id = device.uuid
         self._id = calculate_gerage_door_opener_id(self._device.uuid, self._channel)
         self._device_name = "%s (channel: %d)" % (self._device.name, self._channel)
         device.register_event_callback(self.handler)
@@ -120,6 +121,15 @@ class OpenGarageCover(CoverDevice):
     def supported_features(self):
         """Flag supported features."""
         return SUPPORT_OPEN | SUPPORT_CLOSE
+
+    @property
+    def device_info(self):
+        return {
+            'name': self._device_name,
+            'manufacturer': 'Meross',
+            'model': self._device.type + " " + self._device.hwversion,
+            'sw_version': self._device.fwversion
+        }
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):

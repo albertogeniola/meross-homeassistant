@@ -9,11 +9,13 @@ from .common import (DOMAIN, ENROLLED_DEVICES, MANAGER, SENSORS,
 class PowerSensorWrapper(Entity):
     """Wrapper class to adapt the Meross power sensors into the Homeassistant platform"""
     _device = None
+    _root_id = None
     _id = None
     _device_name = None
 
     def __init__(self, device: AbstractMerossDevice):
         self._device = device
+        self._root_id = device.uuid
         self._id = calculate_sensor_id(self._device.uuid)
         self._device_name = self._device.name
 
@@ -104,6 +106,15 @@ class PowerSensorWrapper(Entity):
     @property
     def device_class(self) -> str:
         return 'power'
+
+    @property
+    def device_info(self):
+        return {
+            'name': self._device_name,
+            'manufacturer': 'Meross',
+            'model': self._device.type + " " + self._device.hwversion,
+            'sw_version': self._device.fwversion
+        }
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):

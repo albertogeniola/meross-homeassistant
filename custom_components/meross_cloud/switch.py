@@ -8,12 +8,14 @@ class SwitchEntityWrapper(SwitchDevice):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
     _device = None
     _channel_id = None
+    _root_id = None
     _id = None
     _device_name = None
 
     def __init__(self, device: GenericPlug, channel: int):
         self._device = device
         self._channel_id = channel
+        self._root_id = device.uuid
         self._id = calculate_switch_id(self._device.uuid, channel)
         if channel > 0:
             # This is a sub-channel within the multi-way adapter
@@ -28,31 +30,48 @@ class SwitchEntityWrapper(SwitchDevice):
     def handler(self, evt):
         self.async_schedule_update_ha_state(False)
 
-    @property
-    def today_energy_kwh(self):
-        """Return the today total energy usage in kWh."""
-        return None
-
-    @property
-    def available(self) -> bool:
-        # A device is available if it's online
-        return self._device.online
-
-    @property
-    def name(self) -> str:
-        return self._device_name
-
-    @property
-    def should_poll(self) -> bool:
-        # In general, we don't want HomeAssistant to poll this device.
-        # Instead, we will notify HA when an event is received.
-        return False
 
     @property
     def unique_id(self) -> str:
         # Since Meross plugs may have more than 1 switch, we need to provide a composed ID
         # made of uuid and channel
         return self._id
+
+    @property
+    def name(self) -> str:
+        return self._device_name
+
+    @property
+    def device_info(self):
+        return {
+            'name': self._device_name,
+            'manufacturer': 'Meross',
+            'model': self._device.type + " " + self._device.hwversion,
+            'sw_version': self._device.fwversion
+        }
+
+    @property
+    def available(self) -> bool:
+        # A device is available if it's online
+        return self._device.online
+
+    # TODO
+    #@property
+    #def device_state_attributes(self):
+    #    """Return the state attributes of the device."""
+    #    return self._emeter_params
+
+
+    @property
+    def today_energy_kwh(self):
+        """Return the today total energy usage in kWh."""
+        return None
+
+    @property
+    def should_poll(self) -> bool:
+        # In general, we don't want HomeAssistant to poll this device.
+        # Instead, we will notify HA when an event is received.
+        return False
 
     @property
     def is_on(self) -> bool:
