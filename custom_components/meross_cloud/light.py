@@ -129,7 +129,7 @@ class LightEntityWrapper(Light):
     @property
     def device_info(self):
         return {
-            'identifiers': {(DOMAIN, self._device.uuid)},
+            'identifiers': {(DOMAIN, self._id)},
             'name': self._device_name,
             'manufacturer': 'Meross',
             'model': self._device.type + " " + self._device.hwversion,

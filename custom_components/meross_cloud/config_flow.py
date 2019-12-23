@@ -45,14 +45,11 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             client = MerossHttpClient(email=username, password=password)
             client.get_cloud_credentials()
 
-            #await self.hass.async_add_executor_job(
-            #    Abode, username, password, True, True, True, cache
-            #)
-
+        except UnauthorizedException as ex:
+            _LOGGER.error("Unable to connect to Meross HTTP api: %s", str(ex))
+            return self._show_form({"base": "invalid_credentials"})
         except (UnauthorizedException, ConnectTimeout, HTTPError) as ex:
             _LOGGER.error("Unable to connect to Meross HTTP api: %s", str(ex))
-            if ex.errcode == 400:
-                return self._show_form({"base": "invalid_credentials"})
             return self._show_form({"base": "connection_error"})
 
         return self.async_create_entry(

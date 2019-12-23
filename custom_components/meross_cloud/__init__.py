@@ -142,7 +142,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         _LOGGER.info("Starting meross manager")
         manager.start()
 
-        for platform in ('light', 'switch', 'sensor', 'cover'):
+        for platform in ('light', 'switch'):
             hass.async_create_task(
                 hass.config_entries.async_forward_entry_setup(config_entry, platform)
             )
