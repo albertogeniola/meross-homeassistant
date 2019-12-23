@@ -5,7 +5,6 @@ from datetime import timedelta
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.exceptions import PlatformNotReady
 from homeassistant.helpers import discovery
 from homeassistant.helpers.event import async_track_time_interval
 from meross_iot.api import UnauthorizedException
@@ -17,7 +16,7 @@ from meross_iot.manager import MerossManager
 from meross_iot.meross_event import MerossEventType
 from homeassistant.helpers.typing import ConfigType, HomeAssistantType
 
-from .common import (DOMAIN, ATTR_CONFIG, ENROLLED_DEVICES, HA_COVER, HA_LIGHT, HA_SENSOR,
+from .common import (DOMAIN, ATTR_CONFIG, MEROSS_PLATFORMS, ENROLLED_DEVICES, HA_COVER, HA_LIGHT, HA_SENSOR,
                      HA_SWITCH, MANAGER, SENSORS, dismiss_notification,
                      notify_error)
 from homeassistant import config_entries
@@ -142,7 +141,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         _LOGGER.info("Starting meross manager")
         manager.start()
 
-        for platform in ('light', 'switch'):
+        for platform in (MEROSS_PLATFORMS):
             hass.async_create_task(
                 hass.config_entries.async_forward_entry_setup(config_entry, platform)
             )
@@ -153,7 +152,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         notify_error(hass, "http_connection", "Meross Cloud", "Could not connect to the Meross cloud. Please check"
                                                               " your internet connection and your Meross credentials")
         _LOGGER.exception("Your Meross login credentials are invalid or the network could not be reached "
-                      "at the moment.")
+                          "at the moment.")
 
         return False
 

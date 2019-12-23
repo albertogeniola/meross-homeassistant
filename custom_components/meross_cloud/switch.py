@@ -6,25 +6,21 @@ from .common import DOMAIN, ENROLLED_DEVICES, MANAGER, calculate_switch_id
 
 class SwitchEntityWrapper(SwitchDevice):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
-    _device = None
-    _channel_id = None
-    _root_id = None
-    _id = None
-    _device_name = None
 
     def __init__(self, device: GenericPlug, channel: int):
         self._device = device
         self._channel_id = channel
-        self._root_id = device.uuid
+        self._device_id = device.uuid
+        self._device_name = self._device.name
 
         # If the current device has more than 1 channel, we need to setup the device name and id accordingly
         if len(device.get_channels())>1:
             self._id = calculate_switch_id(self._device.uuid, channel)
             channelData = self._device.get_channels()[channel]
-            self._device_name = "{} - {}".format(self._device.name, channelData.get('devName', 'Main Switch'))
+            self._entity_name = "{} - {}".format(self._device.name, channelData.get('devName', 'Main Switch'))
         else:
             self._id = self._device.uuid
-            self._device_name = self._device.name
+            self._entity_name = self._device.name
 
         device.register_event_callback(self.handler)
 
@@ -39,17 +35,16 @@ class SwitchEntityWrapper(SwitchDevice):
 
     @property
     def name(self) -> str:
-        return self._device_name
+        return self._entity_name
 
     @property
     def device_info(self):
         return {
-            'identifiers': {(DOMAIN, self._id)},
+            'identifiers': {(DOMAIN, self._device_id)},
             'name': self._device_name,
             'manufacturer': 'Meross',
             'model': self._device.type + " " + self._device.hwversion,
-            'sw_version': self._device.fwversion,
-            'via_device': (DOMAIN, self._root_id)
+            'sw_version': self._device.fwversion
         }
 
     @property

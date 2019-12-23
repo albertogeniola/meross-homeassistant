@@ -1,6 +1,6 @@
 from homeassistant.const import ATTR_VOLTAGE
 from homeassistant.helpers.entity import Entity
-from meross_iot.cloud.device import AbstractMerossDevice
+from meross_iot.cloud.devices.power_plugs import GenericPlug
 
 from .common import (DOMAIN, ENROLLED_DEVICES, MANAGER, SENSORS,
                      calculate_sensor_id)
@@ -8,14 +8,10 @@ from .common import (DOMAIN, ENROLLED_DEVICES, MANAGER, SENSORS,
 
 class PowerSensorWrapper(Entity):
     """Wrapper class to adapt the Meross power sensors into the Homeassistant platform"""
-    _device = None
-    _root_id = None
-    _id = None
-    _device_name = None
 
-    def __init__(self, device: AbstractMerossDevice):
+    def __init__(self, device: GenericPlug):
         self._device = device
-        self._root_id = device.uuid
+        self._device_id = device.uuid
         self._id = calculate_sensor_id(self._device.uuid)
         self._device_name = self._device.name
 
@@ -110,6 +106,7 @@ class PowerSensorWrapper(Entity):
     @property
     def device_info(self):
         return {
+            'identifiers': {(DOMAIN, self._device_id)},
             'name': self._device_name,
             'manufacturer': 'Meross',
             'model': self._device.type + " " + self._device.hwversion,
@@ -117,8 +114,22 @@ class PowerSensorWrapper(Entity):
         }
 
 
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    sensor_entities = []
+    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+    plugs = manager.get_devices_by_kind(GenericPlug)
+
+    # First, parse power sensors that are embedded into power plugs
+    for plug in plugs:  # type: GenericPlug
+        if plug.supports_consumption_reading():
+            w = PowerSensorWrapper(device=plug)
+            sensor_entities.append(w)
+
+    # TODO: Then parse thermostat sensors?
+
+    async_add_entities(sensor_entities)
+    # hass.data[DOMAIN][ENROLLED_DEVICES].add(device.uuid)
+
+
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    device = hass.data[DOMAIN][MANAGER].get_device_by_uuid(discovery_info)
-    dev = PowerSensorWrapper(device)
-    async_add_entities((dev,))
-    hass.data[DOMAIN][ENROLLED_DEVICES].add(device.uuid)
+    pass

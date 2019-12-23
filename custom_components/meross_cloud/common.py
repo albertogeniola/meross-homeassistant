@@ -9,6 +9,7 @@ HA_SWITCH = 'switch'
 HA_LIGHT = 'light'
 HA_SENSOR = 'sensor'
 HA_COVER = 'cover'
+MEROSS_PLATFORMS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR)
 
 
 def calculate_switch_id(uuid: str, channel: int):
