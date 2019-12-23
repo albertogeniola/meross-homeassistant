@@ -123,13 +123,6 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         # or if a network exception occurs.
         manager = MerossManager(meross_email=config_entry.data.get(CONF_USERNAME), meross_password=config_entry.data.get(CONF_PASSWORD))
 
-        """
-        for platform in ABODE_PLATFORMS:
-            hass.async_create_task(
-                hass.config_entries.async_forward_entry_setup(config_entry, platform)
-            )
-        """
-
         #wrapper = EventHandlerWrapper(hass, conf)
         hass.data[DOMAIN][MANAGER] = manager
         hass.data[DOMAIN][SENSORS] = {}
