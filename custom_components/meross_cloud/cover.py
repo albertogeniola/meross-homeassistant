@@ -3,6 +3,7 @@ from homeassistant.components.cover import (SUPPORT_CLOSE, SUPPORT_OPEN,
 from homeassistant.const import (STATE_CLOSED, STATE_CLOSING, STATE_OPEN,
                                  STATE_OPENING, STATE_UNKNOWN)
 from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
+from meross_iot.meross_event import MerossEventType
 
 from .common import (DOMAIN, ENROLLED_DEVICES, MANAGER,
                      calculate_gerage_door_opener_id)
@@ -32,12 +33,13 @@ class OpenGarageCover(CoverDevice):
                 self._state = STATE_CLOSED
 
     def handler(self, evt) -> None:
-        if evt.channel == self._channel:
-            # The underlying library only exposes "open" and "closed" statuses
-            if evt.door_state == 'open':
-                self._state = STATE_OPEN
-            elif evt.door_state == 'closed':
-                self._state = STATE_CLOSED
+        if evt.type == MerossEventType.GARAGE_DOOR_STATUS:
+            if evt.channel == self._channel:
+                # The underlying library only exposes "open" and "closed" statuses
+                if evt.door_state == 'open':
+                    self._state = STATE_OPEN
+                elif evt.door_state == 'closed':
+                    self._state = STATE_CLOSED
 
         # In cny case update the UI
         self.async_schedule_update_ha_state(False)
