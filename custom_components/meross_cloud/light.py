@@ -1,11 +1,12 @@
-import homeassistant.util.color as color_util
-from homeassistant.components.light import (Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP,
-                                           ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS)
-from meross_iot.manager import MerossManager
-from meross_iot.cloud.devices.light_bulbs import GenericBulb
-from .common import calculate_switch_id, DOMAIN, ENROLLED_DEVICES, MANAGER
 import logging
 
+import homeassistant.util.color as color_util
+from homeassistant.components.light import (Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP,
+                                            ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS)
+from meross_iot.cloud.devices.light_bulbs import GenericBulb
+from meross_iot.manager import MerossManager
+
+from .common import DOMAIN, MANAGER
 
 _LOGGER = logging.getLogger(__name__)
 

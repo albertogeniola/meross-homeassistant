@@ -1,11 +1,12 @@
+import logging
+
 from homeassistant.components.cover import (SUPPORT_CLOSE, SUPPORT_OPEN,
                                             CoverDevice)
 from homeassistant.const import (STATE_CLOSED, STATE_CLOSING, STATE_OPEN,
                                  STATE_OPENING, STATE_UNKNOWN)
 from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
-from .common import (DOMAIN, ENROLLED_DEVICES, MANAGER)
-import logging
 
+from .common import (DOMAIN, MANAGER)
 
 _LOGGER = logging.getLogger(__name__)
 

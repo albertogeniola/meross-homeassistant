@@ -2,7 +2,7 @@ from homeassistant.const import ATTR_VOLTAGE
 from homeassistant.helpers.entity import Entity
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 
-from .common import (DOMAIN, ENROLLED_DEVICES, MANAGER, SENSORS,
+from .common import (DOMAIN, MANAGER, SENSORS,
                      calculate_sensor_id)
 
 

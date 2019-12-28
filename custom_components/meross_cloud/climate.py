@@ -1,15 +1,14 @@
+import logging
 from typing import Optional, List
 
-from homeassistant.components.climate import ClimateDevice, SUPPORT_TARGET_TEMPERATURE, SUPPORT_PRESET_MODE, \
-    HVAC_MODE_COOL
-from homeassistant.components.climate.const import HVAC_MODE_AUTO, HVAC_MODE_HEAT, HVAC_MODE_OFF
+from homeassistant.components.climate import ClimateDevice, SUPPORT_TARGET_TEMPERATURE, SUPPORT_PRESET_MODE
+from homeassistant.components.climate.const import HVAC_MODE_AUTO, HVAC_MODE_HEAT, HVAC_MODE_OFF, PRESET_NONE, \
+    CURRENT_HVAC_HEAT, CURRENT_HVAC_OFF, CURRENT_HVAC_IDLE
 from homeassistant.const import TEMP_CELSIUS
-from meross_iot.manager import MerossManager
-from meross_iot.cloud.devices.hubs import GenericHub
 from meross_iot.cloud.devices.subdevices.thermostats import ValveSubDevice, ThermostatV3Mode, ThermostatMode
-from .common import DOMAIN, ENROLLED_DEVICES, MANAGER
-import logging
+from meross_iot.manager import MerossManager
 
+from .common import DOMAIN, MANAGER
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,18 +18,9 @@ class ValveEntityWrapper(ClimateDevice):
 
     def __init__(self, device: ValveSubDevice):
         self._device = device
-
-        self._hub_id = self._device._hub.uuid
-
-        # The id of a valve is the concatenation of the hubid and the subdevice id
-        self._subdevice_id = self._device.id
-        self._id = f"{self._device._hub.uuid}:{self._subdevice_id}"
-
-        # TODO: The device name should be gathered from the library somehow...
-        self._device_name = 'Meross Thermostat'
-
-        # TODO
-        # self._device.register_event_callback(self.handler)
+        self._id = self._device.uuid + ":" + self._device.subdevice_id
+        self._device_name = self._device.name
+        self._device.register_event_callback(self.handler)
 
     def handler(self, evt):
         _LOGGER.debug("event_handler(name=%r, evt=%r)" % (self._device_name, repr(vars((evt)))))
@@ -68,117 +58,162 @@ class ValveEntityWrapper(ClimateDevice):
             'manufacturer': 'Meross',
             # TODO: 'model': self._device.type + " " + self._device.hwversion,
             # TODO: 'sw_version': self._device.fwversion,
-            # TODO:'via_device': (DOMAIN, self._hub_id)
+            'via_device': (DOMAIN, self._device.uuid)
         }
 
     @property
     def temperature_unit(self) -> str:
-        # TODO: check if this is always the case
         return TEMP_CELSIUS
+
+    @property
+    def current_temperature(self) -> float:
+        return self._device.room_temperature
+
+    @property
+    def hvac_action(self) -> str:
+        if self._device.onoff == 0:
+            return CURRENT_HVAC_OFF
+        elif self._device.heating:
+            return CURRENT_HVAC_HEAT
+        else:
+            return CURRENT_HVAC_IDLE
 
     @property
     def hvac_mode(self) -> str:
         if self._device.onoff == 0:
             return HVAC_MODE_OFF
-        elif self._device.mode == ThermostatV3Mode.COOL:
-            return HVAC_MODE_COOL
         elif self._device.mode == ThermostatV3Mode.AUTO:
             return HVAC_MODE_AUTO
-        elif self._device.mode == ThermostatV3Mode.HEAT:
+        elif self._device.mode == ThermostatV3Mode.CUSTOM:
+            return HVAC_MODE_HEAT
+        elif self._device.mode == ThermostatMode.SCHEDULE:
+            return HVAC_MODE_AUTO
+        elif self._device.mode == ThermostatMode.CUSTOM:
             return HVAC_MODE_HEAT
         else:
-            return HVAC_MODE_AUTO
+            return HVAC_MODE_HEAT
 
     @property
     def hvac_modes(self) -> List[str]:
-        if isinstance(self._device.mode, ThermostatV3Mode):
-            return [HVAC_MODE_COOL, HVAC_MODE_AUTO, HVAC_MODE_HEAT]
-        else:
-            return []
+        return [HVAC_MODE_OFF, HVAC_MODE_AUTO, HVAC_MODE_HEAT]
 
     def set_temperature(self, **kwargs) -> None:
-        # TODO
-        pass
+        self._device.set_target_temperature(kwargs.get('temperature'))
 
     def set_humidity(self, humidity: int) -> None:
-        # TODO: Not supported
+        # Not supported
         pass
 
     def set_fan_mode(self, fan_mode: str) -> None:
-        # TODO: Not supported
+        # Not supported
         pass
 
     def set_hvac_mode(self, hvac_mode: str) -> None:
-        # TODO: Not supported
-        pass
+        if hvac_mode == HVAC_MODE_OFF:
+            self._device.turn_off()
+            return
+
+        if self._device.type == "mts100v3":
+            if hvac_mode == HVAC_MODE_HEAT:
+                self._device.set_mode(ThermostatV3Mode.CUSTOM)
+            elif hvac_mode == HVAC_MODE_AUTO:
+                self._device.set_mode(ThermostatV3Mode.AUTO)
+            else:
+                _LOGGER.warning("Unsupported mode for this device")
+        elif self._device.type == "mts100":
+            if hvac_mode == HVAC_MODE_HEAT:
+                self._device.set_mode(ThermostatMode.CUSTOM)
+            elif hvac_mode == HVAC_MODE_AUTO:
+                self._device.set_mode(ThermostatMode.SCHEDULE)
+            else:
+                _LOGGER.warning("Unsupported mode for this device")
+        else:
+            _LOGGER.warning("Unsupported mode for this device")
 
     def set_swing_mode(self, swing_mode: str) -> None:
-        # TODO: Not supported
+        # Not supported
         pass
 
     def set_preset_mode(self, preset_mode: str) -> None:
-        # TODO: Not supported
-        pass
+        if self._device.type == "mts100v3":
+            self._device.set_mode(ThermostatV3Mode[preset_mode])
+        elif self._device.type == "mts100":
+            self._device.set_mode(ThermostatMode[preset_mode])
+        else:
+            _LOGGER.warning("Unsupported preset for this device")
 
     def turn_aux_heat_on(self) -> None:
-        # TODO: Not supported
+        # Not supported
         pass
 
     def turn_aux_heat_off(self) -> None:
-        # TODO: Not supported
+        # Not supported
         pass
 
     @property
+    def target_temperature(self) -> Optional[float]:
+        return self._device.target_temperature
+
+    @property
     def target_temperature_high(self) -> Optional[float]:
+        # Not supported
         return None
 
     @property
     def target_temperature_low(self) -> Optional[float]:
+        # Not supported
         return None
+
+    @property
+    def target_temperature_step(self) -> Optional[float]:
+        return 0.5
 
     @property
     def preset_mode(self) -> Optional[str]:
-        return None
+        return self._device.mode.name
 
     @property
     def preset_modes(self) -> Optional[List[str]]:
-        return None
+        if isinstance(self._device.mode, ThermostatV3Mode):
+            return [e.name for e in ThermostatV3Mode]
+        elif isinstance(self._device.mode, ThermostatMode):
+            return [e.name for e in ThermostatMode]
+        else:
+            _LOGGER.warning("Unknown valve mode type.")
+            return [PRESET_NONE]
 
     @property
     def is_aux_heat(self) -> Optional[bool]:
-        return None
+        return False
 
     @property
     def fan_mode(self) -> Optional[str]:
+        # Not supported
         return None
 
     @property
     def fan_modes(self) -> Optional[List[str]]:
+        # Not supported
         return None
 
     @property
     def swing_mode(self) -> Optional[str]:
+        # Not supported
         return None
 
     @property
     def swing_modes(self) -> Optional[List[str]]:
+        # Not supported
         return None
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     thermostat_devices = []
     manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
-    #valves = manager.get_devices_by_kind(ValveSubDevice)
-    # for valve in valves:  # type: ValveSubDevice
-    #    w = ValveEntityWrapper(device=valve)
-    #    thermostat_devices.append(w)
-
-    hubs = manager.get_devices_by_kind(GenericHub)
-    for hub in hubs:  # type: GenericHub
-        for k, device in hub._sub_devices.items():
-            if isinstance(device, ValveSubDevice):
-                w = ValveEntityWrapper(device=device)
-                thermostat_devices.append(w)
+    valves = manager.get_devices_by_kind(ValveSubDevice)
+    for valve in valves:  # type: ValveSubDevice
+        w = ValveEntityWrapper(device=valve)
+        thermostat_devices.append(w)
 
     async_add_entities(thermostat_devices)
 
