@@ -32,82 +32,6 @@ CONFIG_SCHEMA = vol.Schema({
 }, extra=vol.ALLOW_EXTRA)
 
 
-def enroll_device(hass, conf, device):
-    """Handle switch, light and garage openers."""
-    if isinstance(device, GenericPlug):
-        hass.async_create_task(discovery.async_load_platform(hass, HA_SWITCH, DOMAIN, device.uuid, conf))
-
-        # Some switches also come with onboard sensors, so let's add them.
-        # TODO: instead of checking the supports_power_consumption() (which is not available when the device
-        #  is offline), we should retrieve this info somewhere else. The best would be to rely on some library
-        #  maintained dictionary that states the capability of each device. For now that does not exist.
-        if device.online and device.supports_consumption_reading():
-            hass.async_create_task(discovery.async_load_platform(hass, HA_SENSOR, DOMAIN, device.uuid, conf))
-
-    elif isinstance(device, GenericBulb):
-        hass.async_create_task(discovery.async_load_platform(hass, HA_LIGHT, DOMAIN, device.uuid, conf))
-
-    elif isinstance(device, GenericGarageDoorOpener):
-        # A garage opener is sort of a switch.
-        hass.async_create_task(discovery.async_load_platform(hass, HA_COVER, DOMAIN, device.uuid, conf))
-    else:
-        # TODO: log not supported devices
-        pass
-
-
-class EventHandlerWrapper:
-    """Helper wrapper class for handling messages coming from HASSIO CLOUD"""
-
-    def __init__(self, hass, conf):
-        self._hass = hass
-        self._conf = conf
-        self._update_status_interval = timedelta(seconds=20)
-        self._interval_handle = None
-
-    def event_handler(self, evt):
-        if evt.event_type == MerossEventType.DEVICE_ONLINE_STATUS:
-            # If this is the first time we see this device, we need to add it.
-            if evt.device.uuid not in self._hass.data[DOMAIN][ENROLLED_DEVICES]:
-                enroll_device(self._hass, self._conf, evt.device)
-
-        # If we lose the connection to the meross cloud, notify the user.
-        if evt.event_type == MerossEventType.CLIENT_CONNECTION:
-            if evt.status == ClientStatus.CONNECTION_DROPPED:
-                _LOGGER.warn("Connection with the Meross cloud dropped.")
-                notify_error(hass=self._hass, notification_id="connection_status",
-                             title="Meross cloud connection", message="The connection to the Meross cloud **has been "
-                                                                      "dropped**. If this is caused by a network issue,"
-                                                                      "dont' worry, a connection will be reestablished "
-                                                                      "as soon as Internet access is back.")
-                self._interval_handle = async_track_time_interval(self._hass, self.test_client_connection,
-                                                                  self._update_status_interval)
-            elif evt.status == ClientStatus.INITIALIZED:
-                pass
-            else:
-                # Dismiss any network down notification
-                _LOGGER.warn("Connected to the Meross cloud.")
-                dismiss_notification(self._hass, "connection_status")
-
-                # Dismiss the recurrent task
-                if self._interval_handle is not None:
-                    self._interval_handle()
-
-    def test_client_connection(self, evt):
-        try:
-            _LOGGER.info("Trying to establish a connection with the Meross cloud...")
-            manager = self._hass.data[DOMAIN][MANAGER]
-            _LOGGER.debug("Stopping manager...")
-            manager.stop()
-            _LOGGER.debug("Starting manager...")
-            manager.start()
-
-        except UnauthorizedException as e:
-            _LOGGER.error("Your Meross login credentials are invalid or the network could not be reached "
-                          "at the moment.")
-        except Exception as e:
-            _LOGGER.exception("Connection to the meross client failed.")
-
-
 async def async_setup_entry(hass: HomeAssistantType, config_entry):
     """
     This class is called by the HomeAssistant framework when a configuration entry is provided.
@@ -122,10 +46,8 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         # or if a network exception occurs.
         manager = MerossManager(meross_email=config_entry.data.get(CONF_USERNAME), meross_password=config_entry.data.get(CONF_PASSWORD))
 
-        #wrapper = EventHandlerWrapper(hass, conf)
         hass.data[DOMAIN][MANAGER] = manager
         hass.data[DOMAIN][SENSORS] = {}
-        #manager.register_event_handler(wrapper.event_handler)
 
         # Setup a set for keeping track of enrolled devices
         hass.data[DOMAIN][ENROLLED_DEVICES] = set()
@@ -171,9 +93,10 @@ async def async_setup(hass, config):
     hass.data[DOMAIN][ATTR_CONFIG] = conf
 
     if conf is not None:
-        hass.async_create_task(
+        await hass.async_create_task(
             hass.config_entries.flow.async_init(
-                DOMAIN, context={"source": config_entries.SOURCE_IMPORT}
+                DOMAIN, context={"source": config_entries.SOURCE_IMPORT},
+                data=conf
             )
         )
 

@@ -56,7 +56,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             data={
                 CONF_USERNAME: username,
                 CONF_PASSWORD: password
-            },
+            }
         )
 
     @callback
@@ -74,4 +74,8 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.warning("Only one configuration of Meross is allowed.")
             return self.async_abort(reason="single_instance_allowed")
 
-        return self.async_create_entry(title="configuration.yaml", data={})
+        # FIXME: when loading configuration from the configurations.yaml, we hit some sort of deadlock...
+        return await self.async_step_user(import_config)
+
+
+
