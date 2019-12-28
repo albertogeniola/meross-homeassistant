@@ -56,8 +56,7 @@ class ValveEntityWrapper(ClimateDevice):
             'identifiers': {(DOMAIN, self._id)},
             'name': self._device_name,
             'manufacturer': 'Meross',
-            # TODO: 'model': self._device.type + " " + self._device.hwversion,
-            # TODO: 'sw_version': self._device.fwversion,
+            'model': self._device.type,
             'via_device': (DOMAIN, self._device.uuid)
         }
 
