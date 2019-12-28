@@ -7,6 +7,10 @@ from meross_iot.meross_event import MerossEventType
 
 from .common import (DOMAIN, ENROLLED_DEVICES, MANAGER,
                      calculate_gerage_door_opener_id)
+import logging
+
+
+_LOGGER = logging.getLogger(__name__)
 
 ATTR_DOOR_STATE = 'door_state'
 
@@ -40,6 +44,8 @@ class OpenGarageCover(CoverDevice):
                     self._state = STATE_OPEN
                 elif evt.door_state == 'closed':
                     self._state = STATE_CLOSED
+                else:
+                    _LOGGER.error("Unknown/Invalid event door_state: %s" % evt.door_state)
 
         # In cny case update the UI
         self.async_schedule_update_ha_state(False)
