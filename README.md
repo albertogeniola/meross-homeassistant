@@ -89,16 +89,17 @@ Those are place holders that homeassistant automatically replaces by looking at 
 ## Features
 ### Massive support
 This library supports all the Meross devices currently exposed by the Meross IoT library.
-In particular Bulbs, Switches and Garage Door Openers are fully supported and perfectly integrated with HomeAssistant.
+In particular Bulbs, Switches, Garage Door Openers and Smart Valves/Thermostat are fully supported and perfectly integrated with HomeAssistant.
 
-Have a look a the screenshots below...
+<details>
+    <summary>Have a look a the screenshots below...</summary>
 
 <img src="docs/source/images/components/meross_cloud/general-ui.png" alt="User interface" width=400> 
 <img src="docs/source/images/components/meross_cloud/bulb-control.png" alt="Controlling the light bulb" width=400> 
 <img src="docs/source/images/components/meross_cloud/garage-control.png" alt="Controlling the garage opener" width=400> 
 <img src="docs/source/images/components/meross_cloud/sensor.png" alt="Power sensor feedbacks" width=400> 
 <img src="docs/source/images/components/meross_cloud/switch-control.png" alt="Controlling switches" width=400> 
-
+</details>
  
 ### Efficiency and adoption of Homeassistant best practices
 Since I'm aiming at making this component part of the official HA repo, I've put a lot of effort following 
@@ -110,12 +111,11 @@ HomeAssistant best practices, in particular:
 - PEP8 code styling
 
 ## What's next?
-- Automated test
-- CI/CD & GitHub release
-- Feedback collection
+- Discovery implementation
 - Refactor and improvements based on feedbacks
+- Automated test
 
-## Support on Beerpay
+## Supporting my work
 By buying me a coffee, not only you make my development more efficient, but also motivate me to further improve 
 my work. On the other hand, buying me a beer will certainly make me happier: **a toast to you, supporter**!
 
