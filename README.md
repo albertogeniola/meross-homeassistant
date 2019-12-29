@@ -21,11 +21,11 @@ HACS is a nice community-maintained components manager, which allows you to inst
 If you have already HACS installed on your HomeAssistant, it's better to go with that.
 On the other hand, if you don't have HACS installed or if you don't plan to install it, then you can use manual installation.
 
-### Installing via HACS
+### Option A: Installing via HACS
 If you have HACS, well, it's a piece of cake! Just search for "Meross" (Full name is Meross Cloud IoT) in the default repository of HACS and it'll show up!
 Clock on Install: when done, proceed with component setup.
 
-### Classic installation (custom_component)
+### Option B: Classic installation (custom_component)
 1. Download the latest zip release archive from [here](https://github.com/albertogeniola/meross-homeassistant/releases/download/0.1a/meross_cloud.zip) (or clone the git master branch)
 1. Unzip/copy the meross_cloud direcotry within the `custom_components` directory of your homeassistant installation.
 The `custom_components` directory resides within your homeassistant configuration directory.
@@ -47,6 +47,22 @@ After a correct installation, your configuration directory should look like the 
     **Note**: if the custom_components directory does not exist, you need to create it.
 
 ### Component setup    
+Once the component has been installed, you need to configure it in order to make it work.
+There are two ways of doing so:
+- Using the web interface (Lovelace) [**recommended**]
+- Manually editing the configuration.yaml file
+
+#### Option A: Configuration using the web UI [recommended]
+Simply add a new "integration" and look for Meross among the proposed ones.
+The following animation shows how to do that.
+
+<a href="docs/source/images/components/meross_cloud/install-via-webui.gif">
+<img src="docs/source/images/components/meross_cloud/install-via-webui.gif" alt="Installation via web-ui" width=400>
+</a> 
+
+#### Option B: Configuration via editing configuration.yaml
+Follow these steps only if the previous configuration method did not work for you. 
+
 1. Setup your meross cloud credentials. Edit/create the `secrets.yaml` file,
  which is located within the config directory as well. Add the following:
  
