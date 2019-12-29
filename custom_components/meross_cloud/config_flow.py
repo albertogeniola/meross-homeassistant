@@ -18,7 +18,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle Meross config flow."""
 
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
+    CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_PUSH
 
     def __init__(self):
         """Initialize the meross configuration flow."""
@@ -41,8 +41,9 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Test the connection to the Meross Cloud.
         try:
-            client = MerossHttpClient(email=username, password=password)
-            client.get_cloud_credentials()
+            await self.hass.async_add_executor_job(
+                self._test_authorization, username, password
+            )
 
         except UnauthorizedException as ex:
             _LOGGER.error("Unable to connect to Meross HTTP api: %s", str(ex))
@@ -59,6 +60,11 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
 
+    @staticmethod
+    def _test_authorization(username, password):
+        client = MerossHttpClient(email=username, password=password)
+        client.get_cloud_credentials()
+
     @callback
     def _show_form(self, errors=None):
         """Show the form to the user."""
@@ -74,7 +80,6 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.warning("Only one configuration of Meross is allowed.")
             return self.async_abort(reason="single_instance_allowed")
 
-        # FIXME: when loading configuration from the configurations.yaml, we hit some sort of deadlock...
         return await self.async_step_user(import_config)
 
 
