@@ -1,12 +1,13 @@
+import logging
+
 from homeassistant.components.cover import (SUPPORT_CLOSE, SUPPORT_OPEN,
                                             CoverDevice)
 from homeassistant.const import (STATE_CLOSED, STATE_CLOSING, STATE_OPEN,
                                  STATE_OPENING, STATE_UNKNOWN)
 from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
-from .common import (DOMAIN, ENROLLED_DEVICES, MANAGER)
-import logging
 from meross_iot.meross_event import MerossEventType
 
+from .common import (DOMAIN, MANAGER)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class OpenGarageCover(CoverDevice):
                 self._state = STATE_CLOSED
 
     def handler(self, evt) -> None:
-        if evt.type == MerossEventType.GARAGE_DOOR_STATUS:
+        if evt.event_type == MerossEventType.GARAGE_DOOR_STATUS:
             if evt.channel == self._channel:
                 # The underlying library only exposes "open" and "closed" statuses
                 if evt.door_state == 'open':
@@ -153,8 +154,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         cover_entities.append(w)
 
     async_add_entities(cover_entities)
-
-    # hass.data[DOMAIN][ENROLLED_DEVICES].add(device.uuid)
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):

@@ -1,9 +1,13 @@
+import logging
+
 from homeassistant.const import ATTR_VOLTAGE
 from homeassistant.helpers.entity import Entity
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 
 from .common import (DOMAIN, MANAGER, SENSORS,
                      calculate_sensor_id)
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class PowerSensorWrapper(Entity):
@@ -121,14 +125,16 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     # First, parse power sensors that are embedded into power plugs
     for plug in plugs:  # type: GenericPlug
-        if plug.supports_consumption_reading():
+        if not plug.online:
+            _LOGGER.warning("The plug %s is offline; it's impossible to determine if it supports any ability"
+                            % plug.name)
+        elif plug.supports_consumption_reading():
             w = PowerSensorWrapper(device=plug)
             sensor_entities.append(w)
 
     # TODO: Then parse thermostat sensors?
 
     async_add_entities(sensor_entities)
-    # hass.data[DOMAIN][ENROLLED_DEVICES].add(device.uuid)
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
