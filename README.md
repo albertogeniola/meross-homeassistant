@@ -1,4 +1,6 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
+![Build](https://img.shields.io/azure-devops/build/albertogeniola/c4128d1b-c23c-418d-95c5-2de061954ee5/3/master?style=for-the-badge)
+
 
 # Meross HomeAssistant component
 A full featured Homeassistant component to drive Meross devices. 
@@ -19,11 +21,11 @@ HACS is a nice community-maintained components manager, which allows you to inst
 If you have already HACS installed on your HomeAssistant, it's better to go with that.
 On the other hand, if you don't have HACS installed or if you don't plan to install it, then you can use manual installation.
 
-### Installing via HACS
+### Option A: Installing via HACS
 If you have HACS, well, it's a piece of cake! Just search for "Meross" (Full name is Meross Cloud IoT) in the default repository of HACS and it'll show up!
 Clock on Install: when done, proceed with component setup.
 
-### Classic installation (custom_component)
+### Option B: Classic installation (custom_component)
 1. Download the latest zip release archive from [here](https://github.com/albertogeniola/meross-homeassistant/releases/download/0.1a/meross_cloud.zip) (or clone the git master branch)
 1. Unzip/copy the meross_cloud direcotry within the `custom_components` directory of your homeassistant installation.
 The `custom_components` directory resides within your homeassistant configuration directory.
@@ -45,6 +47,22 @@ After a correct installation, your configuration directory should look like the 
     **Note**: if the custom_components directory does not exist, you need to create it.
 
 ### Component setup    
+Once the component has been installed, you need to configure it in order to make it work.
+There are two ways of doing so:
+- Using the web interface (Lovelace) [**recommended**]
+- Manually editing the configuration.yaml file
+
+#### Option A: Configuration using the web UI [recommended]
+Simply add a new "integration" and look for Meross among the proposed ones.
+The following animation shows how to do that.
+
+<a href="docs/source/images/components/meross_cloud/install-via-webui.gif">
+<img src="docs/source/images/components/meross_cloud/install-via-webui.gif" alt="Installation via web-ui" width=400>
+</a> 
+
+#### Option B: Configuration via editing configuration.yaml
+Follow these steps only if the previous configuration method did not work for you. 
+
 1. Setup your meross cloud credentials. Edit/create the `secrets.yaml` file,
  which is located within the config directory as well. Add the following:
  
@@ -71,16 +89,17 @@ Those are place holders that homeassistant automatically replaces by looking at 
 ## Features
 ### Massive support
 This library supports all the Meross devices currently exposed by the Meross IoT library.
-In particular Bulbs, Switches and Garage Door Openers are fully supported and perfectly integrated with HomeAssistant.
+In particular Bulbs, Switches, Garage Door Openers and Smart Valves/Thermostat are fully supported and perfectly integrated with HomeAssistant.
 
-Have a look a the screenshots below...
+<details>
+    <summary>Have a look a the screenshots below...</summary>
 
 <img src="docs/source/images/components/meross_cloud/general-ui.png" alt="User interface" width=400> 
 <img src="docs/source/images/components/meross_cloud/bulb-control.png" alt="Controlling the light bulb" width=400> 
 <img src="docs/source/images/components/meross_cloud/garage-control.png" alt="Controlling the garage opener" width=400> 
 <img src="docs/source/images/components/meross_cloud/sensor.png" alt="Power sensor feedbacks" width=400> 
 <img src="docs/source/images/components/meross_cloud/switch-control.png" alt="Controlling switches" width=400> 
-
+</details>
  
 ### Efficiency and adoption of Homeassistant best practices
 Since I'm aiming at making this component part of the official HA repo, I've put a lot of effort following 
@@ -92,12 +111,11 @@ HomeAssistant best practices, in particular:
 - PEP8 code styling
 
 ## What's next?
-- Automated test
-- CI/CD & GitHub release
-- Feedback collection
+- Discovery implementation
 - Refactor and improvements based on feedbacks
+- Automated test
 
-## Support on Beerpay
+## Supporting my work
 By buying me a coffee, not only you make my development more efficient, but also motivate me to further improve 
 my work. On the other hand, buying me a beer will certainly make me happier: **a toast to you, supporter**!
 
