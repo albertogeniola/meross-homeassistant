@@ -114,16 +114,30 @@ class ValveEntityWrapper(ClimateDevice):
 
         if self._device.type == "mts100v3":
             if hvac_mode == HVAC_MODE_HEAT:
-                self._device.set_mode(ThermostatV3Mode.CUSTOM)
+                def action(error, response):
+                    if error is None:
+                        self._device.set_mode(ThermostatV3Mode.CUSTOM)
+                self._device.turn_on(callback=action)
+
             elif hvac_mode == HVAC_MODE_AUTO:
-                self._device.set_mode(ThermostatV3Mode.AUTO)
+                def action(error, response):
+                    if error is None:
+                        self._device.set_mode(ThermostatV3Mode.AUTO)
+                self._device.turn_on(callback=action)
             else:
                 _LOGGER.warning("Unsupported mode for this device")
+
         elif self._device.type == "mts100":
             if hvac_mode == HVAC_MODE_HEAT:
-                self._device.set_mode(ThermostatMode.CUSTOM)
+                def action(error, response):
+                    if error is None:
+                        self._device.set_mode(ThermostatMode.CUSTOM)
+                self._device.turn_on(callback=action)
             elif hvac_mode == HVAC_MODE_AUTO:
-                self._device.set_mode(ThermostatMode.SCHEDULE)
+                def action(error, response):
+                    if error is None:
+                        self._device.set_mode(ThermostatMode.SCHEDULE)
+                self._device.turn_on(callback=action)
             else:
                 _LOGGER.warning("Unsupported mode for this device")
         else:
