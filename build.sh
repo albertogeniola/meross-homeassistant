@@ -1,6 +1,6 @@
 # Run isort on the entire source
-# pip install isort
-# isort -rc custom_components/meross_cloud
+pip install isort
+isort -rc custom_components/meross_cloud
 
 # Clean the dist directory
 rm -vR dist
