@@ -8,5 +8,5 @@ mkdir dist
 
 # zip the meross_cloud sources
 pushd custom_components/meross_cloud
-zip -r ../../dist/meross_cloud.zip ./**
+zip -r ../../dist/meross_cloud.zip ./
 popd
