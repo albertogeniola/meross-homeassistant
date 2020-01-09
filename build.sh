@@ -7,5 +7,6 @@ rm -vR dist
 mkdir dist
 
 # zip the meross_cloud sources
-zip -r dist/meross_cloud.zip custom_components/meross_cloud
-
+pushd custom_components/meross_cloud
+zip -r dist/meross_cloud.zip ./*
+popd
