@@ -1,7 +1,7 @@
 import logging
 
 from homeassistant.components.cover import (SUPPORT_CLOSE, SUPPORT_OPEN,
-                                            CoverDevice)
+                                            CoverDevice, DEVICE_CLASS_GARAGE)
 from homeassistant.const import (STATE_CLOSED, STATE_CLOSING, STATE_OPEN,
                                  STATE_OPENING, STATE_UNKNOWN)
 from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
@@ -126,7 +126,7 @@ class OpenGarageCover(CoverDevice):
     @property
     def device_class(self):
         """Return the class of this device, from component DEVICE_CLASSES."""
-        return 'door'
+        return DEVICE_CLASS_GARAGE
 
     @property
     def supported_features(self):

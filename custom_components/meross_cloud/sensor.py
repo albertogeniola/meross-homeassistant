@@ -18,6 +18,7 @@ class PowerSensorWrapper(Entity):
         self._device_id = device.uuid
         self._id = calculate_sensor_id(self._device.uuid)
         self._device_name = self._device.name
+        self._sensor_info = None
 
     @property
     def available(self) -> bool:
@@ -39,16 +40,12 @@ class PowerSensorWrapper(Entity):
 
     async def async_update(self):
         if self.available:
-            sensor_info = self._device.get_electricity()
-        else:
-            sensor_info = None
-
-        self.hass.data[DOMAIN][SENSORS][self.unique_id] = sensor_info
+            self._sensor_info = self._device.get_electricity()
 
     @property
     def device_state_attributes(self):
         # Return device's state
-        sensor_data = self.hass.data[DOMAIN][SENSORS].get(self.unique_id)
+        sensor_data = self._sensor_info
         if sensor_data is None:
             sensor_data = {}
 
@@ -89,7 +86,7 @@ class PowerSensorWrapper(Entity):
     @property
     def state(self) -> str:
         # Return the state attributes.
-        sensor_data = self.hass.data[DOMAIN][SENSORS].get(self.unique_id)
+        sensor_data = self._sensor_info
         if sensor_data is None:
             sensor_data = {}
 
@@ -120,7 +117,7 @@ class PowerSensorWrapper(Entity):
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     sensor_entities = []
-    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+    manager = hass.data[DOMAIN][MANAGER]
     plugs = manager.get_devices_by_kind(GenericPlug)
 
     # First, parse power sensors that are embedded into power plugs
@@ -128,7 +125,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         if not plug.online:
             _LOGGER.warning("The plug %s is offline; it's impossible to determine if it supports any ability"
                             % plug.name)
-        elif plug.supports_consumption_reading():
+        elif plug.type.startswith("mss310") or plug.supports_consumption_reading():
             w = PowerSensorWrapper(device=plug)
             sensor_entities.append(w)
 
