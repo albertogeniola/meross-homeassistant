@@ -56,9 +56,7 @@ There are two ways of doing so:
 Simply add a new "integration" and look for Meross among the proposed ones.
 The following animation shows how to do that.
 
-<a href="docs/source/images/components/meross_cloud/install-via-webui.gif">
-<img src="docs/source/images/components/meross_cloud/install-via-webui.gif" alt="Installation via web-ui" width=400>
-</a> 
+[![Installation via web UI](https://raw.githubusercontent.com/albertogeniola/meross-homeassistant/master/docs/source/images/components/meross_cloud/install-via-webui.gif)](https://raw.githubusercontent.com/albertogeniola/meross-homeassistant/master/docs/source/images/components/meross_cloud/install-via-webui.gif)
 
 #### Option B: Configuration via editing configuration.yaml
 Follow these steps only if the previous configuration method did not work for you. 
