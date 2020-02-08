@@ -1,14 +1,26 @@
 from homeassistant.components.switch import SwitchDevice
 from meross_iot.cloud.devices.power_plugs import GenericPlug
+from meross_iot.meross_event import DeviceOnlineStatusEvent, DeviceSwitchStatusEvent
 
 from .common import DOMAIN, MANAGER, calculate_switch_id
+import logging
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class SwitchEntityWrapper(SwitchDevice):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
 
     def __init__(self, device: GenericPlug, channel: int):
+        # Device State
+        self._is_on = None
+        self._is_online = None
+
+        # Reference to the device object
         self._device = device
+
+        # Devide properties
         self._channel_id = channel
         self._device_id = device.uuid
         self._device_name = self._device.name
@@ -22,10 +34,25 @@ class SwitchEntityWrapper(SwitchDevice):
             self._id = self._device.uuid
             self._entity_name = self._device.name
 
+        # Load the current device status
+        self._is_online = self._device.online
+
         device.register_event_callback(self.handler)
 
     def handler(self, evt):
-        self.async_schedule_update_ha_state(False)
+        if isinstance(evt, DeviceOnlineStatusEvent):
+            if evt.status not in ["online", "offline"]:
+                raise ValueError("Invalid online status")
+            self._is_online = evt.status == "online"
+        elif isinstance(evt, DeviceSwitchStatusEvent):
+            if evt.channel_id == self._channel_id:
+                self._is_on = evt.switch_state
+        else:
+            # TODO
+            pass
+
+        # When receiving an event, let's immediately trigger the update state
+        self.async_schedule_update_ha_state(True)
 
     @property
     def unique_id(self) -> str:
@@ -50,37 +77,31 @@ class SwitchEntityWrapper(SwitchDevice):
     @property
     def available(self) -> bool:
         # A device is available if it's online
-        return self._device.online
-
-    # TODO
-    #@property
-    #def device_state_attributes(self):
-    #    """Return the state attributes of the device."""
-    #    return self._emeter_params
-
-
-    @property
-    def today_energy_kwh(self):
-        """Return the today total energy usage in kWh."""
-        return None
+        return self._is_online
 
     @property
     def should_poll(self) -> bool:
-        # In general, we don't want HomeAssistant to poll this device.
-        # Instead, we will notify HA when an event is received.
+        # Although we rely on PUSH notification to promptly update our state
+        # sometimes polling helps when connection is dropped and the underlying library is not
+        # pushing any update
+        # TODO
         return False
 
     @property
     def is_on(self) -> bool:
-        # Note that the following method is not fetching info from the device over the network.
-        # Instead, it is reading the device status from the state-dictionary that is handled by the library.
-        return self._device.get_channel_status(self._channel_id)
+        return self._is_on
 
     def turn_off(self, **kwargs) -> None:
-        self._device.turn_off_channel(self._channel_id)
+        try:
+            self._device.turn_off_channel(self._channel_id)
+        except:
+            _LOGGER.exception("Error when turning off the device %s" % self._device_name)
 
     def turn_on(self, **kwargs) -> None:
-        self._device.turn_on_channel(self._channel_id)
+        try:
+            self._device.turn_on_channel(self._channel_id)
+        except:
+            _LOGGER.exception("Error when turning on the device %s" % self._device_name)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
