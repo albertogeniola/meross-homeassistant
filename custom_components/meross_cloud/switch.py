@@ -1,55 +1,42 @@
 from homeassistant.components.switch import SwitchDevice
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.meross_event import DeviceOnlineStatusEvent, DeviceSwitchStatusEvent
-
-from .common import DOMAIN, MANAGER, calculate_switch_id
+from .common import DOMAIN, MANAGER, calculate_switch_id, AbstractMerossEntityWrapper, cloud_io
 import logging
 
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class SwitchEntityWrapper(SwitchDevice):
+class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
 
     def __init__(self, device: GenericPlug, channel: int):
-        # Device State
-        self._is_on = None
-        self._is_online = None
+        super().__init__(device)
 
-        # Reference to the device object
-        self._device = device
-
-        # Devide properties
+        # Device properties
         self._channel_id = channel
         self._device_id = device.uuid
-        self._device_name = self._device.name
+        self._device_name = device.name
 
         # If the current device has more than 1 channel, we need to setup the device name and id accordingly
-        if len(device.get_channels())>1:
+        if len(device.get_channels()) > 1:
             self._id = calculate_switch_id(self._device.uuid, channel)
-            channelData = self._device.get_channels()[channel]
-            self._entity_name = "{} - {}".format(self._device.name, channelData.get('devName', 'Main Switch'))
+            channelData = device.get_channels()[channel]
+            self._entity_name = "{} - {}".format(device.name, channelData.get('devName', 'Main Switch'))
         else:
-            self._id = self._device.uuid
-            self._entity_name = self._device.name
+            self._id = device.uuid
+            self._entity_name = device.name
 
-        # Load the current device status
-        self._is_online = self._device.online
+        # Device specific state
+        self._is_on = self.get_switch_state()
 
-        device.register_event_callback(self.handler)
-
-    def handler(self, evt):
-        if isinstance(evt, DeviceOnlineStatusEvent):
-            if evt.status not in ["online", "offline"]:
-                raise ValueError("Invalid online status")
-            self._is_online = evt.status == "online"
-        elif isinstance(evt, DeviceSwitchStatusEvent):
+    def device_event_handler(self, evt):
+        if isinstance(evt, DeviceSwitchStatusEvent):
             if evt.channel_id == self._channel_id:
                 self._is_on = evt.switch_state
         else:
-            # TODO
-            pass
+            _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
 
         # When receiving an event, let's immediately trigger the update state
         self.async_schedule_update_ha_state(True)
@@ -81,27 +68,25 @@ class SwitchEntityWrapper(SwitchDevice):
 
     @property
     def should_poll(self) -> bool:
-        # Although we rely on PUSH notification to promptly update our state
-        # sometimes polling helps when connection is dropped and the underlying library is not
-        # pushing any update
-        # TODO
+        # The current state propagation is handled via PUSH notification from the server.
+        # Therefore, we don't want Homeassistant to waste resources to poll the server.
         return False
 
     @property
     def is_on(self) -> bool:
         return self._is_on
 
+    @cloud_io
     def turn_off(self, **kwargs) -> None:
-        try:
-            self._device.turn_off_channel(self._channel_id)
-        except:
-            _LOGGER.exception("Error when turning off the device %s" % self._device_name)
+        self._device.turn_off_channel(self._channel_id)
 
+    @cloud_io
     def turn_on(self, **kwargs) -> None:
-        try:
-            self._device.turn_on_channel(self._channel_id)
-        except:
-            _LOGGER.exception("Error when turning on the device %s" % self._device_name)
+        self._device.turn_on_channel(self._channel_id)
+
+    @cloud_io
+    def get_switch_state(self):
+        return self._device.get_channel_status(self._channel_id)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
