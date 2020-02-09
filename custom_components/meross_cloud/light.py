@@ -1,12 +1,12 @@
 import logging
-
 import homeassistant.util.color as color_util
 from homeassistant.components.light import (Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP,
                                             ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS)
 from meross_iot.cloud.devices.light_bulbs import GenericBulb
 from meross_iot.manager import MerossManager
+from meross_iot.meross_event import BulbSwitchStateChangeEvent, BulbLightStateChangeEvent
 
-from .common import DOMAIN, MANAGER
+from .common import DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,25 +25,94 @@ def expand_status(status):
     return out
 
 
-class LightEntityWrapper(Light):
+class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
 
     def __init__(self, device: GenericBulb, channel: int):
-        self._device = device
+        super().__init__(device)
+
+        # Device state
+        self._state = {}
+        self._flags = 0
+
+        # Device info
         self._channel_id = channel
         self._id = self._device.uuid
         self._device_name = self._device.name
 
-        self._device.register_event_callback(self.handler)
+        # Update device state
+        if self._is_online:
+            self._state = self._fetch_state()
+            if self._device.supports_luminance():
+                self._flags |= SUPPORT_BRIGHTNESS
+            if self._device.is_rgb():
+                self._flags |= SUPPORT_COLOR
+            if self._device.is_light_temperature():
+                self._flags |= SUPPORT_COLOR_TEMP
 
-    def handler(self, evt):
-        _LOGGER.debug("event_handler(name=%r, evt=%r)" % (self._device_name, repr(vars((evt)))))
-        self.async_schedule_update_ha_state(False)
+    def device_event_handler(self, evt):
+        if isinstance(evt, BulbSwitchStateChangeEvent):
+            if evt.channel == self._channel_id:
+                self._state['onoff'] = evt.is_on
+        elif isinstance(evt, BulbLightStateChangeEvent):
+            if evt.channel == self._channel_id:
+                self._state['capacity'] = evt.light_state.get('capacity')
+                self._state['rgb'] = evt.light_state.get('rgb')
+                self._state['temperature'] = evt.light_state.get('temperature')
+                self._state['luminance'] = evt.light_state.get('luminance')
+                self._state['gradual'] = evt.light_state.get('gradual')
+                self._state['transform'] = evt.light_state.get('transform')
+        else:
+            _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
+
+        # When receiving an event, let's immediately trigger the update state
+        self.async_schedule_update_ha_state(True)
 
     @property
     def available(self) -> bool:
         # A device is available if it's online
-        return self._device.online
+        return self._is_online
+
+    @property
+    def is_on(self) -> bool:
+        if self._state is None:
+            return None
+
+        return self._state.get('onoff', None) == 1
+
+    @property
+    def brightness(self):
+        if self._state is None:
+            return None
+
+        # Meross bulbs support luminance between 0 and 100;
+        # while the HA wants values from 0 to 255. Therefore, we need to scale the values.
+        luminance = self._state.get('luminance', None)
+        if luminance is None:
+            return None
+        return float(luminance) / 100 * 255
+
+    @property
+    def hs_color(self):
+        if self._state is None:
+            return None
+
+        if self._state.get('capacity') == 5:  # rgb mode
+            rgb = rgb_int_to_tuple(self._state.get('rgb'))
+            _LOGGER.info("rgb: %s" % str(rgb))
+            return color_util.color_RGB_to_hs(*rgb)
+        return None
+
+    @property
+    def color_temp(self):
+        if self._state is None:
+            return None
+
+        if self._state.get('capacity') == 6:  # White light mode
+            value = self._state.get('temperature')
+            norm_value = (100 - value) / 100.0
+            return self.min_mireds + (norm_value * (self.max_mireds - self.min_mireds))
+        return None
 
     @property
     def name(self) -> str:
@@ -54,19 +123,32 @@ class LightEntityWrapper(Light):
         return self._id
 
     @property
-    def is_on(self) -> bool:
-        # Note that the following method is not fetching info from the device over the network.
-        # Instead, it is reading the device status from the state-dictionary that is handled by the library.
-        return self._device.get_channel_status(self._channel_id).get('onoff')
+    def supported_features(self):
+        return self._flags
 
+    @property
+    def device_info(self):
+        return {
+            'identifiers': {(DOMAIN, self._id)},
+            'name': self._device_name,
+            'manufacturer': 'Meross',
+            'model': self._device.type + " " + self._device.hwversion,
+            'sw_version': self._device.fwversion
+        }
+
+    @cloud_io
+    def _fetch_state(self):
+        self._state = self._device.get_status(self._channel_id)
+        return self._state
+
+    @cloud_io
     def turn_off(self, **kwargs) -> None:
-        _LOGGER.debug('turn_off(name=%r)' % self._device_name)
         self._device.turn_off(channel=self._channel_id)
 
+    @cloud_io
     def turn_on(self, **kwargs) -> None:
         if not self.is_on:
-            _LOGGER.debug('turn_on(name=%r)' % (self._device_name))
-            self._device.turn_on(channel=self._channel_id) # Avoid a potential response event race between setting on and below set_light_color
+            self._device.turn_on(channel=self._channel_id)
 
         # Color is taken from either of these 2 values, but not both.
         if ATTR_HS_COLOR in kwargs:
@@ -86,57 +168,6 @@ class LightEntityWrapper(Light):
             brightness = kwargs[ATTR_BRIGHTNESS] * 100 / 255
             _LOGGER.debug("    brightness change: %r" % brightness)
             self._device.set_light_color(self._channel_id, luminance=brightness)
-
-    @property
-    def brightness(self):
-        # Meross bulbs support luminance between 0 and 100;
-        # while the HA wants values from 0 to 255. Therefore, we need to scale the values.
-        status = self._device.get_status(self._channel_id)
-        _LOGGER.debug('get_brightness(name=%r status=%r)' % (self._device_name, expand_status(status)))
-        return status.get('luminance') / 100 * 255
-
-    @property
-    def hs_color(self):
-        status = self._device.get_channel_status(self._channel_id)
-        _LOGGER.debug('get_hs_color(name=%r status=%r)' % (self._device_name, expand_status(status)))
-        if status.get('capacity') == 5:  # rgb mode
-            rgb = rgb_int_to_tuple(status.get('rgb'))
-            return color_util.color_RGB_to_hs(*rgb)
-        return None
-
-    @property
-    def color_temp(self):
-        status = self._device.get_channel_status(self._channel_id)
-        _LOGGER.debug('get_color_temp(name=%r status=%r)' % (self._device_name, expand_status(status)))
-        if status.get('capacity') == 6: # White light mode
-            value = status.get('temperature')
-            norm_value = (100 - value) / 100.0
-            return self.min_mireds + (norm_value * (self.max_mireds - self.min_mireds))
-        return None
-
-    @property
-    def supported_features(self):
-        if not self.available:
-            return 0
-
-        flags = 0
-        if self._device.supports_luminance():
-           flags |= SUPPORT_BRIGHTNESS
-        if self._device.is_rgb():
-           flags |= SUPPORT_COLOR
-        if self._device.is_light_temperature():
-           flags |= SUPPORT_COLOR_TEMP
-        return flags
-
-    @property
-    def device_info(self):
-        return {
-            'identifiers': {(DOMAIN, self._id)},
-            'name': self._device_name,
-            'manufacturer': 'Meross',
-            'model': self._device.type + " " + self._device.hwversion,
-            'sw_version': self._device.fwversion
-        }
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):

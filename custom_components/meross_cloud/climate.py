@@ -44,7 +44,7 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
             self._target_temperature = float(evt.temperature.get('currentSet')) / 10
             self._heating = evt.temperature.get('heating') == 1
         elif isinstance(evt, ThermostatModeChange):
-            pass
+            self._device_mode = evt.mode
         else:
             _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
 

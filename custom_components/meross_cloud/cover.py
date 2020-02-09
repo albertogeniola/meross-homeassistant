@@ -1,58 +1,64 @@
 import logging
-
 from homeassistant.components.cover import (SUPPORT_CLOSE, SUPPORT_OPEN,
                                             CoverDevice, DEVICE_CLASS_GARAGE)
 from homeassistant.const import (STATE_CLOSED, STATE_CLOSING, STATE_OPEN,
                                  STATE_OPENING, STATE_UNKNOWN)
 from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
-from meross_iot.meross_event import MerossEventType
-
-from .common import (DOMAIN, MANAGER)
+from meross_iot.meross_event import MerossEventType, DeviceDoorStatusEvent
+from .common import (DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 
 ATTR_DOOR_STATE = 'door_state'
 
 
-class OpenGarageCover(CoverDevice):
+class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
     """Representation of a OpenGarage cover."""
 
     def __init__(self, device: GenericGarageDoorOpener):
-        """Initialize the cover."""
-        self._state_before_move = STATE_UNKNOWN
-        self._state = STATE_UNKNOWN
+        super().__init__(device)
+
+        # Device properties
         self._device = device
         self._device_id = device.uuid
         self._id = device.uuid
         self._device_name = self._device.name
-        device.register_event_callback(self.handler)
-
-        if len(self._device.get_channels())>1:
-            _LOGGER.error(f"Garage opener {self._id} has more than 1 channel. This is currently not supported.")
-
         self._channel = 0
 
+        if len(self._device.get_channels()) > 1:
+            _LOGGER.error(f"Garage opener {self._id} has more than 1 channel. This is currently not supported.")
+
+        # Device specific state
+        self._state = STATE_UNKNOWN
+        self._state_before_move = STATE_UNKNOWN
+
         # If the device is online, we need to update its status from STATE_UNKNOWN
-        if device.online and self._state == STATE_UNKNOWN:
-            open = device.get_status().get(self._channel)
-            if open:
+        if device.online:
+            self._fetch_status()
+
+    @cloud_io
+    def _fetch_status(self):
+        open = self._device.get_status().get(self._channel)
+        if open:
+            self._state = STATE_OPEN
+        else:
+            self._state = STATE_CLOSED
+        return self._state
+
+    def device_event_handler(self, evt):
+        if isinstance(evt, DeviceDoorStatusEvent) and evt.channel==self._channel:
+            # The underlying library only exposes "open" and "closed" statuses
+            if evt.door_state == 'open':
                 self._state = STATE_OPEN
-            else:
+            elif evt.door_state == 'closed':
                 self._state = STATE_CLOSED
+            else:
+                _LOGGER.error("Unknown/Invalid event door_state: %s" % evt.door_state)
+        else:
+            _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
 
-    def handler(self, evt) -> None:
-        if evt.event_type == MerossEventType.GARAGE_DOOR_STATUS:
-            if evt.channel == self._channel:
-                # The underlying library only exposes "open" and "closed" statuses
-                if evt.door_state == 'open':
-                    self._state = STATE_OPEN
-                elif evt.door_state == 'closed':
-                    self._state = STATE_CLOSED
-                else:
-                    _LOGGER.error("Unknown/Invalid event door_state: %s" % evt.door_state)
-
-        # In cny case update the UI
-        self.async_schedule_update_ha_state(False)
+        # When receiving an event, let's immediately trigger the update state
+        self.async_schedule_update_ha_state(True)
 
     @property
     def name(self) -> str:
@@ -62,7 +68,7 @@ class OpenGarageCover(CoverDevice):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self._device.online
+        return self._is_online
 
     @property
     def is_closed(self):
@@ -82,36 +88,27 @@ class OpenGarageCover(CoverDevice):
     def is_closing(self):
         return self._state == STATE_CLOSING
 
-    def _door_callback(self, error, state):
-        # TODO: check for errors
-        self.async_schedule_update_ha_state(False)
-
-    async def async_close_cover(self, **kwargs):
-        """Close the cover."""
-        if self._state not in [STATE_CLOSED, STATE_CLOSING]:
-            self._state_before_move = self._state
-            self._state = STATE_CLOSING
-            self._device.close_door(channel=self._channel, ensure_closed=True, callback=self._door_callback)
-
-    async def async_open_cover(self, **kwargs):
-        """Open the cover."""
-        if self._state not in [STATE_OPEN, STATE_OPENING]:
-            self._state_before_move = self._state
-            self._state = STATE_OPENING
-            self._device.open_door(channel=self._channel, ensure_opened=True, callback=self._door_callback)
-
-    def open_cover(self, **kwargs):
-        if self._state not in [STATE_OPEN, STATE_OPENING]:
-            self._state_before_move = self._state
-            self._state = STATE_OPENING
-            self._device.open_door(channel=self._channel, ensure_opened=True)
-
+    @cloud_io
     def close_cover(self, **kwargs):
         """Close the cover."""
         if self._state not in [STATE_CLOSED, STATE_CLOSING]:
             self._state_before_move = self._state
             self._state = STATE_CLOSING
             self._device.close_door(channel=self._channel, ensure_closed=True)
+
+            # We changed the state, thus we need to notify HA about it
+            self.schedule_update_ha_state(True)
+
+    @cloud_io
+    def open_cover(self, **kwargs):
+        """Open the cover."""
+        if self._state not in [STATE_OPEN, STATE_OPENING]:
+            self._state_before_move = self._state
+            self._state = STATE_OPENING
+            self._device.open_door(channel=self._channel, ensure_opened=True)
+
+            # We changed the state, thus we need to notify HA about it
+            self.schedule_update_ha_state(True)
 
     @property
     def should_poll(self) -> bool:

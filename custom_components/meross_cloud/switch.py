@@ -29,7 +29,9 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
             self._entity_name = device.name
 
         # Device specific state
-        self._is_on = self.get_switch_state()
+        self._is_on = None
+        if self._is_online:
+            self._is_on = self.fetch_switch_state()
 
     def device_event_handler(self, evt):
         if isinstance(evt, DeviceSwitchStatusEvent):
@@ -85,7 +87,7 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
         self._device.turn_on_channel(self._channel_id)
 
     @cloud_io
-    def get_switch_state(self):
+    def fetch_switch_state(self):
         return self._device.get_channel_status(self._channel_id)
 
 
