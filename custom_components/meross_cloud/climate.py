@@ -7,29 +7,99 @@ from homeassistant.components.climate.const import HVAC_MODE_AUTO, HVAC_MODE_HEA
 from homeassistant.const import TEMP_CELSIUS
 from meross_iot.cloud.devices.subdevices.thermostats import ValveSubDevice, ThermostatV3Mode, ThermostatMode
 from meross_iot.manager import MerossManager
+from meross_iot.meross_event import ThermostatTemperatureChange, ThermostatModeChange
 
-from .common import DOMAIN, MANAGER
+from .common import DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class ValveEntityWrapper(ClimateDevice):
+class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
     """Wrapper class to adapt the Meross thermostat into the Homeassistant platform"""
 
     def __init__(self, device: ValveSubDevice):
-        self._device = device
+        super().__init__(device)
+
         self._id = self._device.uuid + ":" + self._device.subdevice_id
         self._device_name = self._device.name
-        self._device.register_event_callback(self.handler)
 
-    def handler(self, evt):
-        _LOGGER.debug("event_handler(name=%r, evt=%r)" % (self._device_name, repr(vars((evt)))))
+        # For now, we assume that every Meross Thermostat supports the following modes.
+        # This might be improved in the future by looking at the device abilities via get_abilities()
+        self._flags = 0
+        self._flags |= SUPPORT_TARGET_TEMPERATURE
+        self._flags |= SUPPORT_PRESET_MODE
+
+        # Device state
+        self._is_on = self._device.online
+        if self._is_on:
+            self._current_temperature = None
+            self._device_mode = None
+            self._target_temperature = None
+            self._heating = None
+            self.fetch_device_state()
+
+    def device_event_handler(self, evt):
+        if isinstance(evt, ThermostatTemperatureChange):
+            self._current_temperature = float(evt.temperature.get('room'))/10
+            self._target_temperature = float(evt.temperature.get('currentSet')) / 10
+            self._heating = evt.temperature.get('heating') == 1
+        elif isinstance(evt, ThermostatModeChange):
+            pass
+        else:
+            _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
+
         self.async_schedule_update_ha_state(False)
+
+    @cloud_io
+    def fetch_device_state(self):
+        state = self._device.get_status()
+        self._is_on = state.get('togglex').get('onoff') == 1
+        mode = state.get('mode').get('state')
+
+        if self._device.type == "mts100v3":
+            self._device_mode = ThermostatV3Mode(mode)
+        elif self._device.type == "mts100":
+            self._device_mode = ThermostatMode(mode)
+        else:
+            _LOGGER.warning("Unknown device type %s" % self._device.type)
+
+        temp = state.get('temperature')
+        self._current_temperature = float(temp.get('room')) / 10
+        self._target_temperature = float(temp.get('currentSet')) / 10
+        self._heating = temp.get('heating') == 1
+
+    @property
+    def current_temperature(self) -> float:
+        return self._current_temperature
+
+    @property
+    def hvac_action(self) -> str:
+        if not self._is_on:
+            return CURRENT_HVAC_OFF
+        elif self._heating:
+            return CURRENT_HVAC_HEAT
+        else:
+            return CURRENT_HVAC_IDLE
+
+    @property
+    def hvac_mode(self) -> str:
+        if not self._is_on:
+            return HVAC_MODE_OFF
+        elif self._device_mode == ThermostatV3Mode.AUTO:
+            return HVAC_MODE_AUTO
+        elif self._device_mode == ThermostatV3Mode.CUSTOM:
+            return HVAC_MODE_HEAT
+        elif self._device_mode == ThermostatMode.SCHEDULE:
+            return HVAC_MODE_AUTO
+        elif self._device_mode == ThermostatMode.CUSTOM:
+            return HVAC_MODE_HEAT
+        else:
+            return HVAC_MODE_HEAT
 
     @property
     def available(self) -> bool:
         # A device is available if it's online
-        return self._device.online
+        return self._is_online
 
     @property
     def name(self) -> str:
@@ -41,14 +111,7 @@ class ValveEntityWrapper(ClimateDevice):
 
     @property
     def supported_features(self):
-        if not self.available:
-            return 0
-
-        flags = 0
-        flags |= SUPPORT_TARGET_TEMPERATURE
-        flags |= SUPPORT_PRESET_MODE
-
-        return flags
+        return self._flags
 
     @property
     def device_info(self):
@@ -65,51 +128,21 @@ class ValveEntityWrapper(ClimateDevice):
         return TEMP_CELSIUS
 
     @property
-    def current_temperature(self) -> float:
-        return self._device.room_temperature
-
-    @property
-    def hvac_action(self) -> str:
-        if self._device.onoff == 0:
-            return CURRENT_HVAC_OFF
-        elif self._device.heating:
-            return CURRENT_HVAC_HEAT
-        else:
-            return CURRENT_HVAC_IDLE
-
-    @property
-    def hvac_mode(self) -> str:
-        if self._device.onoff == 0:
-            return HVAC_MODE_OFF
-        elif self._device.mode == ThermostatV3Mode.AUTO:
-            return HVAC_MODE_AUTO
-        elif self._device.mode == ThermostatV3Mode.CUSTOM:
-            return HVAC_MODE_HEAT
-        elif self._device.mode == ThermostatMode.SCHEDULE:
-            return HVAC_MODE_AUTO
-        elif self._device.mode == ThermostatMode.CUSTOM:
-            return HVAC_MODE_HEAT
-        else:
-            return HVAC_MODE_HEAT
-
-    @property
     def hvac_modes(self) -> List[str]:
         return [HVAC_MODE_OFF, HVAC_MODE_AUTO, HVAC_MODE_HEAT]
 
+    @cloud_io
     def set_temperature(self, **kwargs) -> None:
         self._device.set_target_temperature(kwargs.get('temperature'))
 
-    def set_humidity(self, humidity: int) -> None:
-        # Not supported
-        pass
-
-    def set_fan_mode(self, fan_mode: str) -> None:
-        # Not supported
-        pass
-
+    @cloud_io
     def set_hvac_mode(self, hvac_mode: str) -> None:
+        # NOTE: this method will also update the local state as the thermostat will take too much time to get the
+        # command ACK.
         if hvac_mode == HVAC_MODE_OFF:
             self._device.turn_off()
+            self._is_on = False  # Update local state
+            self.async_schedule_update_ha_state()
             return
 
         if self._device.type == "mts100v3":
@@ -117,13 +150,17 @@ class ValveEntityWrapper(ClimateDevice):
                 def action(error, response):
                     if error is None:
                         self._device.set_mode(ThermostatV3Mode.CUSTOM)
+                        self._device_mode = ThermostatV3Mode.CUSTOM  # Update local state
                 self._device.turn_on(callback=action)
+                self._is_on = True  # Update local state
 
             elif hvac_mode == HVAC_MODE_AUTO:
                 def action(error, response):
                     if error is None:
                         self._device.set_mode(ThermostatV3Mode.AUTO)
+                        self._device_mode = ThermostatV3Mode.AUTO  # Update local state
                 self._device.turn_on(callback=action)
+                self._is_on = True  # Update local state
             else:
                 _LOGGER.warning("Unsupported mode for this device")
 
@@ -132,50 +169,35 @@ class ValveEntityWrapper(ClimateDevice):
                 def action(error, response):
                     if error is None:
                         self._device.set_mode(ThermostatMode.CUSTOM)
+                        self._device_mode = ThermostatMode.CUSTOM  # Update local state
                 self._device.turn_on(callback=action)
+                self._is_on = True  # Update local state
             elif hvac_mode == HVAC_MODE_AUTO:
                 def action(error, response):
                     if error is None:
                         self._device.set_mode(ThermostatMode.SCHEDULE)
+                        self._device_mode = ThermostatMode.SCHEDULE  # Update local state
                 self._device.turn_on(callback=action)
+                self._is_on = True  # Update local state
             else:
                 _LOGGER.warning("Unsupported mode for this device")
         else:
             _LOGGER.warning("Unsupported mode for this device")
 
-    def set_swing_mode(self, swing_mode: str) -> None:
-        # Not supported
-        pass
-
+    @cloud_io
     def set_preset_mode(self, preset_mode: str) -> None:
         if self._device.type == "mts100v3":
             self._device.set_mode(ThermostatV3Mode[preset_mode])
+            self._device_mode = ThermostatV3Mode[preset_mode]  # Update local state
         elif self._device.type == "mts100":
             self._device.set_mode(ThermostatMode[preset_mode])
+            self._device_mode = ThermostatMode[preset_mode]  # Update local state
         else:
             _LOGGER.warning("Unsupported preset for this device")
 
-    def turn_aux_heat_on(self) -> None:
-        # Not supported
-        pass
-
-    def turn_aux_heat_off(self) -> None:
-        # Not supported
-        pass
-
     @property
     def target_temperature(self) -> Optional[float]:
-        return self._device.target_temperature
-
-    @property
-    def target_temperature_high(self) -> Optional[float]:
-        # Not supported
-        return None
-
-    @property
-    def target_temperature_low(self) -> Optional[float]:
-        # Not supported
-        return None
+        return self._target_temperature
 
     @property
     def target_temperature_step(self) -> Optional[float]:
@@ -187,9 +209,9 @@ class ValveEntityWrapper(ClimateDevice):
 
     @property
     def preset_modes(self) -> Optional[List[str]]:
-        if isinstance(self._device.mode, ThermostatV3Mode):
+        if isinstance(self._device_mode, ThermostatV3Mode):
             return [e.name for e in ThermostatV3Mode]
-        elif isinstance(self._device.mode, ThermostatMode):
+        elif isinstance(self._device_mode, ThermostatMode):
             return [e.name for e in ThermostatMode]
         else:
             _LOGGER.warning("Unknown valve mode type.")
@@ -198,6 +220,16 @@ class ValveEntityWrapper(ClimateDevice):
     @property
     def is_aux_heat(self) -> Optional[bool]:
         return False
+
+    @property
+    def target_temperature_high(self) -> Optional[float]:
+        # Not supported
+        return None
+
+    @property
+    def target_temperature_low(self) -> Optional[float]:
+        # Not supported
+        return None
 
     @property
     def fan_mode(self) -> Optional[str]:
@@ -218,6 +250,21 @@ class ValveEntityWrapper(ClimateDevice):
     def swing_modes(self) -> Optional[List[str]]:
         # Not supported
         return None
+
+    def set_humidity(self, humidity: int) -> None:
+        pass
+
+    def set_fan_mode(self, fan_mode: str) -> None:
+        pass
+
+    def set_swing_mode(self, swing_mode: str) -> None:
+        pass
+
+    def turn_aux_heat_on(self) -> None:
+        pass
+
+    def turn_aux_heat_off(self) -> None:
+        pass
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
