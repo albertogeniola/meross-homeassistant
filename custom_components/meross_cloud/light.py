@@ -99,7 +99,6 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
 
         if self._state.get('capacity') == 5:  # rgb mode
             rgb = rgb_int_to_tuple(self._state.get('rgb'))
-            _LOGGER.info("rgb: %s" % str(rgb))
             return color_util.color_RGB_to_hs(*rgb)
         return None
 

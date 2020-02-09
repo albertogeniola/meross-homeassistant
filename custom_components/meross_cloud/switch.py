@@ -12,21 +12,21 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
 
     def __init__(self, device: GenericPlug, channel: int):
+        # If the current device has more than 1 channel, we need to setup the device name and id accordingly
+        if len(device.get_channels()) > 1:
+            self._id = calculate_switch_id(device.uuid, channel)
+            channelData = device.get_channels()[channel]
+            self._entity_name = "{} - {}".format(device.name, channelData.get('devName', 'Main Switch'))
+        else:
+            self._id = device.uuid
+            self._entity_name = device.name
+
         super().__init__(device)
 
         # Device properties
         self._channel_id = channel
         self._device_id = device.uuid
         self._device_name = device.name
-
-        # If the current device has more than 1 channel, we need to setup the device name and id accordingly
-        if len(device.get_channels()) > 1:
-            self._id = calculate_switch_id(self._device.uuid, channel)
-            channelData = device.get_channels()[channel]
-            self._entity_name = "{} - {}".format(device.name, channelData.get('devName', 'Main Switch'))
-        else:
-            self._id = device.uuid
-            self._entity_name = device.name
 
         # Device specific state
         self._is_on = None
