@@ -5,25 +5,40 @@ from homeassistant.helpers.entity import Entity
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 
 from .common import (DOMAIN, MANAGER, SENSORS,
-                     calculate_sensor_id)
+                     calculate_sensor_id, AbstractMerossEntityWrapper, cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class PowerSensorWrapper(Entity):
+class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
     """Wrapper class to adapt the Meross power sensors into the Homeassistant platform"""
 
     def __init__(self, device: GenericPlug):
-        self._device = device
+        super().__init__(device)
+
+        # Device properties
         self._device_id = device.uuid
-        self._id = calculate_sensor_id(self._device.uuid)
-        self._device_name = self._device.name
+        self._id = calculate_sensor_id(device.uuid)
+        self._device_name = device.name
         self._sensor_info = None
+
+    def device_event_handler(self, evt):
+        self.schedule_update_ha_state(True)
+
+    def update(self):
+        # TODO: Update Online status
+        # TODO: Update electricity
+
+        if self.available:
+            self._sensor_info = self._fetch_power_status()
+
+    @cloud_io
+    def _fetch_power_status(self):
+        return self._device.get_electricity()
 
     @property
     def available(self) -> bool:
-        # A device is available if it's online
-        return self._device.online
+        return self._is_online
 
     @property
     def name(self) -> str:
@@ -37,10 +52,6 @@ class PowerSensorWrapper(Entity):
     @property
     def unique_id(self) -> str:
         return self._id
-
-    async def async_update(self):
-        if self.available:
-            self._sensor_info = self._device.get_electricity()
 
     @property
     def device_state_attributes(self):
