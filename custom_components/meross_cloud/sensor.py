@@ -33,14 +33,15 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
         try:
             self._device.get_status(force_status_refresh=True)
             self._is_online = self._device.online
+
+            # Update electricity stats
+            if self._is_online:
+                self._sensor_info = self._device.get_electricity()
+
         except:
             _LOGGER.error("Failed to update data for device %s" % self.name)
             _LOGGER.debug("Error details:")
             self._is_online = False
-
-        # Update electricity stats
-        if self._is_online:
-            return self._device.get_electricity()
 
     def force_state_update(self):
         self.schedule_update_ha_state(force_refresh=True)

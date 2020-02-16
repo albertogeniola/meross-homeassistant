@@ -42,12 +42,12 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
         try:
             data = self._device.get_status(force_status_refresh=True)
             self._is_online = self._device.online
-
-            open = data.get(self._channel)
-            if open:
-                self._state = STATE_OPEN
-            else:
-                self._state = STATE_CLOSED
+            if self._is_online:
+                open = data.get(self._channel)
+                if open:
+                    self._state = STATE_OPEN
+                else:
+                    self._state = STATE_CLOSED
         except:
             _LOGGER.error("Failed to update data for device %s" % self.name)
             _LOGGER.debug("Error details:")

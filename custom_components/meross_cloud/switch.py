@@ -37,12 +37,14 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
         try:
             self._device.get_status(force_status_refresh=True)
             self._is_online = self._device.online
+
+            if self._is_online:
+                self._is_on = self._device.get_channel_status(self._channel_id)
+
         except:
             _LOGGER.error("Failed to update data for device %s" % self.name)
             _LOGGER.debug("Error details:")
             self._is_online = False
-
-        self._is_on = self._device.get_channel_status(self._channel_id)
 
     def force_state_update(self):
         self.schedule_update_ha_state(True)

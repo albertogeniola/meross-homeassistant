@@ -136,14 +136,15 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
             self._device.get_status(force_status_refresh=True)
             self._is_online = self._device.online
 
-            if self._device.supports_luminance():
-                self._flags |= SUPPORT_BRIGHTNESS
-            if self._device.is_rgb():
-                self._flags |= SUPPORT_COLOR
-            if self._device.is_light_temperature():
-                self._flags |= SUPPORT_COLOR_TEMP
+            if self._is_online:
+                if self._device.supports_luminance():
+                    self._flags |= SUPPORT_BRIGHTNESS
+                if self._device.is_rgb():
+                    self._flags |= SUPPORT_COLOR
+                if self._device.is_light_temperature():
+                    self._flags |= SUPPORT_COLOR_TEMP
 
-            self._state = self._device.get_status(self._channel_id, force_status_refresh=True)
+                self._state = self._device.get_status(self._channel_id, force_status_refresh=True)
         except:
             _LOGGER.error("Failed to update data for device %s" % self.name)
             _LOGGER.debug("Error details:")

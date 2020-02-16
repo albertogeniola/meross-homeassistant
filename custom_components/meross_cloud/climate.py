@@ -58,20 +58,22 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
         try:
             state = self._device.get_status()
             self._is_online = self._device.online
-            self._is_on = state.get('togglex').get('onoff') == 1
-            mode = state.get('mode').get('state')
 
-            if self._device.type == "mts100v3":
-                self._device_mode = ThermostatV3Mode(mode)
-            elif self._device.type == "mts100":
-                self._device_mode = ThermostatMode(mode)
-            else:
-                _LOGGER.warning("Unknown device type %s" % self._device.type)
+            if self._is_online:
+                self._is_on = state.get('togglex').get('onoff') == 1
+                mode = state.get('mode').get('state')
 
-            temp = state.get('temperature')
-            self._current_temperature = float(temp.get('room')) / 10
-            self._target_temperature = float(temp.get('currentSet')) / 10
-            self._heating = temp.get('heating') == 1
+                if self._device.type == "mts100v3":
+                    self._device_mode = ThermostatV3Mode(mode)
+                elif self._device.type == "mts100":
+                    self._device_mode = ThermostatMode(mode)
+                else:
+                    _LOGGER.warning("Unknown device type %s" % self._device.type)
+
+                temp = state.get('temperature')
+                self._current_temperature = float(temp.get('room')) / 10
+                self._target_temperature = float(temp.get('currentSet')) / 10
+                self._heating = temp.get('heating') == 1
         except:
             _LOGGER.error("Failed to update data for device %s" % self.name)
             _LOGGER.debug("Error details:")
