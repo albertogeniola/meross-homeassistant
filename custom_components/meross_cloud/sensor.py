@@ -137,24 +137,26 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    sensor_entities = []
-    manager = hass.data[DOMAIN][MANAGER]
-    plugs = manager.get_devices_by_kind(GenericPlug)
+    def sync_logic():
+        sensor_entities = []
+        manager = hass.data[DOMAIN][MANAGER]
+        plugs = manager.get_devices_by_kind(GenericPlug)
 
-    # First, parse power sensors that are embedded into power plugs
-    for plug in plugs:  # type: GenericPlug
-        if not plug.online:
-            _LOGGER.warning("The plug %s is offline; it's impossible to determine if it supports any ability"
-                            % plug.name)
-        elif plug.type.startswith("mss310") or plug.supports_consumption_reading():
-            w = PowerSensorWrapper(device=plug)
-            sensor_entities.append(w)
-            hass.data[DOMAIN][HA_SENSOR][w.unique_id] = w
+        # First, parse power sensors that are embedded into power plugs
+        for plug in plugs:  # type: GenericPlug
+            if not plug.online:
+                _LOGGER.warning("The plug %s is offline; it's impossible to determine if it supports any ability"
+                                % plug.name)
+            elif plug.type.startswith("mss310") or plug.supports_consumption_reading():
+                w = PowerSensorWrapper(device=plug)
+                sensor_entities.append(w)
+                hass.data[DOMAIN][HA_SENSOR][w.unique_id] = w
+        # TODO: Then parse thermostat sensors?
+        return sensor_entities
 
-    # TODO: Then parse thermostat sensors?
-
+    sensor_entities = await hass.async_add_executor_job(sync_logic)
     async_add_entities(sensor_entities)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+def setup_platform(hass, config, async_add_entities, discovery_info=None):
     pass

@@ -150,17 +150,20 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    cover_entities = []
-    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
-    openers = manager.get_devices_by_kind(GenericGarageDoorOpener)
+    def sync_logic():
+        cover_entities = []
+        manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+        openers = manager.get_devices_by_kind(GenericGarageDoorOpener)
 
-    for opener in openers:  # type: GenericGarageDoorOpener
-        w = OpenGarageCover(device=opener)
-        cover_entities.append(w)
-        hass.data[DOMAIN][HA_COVER][w.unique_id] = w
+        for opener in openers:  # type: GenericGarageDoorOpener
+            w = OpenGarageCover(device=opener)
+            cover_entities.append(w)
+            hass.data[DOMAIN][HA_COVER][w.unique_id] = w
+        return cover_entities
 
+    cover_entities = await hass.async_add_executor_job(sync_logic)
     async_add_entities(cover_entities)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+def setup_platform(hass, config, async_add_entities, discovery_info=None):
     pass

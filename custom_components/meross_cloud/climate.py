@@ -279,17 +279,20 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    thermostat_devices = []
-    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
-    valves = manager.get_devices_by_kind(ValveSubDevice)
-    for valve in valves:  # type: ValveSubDevice
-        w = ValveEntityWrapper(device=valve)
-        thermostat_devices.append(w)
-        hass.data[DOMAIN][HA_CLIMATE][w.unique_id] = w
+    def sync_logic():
+        thermostat_devices = []
+        manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+        valves = manager.get_devices_by_kind(ValveSubDevice)
+        for valve in valves:  # type: ValveSubDevice
+            w = ValveEntityWrapper(device=valve)
+            thermostat_devices.append(w)
+            hass.data[DOMAIN][HA_CLIMATE][w.unique_id] = w
+        return thermostat_devices
 
+    thermostat_devices = await hass.async_add_executor_job(sync_logic)
     async_add_entities(thermostat_devices)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+def setup_platform(hass, config, async_add_entities, discovery_info=None):
     pass
 

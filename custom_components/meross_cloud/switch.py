@@ -3,6 +3,7 @@ from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.meross_event import DeviceOnlineStatusEvent, DeviceSwitchStatusEvent
 from .common import DOMAIN, MANAGER, calculate_switch_id, AbstractMerossEntityWrapper, cloud_io, HA_SWITCH
 import logging
+import asyncio
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -104,21 +105,24 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    switch_entities = []
-    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
-    plugs = manager.get_devices_by_kind(GenericPlug)
+    def sync_logic():
+        switch_entities = []
+        manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+        plugs = manager.get_devices_by_kind(GenericPlug)
 
-    for plug in plugs:  # type: GenericPlug
-        # Every Meross plug might have multiple switches onboard. For this reason we need to
-        # instantiate multiple switch entities for every channel.
-        for channel_index, channel in enumerate(plug.get_channels()):
-            w = SwitchEntityWrapper(device=plug, channel=channel_index)
-            switch_entities.append(w)
-            hass.data[DOMAIN][HA_SWITCH][w.unique_id] = w
+        for plug in plugs:  # type: GenericPlug
+            # Every Meross plug might have multiple switches onboard. For this reason we need to
+            # instantiate multiple switch entities for every channel.
+            for channel_index, channel in enumerate(plug.get_channels()):
+                w = SwitchEntityWrapper(device=plug, channel=channel_index)
+                switch_entities.append(w)
+                hass.data[DOMAIN][HA_SWITCH][w.unique_id] = w
+        return switch_entities
 
+    switch_entities = await hass.async_add_executor_job(sync_logic)
     async_add_entities(switch_entities)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+def setup_platform(hass, config, async_add_entities, discovery_info=None):
     pass
 

@@ -180,18 +180,21 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    bulb_devices = []
-    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
-    bulbs = manager.get_devices_by_kind(GenericBulb)
+    def sync_logic():
+        bulb_devices = []
+        manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+        bulbs = manager.get_devices_by_kind(GenericBulb)
 
-    for bulb in bulbs:
-        w = LightEntityWrapper(device=bulb, channel=0)
-        bulb_devices.append(w)
-        hass.data[DOMAIN][HA_LIGHT][w.unique_id] = w
+        for bulb in bulbs:
+            w = LightEntityWrapper(device=bulb, channel=0)
+            bulb_devices.append(w)
+            hass.data[DOMAIN][HA_LIGHT][w.unique_id] = w
+        return bulb_devices
 
+    bulb_devices = await hass.async_add_executor_job(sync_logic)
     async_add_entities(bulb_devices)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+def setup_platform(hass, config, async_add_entities, discovery_info=None):
     pass
 
