@@ -5,7 +5,7 @@ from homeassistant.helpers.entity import Entity
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 
 from .common import (DOMAIN, MANAGER, SENSORS,
-                     calculate_sensor_id, AbstractMerossEntityWrapper, cloud_io)
+                     calculate_sensor_id, AbstractMerossEntityWrapper, cloud_io, HA_SENSOR)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,13 +27,19 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
 
     def update(self):
         # TODO: Update Online status
-        # TODO: Update electricity
-
         if self.available:
             self._sensor_info = self._fetch_power_status()
 
+    def force_state_update(self):
+        self._fetch_status(force_update=True)
+
     @cloud_io
-    def _fetch_power_status(self):
+    def _fetch_status(self, force_update=False):
+        # Online status
+        self._device.get_status(force_status_refresh=force_update)
+        self._is_online = self._device.online
+
+        # Update electricity stats
         return self._device.get_electricity()
 
     @property
@@ -139,6 +145,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         elif plug.type.startswith("mss310") or plug.supports_consumption_reading():
             w = PowerSensorWrapper(device=plug)
             sensor_entities.append(w)
+            hass.data[DOMAIN][HA_SENSOR][w.unique_id] = w
 
     # TODO: Then parse thermostat sensors?
 

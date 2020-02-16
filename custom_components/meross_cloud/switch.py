@@ -1,7 +1,7 @@
 from homeassistant.components.switch import SwitchDevice
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.meross_event import DeviceOnlineStatusEvent, DeviceSwitchStatusEvent
-from .common import DOMAIN, MANAGER, calculate_switch_id, AbstractMerossEntityWrapper, cloud_io
+from .common import DOMAIN, MANAGER, calculate_switch_id, AbstractMerossEntityWrapper, cloud_io, HA_SWITCH
 import logging
 
 
@@ -31,7 +31,10 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
         # Device specific state
         self._is_on = None
         if self._is_online:
-            self._is_on = self.fetch_switch_state()
+            self._is_on = self.fetch_state()
+
+    def force_state_update(self):
+        self.fetch_state(force_update=True)
 
     def device_event_handler(self, evt):
         if isinstance(evt, DeviceSwitchStatusEvent):
@@ -87,7 +90,9 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
         self._device.turn_on_channel(self._channel_id)
 
     @cloud_io
-    def fetch_switch_state(self):
+    def fetch_state(self, force_update=False):
+        self._device.get_status(force_status_refresh=force_update)
+        self._is_online = self._device.online
         return self._device.get_channel_status(self._channel_id)
 
 
@@ -102,6 +107,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         for channel_index, channel in enumerate(plug.get_channels()):
             w = SwitchEntityWrapper(device=plug, channel=channel_index)
             switch_entities.append(w)
+            hass.data[DOMAIN][HA_SWITCH][w.unique_id] = w
 
     async_add_entities(switch_entities)
 

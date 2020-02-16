@@ -9,7 +9,7 @@ from meross_iot.cloud.devices.subdevices.thermostats import ValveSubDevice, Ther
 from meross_iot.manager import MerossManager
 from meross_iot.meross_event import ThermostatTemperatureChange, ThermostatModeChange
 
-from .common import DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io
+from .common import DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io, HA_CLIMATE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,9 +50,14 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
 
         self.async_schedule_update_ha_state(False)
 
+    def force_state_update(self):
+        # TODO: Check if this is enough
+        self.fetch_device_state()
+
     @cloud_io
     def fetch_device_state(self):
         state = self._device.get_status()
+        self._is_online = self._device.online
         self._is_on = state.get('togglex').get('onoff') == 1
         mode = state.get('mode').get('state')
 
@@ -274,6 +279,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     for valve in valves:  # type: ValveSubDevice
         w = ValveEntityWrapper(device=valve)
         thermostat_devices.append(w)
+        hass.data[DOMAIN][HA_CLIMATE][w.unique_id] = w
 
     async_add_entities(thermostat_devices)
 

@@ -5,7 +5,7 @@ from homeassistant.const import (STATE_CLOSED, STATE_CLOSING, STATE_OPEN,
                                  STATE_OPENING, STATE_UNKNOWN)
 from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
 from meross_iot.meross_event import MerossEventType, DeviceDoorStatusEvent
-from .common import (DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io)
+from .common import (DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io, HA_COVER)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,11 +34,17 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
 
         # If the device is online, we need to update its status from STATE_UNKNOWN
         if device.online:
-            self._fetch_status()
+            self._fetch_status(force_update=True)
+
+    def force_state_update(self):
+        self._fetch_status(force_update=True)
 
     @cloud_io
-    def _fetch_status(self):
-        open = self._device.get_status().get(self._channel)
+    def _fetch_status(self, force_update=False):
+        data = self._device.get_status(force_status_refresh=force_update)
+        self._is_online = self._device.online
+
+        open = data.get(self._channel)
         if open:
             self._state = STATE_OPEN
         else:
@@ -149,6 +155,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     for opener in openers:  # type: GenericGarageDoorOpener
         w = OpenGarageCover(device=opener)
         cover_entities.append(w)
+        hass.data[DOMAIN][HA_COVER][w.unique_id] = w
 
     async_add_entities(cover_entities)
 

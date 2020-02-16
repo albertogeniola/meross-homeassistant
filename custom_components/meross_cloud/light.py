@@ -6,7 +6,7 @@ from meross_iot.cloud.devices.light_bulbs import GenericBulb
 from meross_iot.manager import MerossManager
 from meross_iot.meross_event import BulbSwitchStateChangeEvent, BulbLightStateChangeEvent
 
-from .common import DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io
+from .common import DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io, HA_LIGHT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
 
         # Update device state
         if self._is_online:
-            self._state = self._fetch_state()
+            self._state = self._fetch_state(force_update=True)
             if self._device.supports_luminance():
                 self._flags |= SUPPORT_BRIGHTNESS
             if self._device.is_rgb():
@@ -135,9 +135,13 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
             'sw_version': self._device.fwversion
         }
 
+    def force_state_update(self):
+        self._fetch_state(force_update=True)
+
     @cloud_io
-    def _fetch_state(self):
-        self._state = self._device.get_status(self._channel_id)
+    def _fetch_state(self, force_update=False):
+        self._state = self._device.get_status(self._channel_id, force_status_refresh=force_update)
+        self._is_online = self._device.online
         return self._state
 
     @cloud_io
@@ -177,6 +181,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     for bulb in bulbs:
         w = LightEntityWrapper(device=bulb, channel=0)
         bulb_devices.append(w)
+        hass.data[DOMAIN][HA_LIGHT][w.unique_id] = w
 
     async_add_entities(bulb_devices)
 
