@@ -28,13 +28,24 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
         self._device_id = device.uuid
         self._device_name = device.name
 
-        # Device specific state
+        # Device state
         self._is_on = None
-        if self._is_online:
-            self._is_on = self.fetch_state()
+        self.update()
+
+    @cloud_io
+    def update(self):
+        try:
+            self._device.get_status(force_status_refresh=True)
+            self._is_online = self._device.online
+        except:
+            _LOGGER.error("Failed to update data for device %s" % self.name)
+            _LOGGER.debug("Error details:")
+            self._is_online = False
+
+        self._is_on = self._device.get_channel_status(self._channel_id)
 
     def force_state_update(self):
-        self.fetch_state(force_update=True)
+        self.schedule_update_ha_state(True)
 
     def device_event_handler(self, evt):
         if isinstance(evt, DeviceSwitchStatusEvent):
@@ -44,7 +55,7 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
             _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
 
         # When receiving an event, let's immediately trigger the update state
-        self.async_schedule_update_ha_state(True)
+        self.schedule_update_ha_state(False)
 
     @property
     def unique_id(self) -> str:
@@ -88,12 +99,6 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
     @cloud_io
     def turn_on(self, **kwargs) -> None:
         self._device.turn_on_channel(self._channel_id)
-
-    @cloud_io
-    def fetch_state(self, force_update=False):
-        self._device.get_status(force_status_refresh=force_update)
-        self._is_online = self._device.online
-        return self._device.get_channel_status(self._channel_id)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):

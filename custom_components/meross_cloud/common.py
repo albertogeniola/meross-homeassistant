@@ -59,6 +59,22 @@ def notify_error(hass, notification_id, title, message):
     )
 
 
+def cloud_io(func):
+    @functools.wraps(func)
+    def wrapper_decorator(*args, **kwargs):
+        instance = args[0]  # type: Union[AbstractMerossEntityWrapper, Entity]
+        try:
+            value = func(*args, **kwargs)
+            instance.reset_error_state()
+            return value
+        except CommandTimeoutException:
+            _LOGGER.error("A timeout exception occurred while executing function %s " % str(func))
+            _LOGGER.debug("Exception info")
+            instance.notify_error()
+
+    return wrapper_decorator
+
+
 class AbstractMerossEntityWrapper(ABC):
     """This method wraps utilities and common behavior to all the MerossDeviceWrappers"""
     def __init__(self,
@@ -92,6 +108,7 @@ class AbstractMerossEntityWrapper(ABC):
         pass
 
     @abstractmethod
+    @cloud_io
     def force_state_update(self):
         pass
 
@@ -108,22 +125,6 @@ class AbstractMerossEntityWrapper(ABC):
             self._is_online = False
             # TODO: start a timed poller
             # TODO: update state?
-
-
-def cloud_io(func):
-    @functools.wraps(func)
-    def wrapper_decorator(*args, **kwargs):
-        instance = args[0]  # type: Union[AbstractMerossEntityWrapper, Entity]
-        try:
-            value = func(*args, **kwargs)
-            instance.reset_error_state()
-            return value
-        except CommandTimeoutException:
-            _LOGGER.error("A timeout exception occurred while executing function %s " % str(func))
-            _LOGGER.debug("Exception info")
-            instance.notify_error()
-
-    return wrapper_decorator
 
 
 class MerossCloudConnectionWatchdog(object):
@@ -185,7 +186,12 @@ class MerossCloudConnectionWatchdog(object):
 
     def _force_full_device_update(self):
         for plat in MEROSS_PLATFORMS:
+            # TODO: find a better way to handle device offline exceptions.
+            # Maybe a viable option is to rely on HTTP api to check online devices.
             for uuid, device in self._hass.data[DOMAIN][plat].items():  # type:AbstractMerossEntityWrapper
                 _LOGGER.info("Forcing state update for device %s" % uuid)
-                device.force_state_update()
+                try:
+                    device.force_state_update()
+                except:
+                    _LOGGER.exception("Error occurred while refreshing status for device %s" % device.name)
 

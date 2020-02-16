@@ -32,27 +32,29 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
         self._state = STATE_UNKNOWN
         self._state_before_move = STATE_UNKNOWN
 
-        # If the device is online, we need to update its status from STATE_UNKNOWN
-        if device.online:
-            self._fetch_status(force_update=True)
+        self.update()
 
     def force_state_update(self):
-        self._fetch_status(force_update=True)
+        self.schedule_update_ha_state(True)
 
     @cloud_io
-    def _fetch_status(self, force_update=False):
-        data = self._device.get_status(force_status_refresh=force_update)
-        self._is_online = self._device.online
+    def update(self):
+        try:
+            data = self._device.get_status(force_status_refresh=True)
+            self._is_online = self._device.online
 
-        open = data.get(self._channel)
-        if open:
-            self._state = STATE_OPEN
-        else:
-            self._state = STATE_CLOSED
-        return self._state
+            open = data.get(self._channel)
+            if open:
+                self._state = STATE_OPEN
+            else:
+                self._state = STATE_CLOSED
+        except:
+            _LOGGER.error("Failed to update data for device %s" % self.name)
+            _LOGGER.debug("Error details:")
+            self._is_online = False
 
     def device_event_handler(self, evt):
-        if isinstance(evt, DeviceDoorStatusEvent) and evt.channel==self._channel:
+        if isinstance(evt, DeviceDoorStatusEvent) and evt.channel == self._channel:
             # The underlying library only exposes "open" and "closed" statuses
             if evt.door_state == 'open':
                 self._state = STATE_OPEN
@@ -64,7 +66,7 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
             _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
 
         # When receiving an event, let's immediately trigger the update state
-        self.async_schedule_update_ha_state(True)
+        self.schedule_update_ha_state(False)
 
     @property
     def name(self) -> str:
@@ -103,7 +105,7 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
             self._device.close_door(channel=self._channel, ensure_closed=True)
 
             # We changed the state, thus we need to notify HA about it
-            self.schedule_update_ha_state(True)
+            self.schedule_update_ha_state(False)
 
     @cloud_io
     def open_cover(self, **kwargs):
@@ -114,7 +116,7 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
             self._device.open_door(channel=self._channel, ensure_opened=True)
 
             # We changed the state, thus we need to notify HA about it
-            self.schedule_update_ha_state(True)
+            self.schedule_update_ha_state(False)
 
     @property
     def should_poll(self) -> bool:

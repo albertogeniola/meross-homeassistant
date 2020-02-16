@@ -30,13 +30,13 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
         self._flags |= SUPPORT_PRESET_MODE
 
         # Device state
-        self._is_on = self._device.online
-        if self._is_on:
-            self._current_temperature = None
-            self._device_mode = None
-            self._target_temperature = None
-            self._heating = None
-            self.fetch_device_state()
+        self._current_temperature = None
+        self._is_on = None
+        self._device_mode = None
+        self._target_temperature = None
+        self._heating = None
+
+        self.update()
 
     def device_event_handler(self, evt):
         if isinstance(evt, ThermostatTemperatureChange):
@@ -51,27 +51,31 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
         self.async_schedule_update_ha_state(False)
 
     def force_state_update(self):
-        # TODO: Check if this is enough
-        self.fetch_device_state()
+        self.schedule_update_ha_state(force_refresh=True)
 
     @cloud_io
-    def fetch_device_state(self):
-        state = self._device.get_status()
-        self._is_online = self._device.online
-        self._is_on = state.get('togglex').get('onoff') == 1
-        mode = state.get('mode').get('state')
+    def update(self):
+        try:
+            state = self._device.get_status()
+            self._is_online = self._device.online
+            self._is_on = state.get('togglex').get('onoff') == 1
+            mode = state.get('mode').get('state')
 
-        if self._device.type == "mts100v3":
-            self._device_mode = ThermostatV3Mode(mode)
-        elif self._device.type == "mts100":
-            self._device_mode = ThermostatMode(mode)
-        else:
-            _LOGGER.warning("Unknown device type %s" % self._device.type)
+            if self._device.type == "mts100v3":
+                self._device_mode = ThermostatV3Mode(mode)
+            elif self._device.type == "mts100":
+                self._device_mode = ThermostatMode(mode)
+            else:
+                _LOGGER.warning("Unknown device type %s" % self._device.type)
 
-        temp = state.get('temperature')
-        self._current_temperature = float(temp.get('room')) / 10
-        self._target_temperature = float(temp.get('currentSet')) / 10
-        self._heating = temp.get('heating') == 1
+            temp = state.get('temperature')
+            self._current_temperature = float(temp.get('room')) / 10
+            self._target_temperature = float(temp.get('currentSet')) / 10
+            self._heating = temp.get('heating') == 1
+        except:
+            _LOGGER.error("Failed to update data for device %s" % self.name)
+            _LOGGER.debug("Error details:")
+            self._is_online = False
 
     @property
     def current_temperature(self) -> float:
