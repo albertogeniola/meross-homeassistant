@@ -32,26 +32,23 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
         self._state = STATE_UNKNOWN
         self._state_before_move = STATE_UNKNOWN
 
-        self.update()
+        self._is_online = self._device.online
+        if self._is_online:
+            self.update()
 
     def force_state_update(self):
         self.schedule_update_ha_state(True)
 
     @cloud_io
     def update(self):
-        try:
-            data = self._device.get_status(force_status_refresh=True)
-            self._is_online = self._device.online
-            if self._is_online:
-                open = data.get(self._channel)
-                if open:
-                    self._state = STATE_OPEN
-                else:
-                    self._state = STATE_CLOSED
-        except:
-            _LOGGER.error("Failed to update data for device %s" % self.name)
-            _LOGGER.debug("Error details:")
-            self._is_online = False
+        data = self._device.get_status(force_status_refresh=True)
+        self._is_online = self._device.online
+        if self._is_online:
+            open = data.get(self._channel)
+            if open:
+                self._state = STATE_OPEN
+            else:
+                self._state = STATE_CLOSED
 
     def device_event_handler(self, evt):
         if isinstance(evt, DeviceDoorStatusEvent) and evt.channel == self._channel:

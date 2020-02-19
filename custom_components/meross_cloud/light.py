@@ -41,7 +41,9 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
         self._device_name = self._device.name
 
         # Update device state
-        self.update()
+        self._is_online = self._device.online
+        if self._is_online:
+            self.update()
 
     def device_event_handler(self, evt):
         if isinstance(evt, BulbSwitchStateChangeEvent):
@@ -132,23 +134,18 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
 
     @cloud_io
     def update(self):
-        try:
-            self._device.get_status(force_status_refresh=True)
-            self._is_online = self._device.online
+        self._device.get_status(force_status_refresh=True)
+        self._is_online = self._device.online
 
-            if self._is_online:
-                if self._device.supports_luminance():
-                    self._flags |= SUPPORT_BRIGHTNESS
-                if self._device.is_rgb():
-                    self._flags |= SUPPORT_COLOR
-                if self._device.is_light_temperature():
-                    self._flags |= SUPPORT_COLOR_TEMP
+        if self._is_online:
+            if self._device.supports_luminance():
+                self._flags |= SUPPORT_BRIGHTNESS
+            if self._device.is_rgb():
+                self._flags |= SUPPORT_COLOR
+            if self._device.is_light_temperature():
+                self._flags |= SUPPORT_COLOR_TEMP
 
-                self._state = self._device.get_status(self._channel_id, force_status_refresh=True)
-        except:
-            _LOGGER.error("Failed to update data for device %s" % self.name)
-            _LOGGER.debug("Error details:")
-            self._is_online = False
+            self._state = self._device.get_status(self._channel_id, force_status_refresh=True)
 
     @cloud_io
     def turn_off(self, **kwargs) -> None:

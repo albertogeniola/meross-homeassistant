@@ -22,6 +22,8 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
         self._device_name = device.name
         self._sensor_info = None
 
+        self._is_online = self._device.online
+
     def device_event_handler(self, evt):
         # This device is handled via polling.
         # However, if an event is detected, we immediately ask HA to update its state.
@@ -30,18 +32,12 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
     @cloud_io
     def update(self):
         # TODO: loading the entire device data at every iteration might be stressful. Need to re-engineer this
-        try:
-            self._device.get_status(force_status_refresh=True)
-            self._is_online = self._device.online
+        self._device.get_status(force_status_refresh=True)
+        self._is_online = self._device.online
 
-            # Update electricity stats
-            if self._is_online:
-                self._sensor_info = self._device.get_electricity()
-
-        except:
-            _LOGGER.error("Failed to update data for device %s" % self.name)
-            _LOGGER.debug("Error details:")
-            self._is_online = False
+        # Update electricity stats
+        if self._is_online:
+            self._sensor_info = self._device.get_electricity()
 
     def force_state_update(self):
         self.schedule_update_ha_state(force_refresh=True)
