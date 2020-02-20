@@ -32,7 +32,7 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
         # Device state
         self._is_on = None
         self._is_online = self._device.online
-        if self._is_online:
+        if self._is_online and self.enabled:
             self.update()
 
     @cloud_io
@@ -44,7 +44,8 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
             self._is_on = self._device.get_channel_status(self._channel_id)
 
     def force_state_update(self):
-        self.schedule_update_ha_state(True)
+        if self.enabled:
+            self.schedule_update_ha_state(True)
 
     def device_event_handler(self, evt):
         if isinstance(evt, DeviceSwitchStatusEvent):
@@ -54,7 +55,9 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
             _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
 
         # When receiving an event, let's immediately trigger the update state
-        self.schedule_update_ha_state(False)
+        # Only update the state if the device is enabled
+        if self.enabled:
+            self.schedule_update_ha_state(False)
 
     @property
     def unique_id(self) -> str:

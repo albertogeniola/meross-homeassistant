@@ -27,7 +27,8 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
     def device_event_handler(self, evt):
         # This device is handled via polling.
         # However, if an event is detected, we immediately ask HA to update its state.
-        self.schedule_update_ha_state(False)
+        if self.enabled:
+            self.schedule_update_ha_state(False)
 
     @cloud_io
     def update(self):
@@ -40,7 +41,8 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
             self._sensor_info = self._device.get_electricity()
 
     def force_state_update(self):
-        self.schedule_update_ha_state(force_refresh=True)
+        if self.enabled:
+            self.schedule_update_ha_state(force_refresh=True)
 
     @property
     def available(self) -> bool:
