@@ -37,7 +37,8 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
             self.update()
 
     def force_state_update(self):
-        self.schedule_update_ha_state(True)
+        if self.enabled:
+            self.schedule_update_ha_state(True)
 
     @cloud_io
     def update(self):
@@ -63,7 +64,8 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
             _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
 
         # When receiving an event, let's immediately trigger the update state
-        self.schedule_update_ha_state(False)
+        if self.enabled:
+            self.schedule_update_ha_state(False)
 
     @property
     def name(self) -> str:
@@ -102,7 +104,8 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
             self._device.close_door(channel=self._channel, ensure_closed=True)
 
             # We changed the state, thus we need to notify HA about it
-            self.schedule_update_ha_state(False)
+            if self.enabled:
+                self.schedule_update_ha_state(False)
 
     @cloud_io
     def open_cover(self, **kwargs):
@@ -113,7 +116,8 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
             self._device.open_door(channel=self._channel, ensure_opened=True)
 
             # We changed the state, thus we need to notify HA about it
-            self.schedule_update_ha_state(False)
+            if self.enabled:
+                self.schedule_update_ha_state(False)
 
     @property
     def should_poll(self) -> bool:

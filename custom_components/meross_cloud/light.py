@@ -61,7 +61,8 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
             _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
 
         # When receiving an event, let's immediately trigger the update state
-        self.schedule_update_ha_state(False)
+        if self.enabled:
+            self.schedule_update_ha_state(False)
 
     @property
     def available(self) -> bool:
@@ -130,7 +131,8 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
         }
 
     def force_state_update(self):
-        self.schedule_update_ha_state(True)
+        if self.enabled:
+            self.schedule_update_ha_state(True)
 
     @cloud_io
     def update(self):

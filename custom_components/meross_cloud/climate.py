@@ -59,10 +59,12 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
         else:
             _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
 
-        self.async_schedule_update_ha_state(False)
+        if self.enabled:
+            self.schedule_update_ha_state(False)
 
     def force_state_update(self):
-        self.schedule_update_ha_state(True)
+        if self.enabled:
+            self.schedule_update_ha_state(True)
 
     @cloud_io
     def update(self):
@@ -150,8 +152,10 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
 
     @cloud_io
     def set_temperature(self, **kwargs) -> None:
-        self._device.set_target_temperature(kwargs.get('temperature'), callback=none_callback, timeout=THERMOSTAT_TIMEOUT)
-        self.schedule_update_ha_state(False)
+        target = kwargs.get('temperature')
+        self._device.set_target_temperature(target, callback=none_callback, timeout=THERMOSTAT_TIMEOUT)
+        # Assume update will work, thus update local state immediately
+        self._target_temperature = target
 
     @cloud_io
     def set_hvac_mode(self, hvac_mode: str) -> None:
@@ -160,7 +164,6 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
         if hvac_mode == HVAC_MODE_OFF:
             self._device.turn_off(callback=none_callback, timeout=THERMOSTAT_TIMEOUT)
             self._is_on = False  # Update local state
-            #self.schedule_update_ha_state(False)
             return
 
         if self._device.type == "mts100v3":
@@ -168,17 +171,21 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
                 def action(error, response):
                     if error is None:
                         self._device.set_mode(ThermostatV3Mode.CUSTOM, callback=none_callback, timeout=THERMOSTAT_TIMEOUT)
-                        self._device_mode = ThermostatV3Mode.CUSTOM  # Update local state
                 self._device.turn_on(callback=action, timeout=THERMOSTAT_TIMEOUT)
-                self._is_on = True  # Update local state
+
+                # Update local state
+                self._device_mode = ThermostatV3Mode.CUSTOM
+                self._is_on = True
 
             elif hvac_mode == HVAC_MODE_AUTO:
                 def action(error, response):
                     if error is None:
                         self._device.set_mode(ThermostatV3Mode.AUTO, callback=none_callback, timeout=THERMOSTAT_TIMEOUT)
-                        self._device_mode = ThermostatV3Mode.AUTO  # Update local state
                 self._device.turn_on(callback=action, timeout=THERMOSTAT_TIMEOUT)
-                self._is_on = True  # Update local state
+
+                # Update local state
+                self._is_on = True
+                self._device_mode = ThermostatV3Mode.AUTO
             else:
                 _LOGGER.warning("Unsupported mode for this device")
 
@@ -187,21 +194,24 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
                 def action(error, response):
                     if error is None:
                         self._device.set_mode(ThermostatMode.CUSTOM, callback=none_callback, timeout=THERMOSTAT_TIMEOUT)
-                        self._device_mode = ThermostatMode.CUSTOM  # Update local state
                 self._device.turn_on(callback=action, timeout=THERMOSTAT_TIMEOUT)
-                self._is_on = True  # Update local state
+
+                # Update local state
+                self._is_on = True
+                self._device_mode = ThermostatMode.CUSTOM
             elif hvac_mode == HVAC_MODE_AUTO:
                 def action(error, response):
                     if error is None:
                         self._device.set_mode(ThermostatMode.SCHEDULE, callback=none_callback, timeout=THERMOSTAT_TIMEOUT)
-                        self._device_mode = ThermostatMode.SCHEDULE  # Update local state
                 self._device.turn_on(callback=action, timeout=THERMOSTAT_TIMEOUT)
-                self._is_on = True  # Update local state
+
+                # Update local state
+                self._is_on = True
+                self._device_mode = ThermostatMode.SCHEDULE
             else:
                 _LOGGER.warning("Unsupported mode for this device")
         else:
             _LOGGER.warning("Unsupported mode for this device")
-        #self.schedule_update_ha_state(False)
 
     @cloud_io
     def set_preset_mode(self, preset_mode: str) -> None:
@@ -213,7 +223,6 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
             self._device.set_mode(ThermostatMode[preset_mode], callback=none_callback, timeout=THERMOSTAT_TIMEOUT)
         else:
             _LOGGER.warning("Unsupported preset for this device")
-        self.schedule_update_ha_state(False)
 
     @property
     def target_temperature(self) -> Optional[float]:
