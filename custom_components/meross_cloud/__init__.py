@@ -27,6 +27,18 @@ CONFIG_SCHEMA = vol.Schema({
 }, extra=vol.ALLOW_EXTRA)
 
 
+def print_version():
+    try:
+        import json
+        import os
+        fname = os.path.join(os.path.dirname(__file__), "manifest.json")
+        with open(fname, "rt") as f:
+            data = json.load(f)
+            _LOGGER.info("MerossCloudVersion: %s" % data.get("meross_cloud_version"))
+    except:
+        _LOGGER.error("Failed to print version")
+
+
 async def async_setup_entry(hass: HomeAssistantType, config_entry):
     """
     This class is called by the HomeAssistant framework when a configuration entry is provided.
@@ -35,6 +47,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     """
 
     try:
+        print_version()
 
         # These will contain the initialized devices
         # The following call can cause am UnauthorizedException if bad login credentials are provided

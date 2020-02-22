@@ -2,6 +2,8 @@
 pip install isort
 isort -rc custom_components/meross_cloud
 
+echo "BuildNumber: $BUILD_BUILDNUMBER"
+
 # Clean the dist directory
 rm -vR dist
 mkdir dist
