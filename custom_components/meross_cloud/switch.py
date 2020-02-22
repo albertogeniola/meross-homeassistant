@@ -38,7 +38,6 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
 
     @cloud_io
     def update(self):
-        _LOGGER.info("Thread %s: SWITCH UPDATE" % threading.current_thread().name)
         self._device.get_status(force_status_refresh=True)
         self._is_online = self._device.online
 
