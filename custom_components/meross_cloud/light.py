@@ -177,6 +177,12 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
             _LOGGER.debug("    brightness change: %r" % brightness)
             self._device.set_light_color(self._channel_id, luminance=brightness)
 
+    async def async_added_to_hass(self) -> None:
+        self._device.register_event_callback(self.common_handler)
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._device.unregister_event_callback(self.common_handler)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     def sync_logic():

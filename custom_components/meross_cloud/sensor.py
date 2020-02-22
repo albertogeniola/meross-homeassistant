@@ -6,6 +6,8 @@ from meross_iot.cloud.devices.power_plugs import GenericPlug
 
 from .common import (DOMAIN, MANAGER, SENSORS,
                      calculate_sensor_id, AbstractMerossEntityWrapper, cloud_io, HA_SENSOR)
+import threading
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +35,7 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
     @cloud_io
     def update(self):
         # TODO: loading the entire device data at every iteration might be stressful. Need to re-engineer this
-        self._device.get_status(force_status_refresh=True)
+        self._device.get_status(force_status_refresh=False)
         self._is_online = self._device.online
 
         # Update electricity stats
@@ -132,6 +134,12 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
             'model': self._device.type + " " + self._device.hwversion,
             'sw_version': self._device.fwversion
         }
+
+    async def async_added_to_hass(self) -> None:
+        self._device.register_event_callback(self.common_handler)
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._device.unregister_event_callback(self.common_handler)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
