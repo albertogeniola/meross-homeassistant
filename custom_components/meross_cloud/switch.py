@@ -49,7 +49,6 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
         self.schedule_update_ha_state(True)
 
     def device_event_handler(self, evt):
-        _LOGGER.info("Thread %s: SWITCH EVENT HANDLER started" % threading.current_thread().name)
         if isinstance(evt, DeviceSwitchStatusEvent):
             if evt.channel_id == self._channel_id:
                 self._is_on = evt.switch_state
@@ -58,7 +57,6 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
 
         # When receiving an event, let's immediately trigger the update state
         self.schedule_update_ha_state(False)
-        _LOGGER.info("Thread %s: SWITCH EVENT HANDLER stopped" % threading.current_thread().name)
 
     @property
     def unique_id(self) -> str:

@@ -27,16 +27,13 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
         self._is_online = self._device.online
 
     def device_event_handler(self, evt):
-        _LOGGER.info("Thread %s: SENSOR EVENT HANDLER started" % threading.current_thread().name)
         # This device is handled via polling.
         # However, if an event is detected, we immediately ask HA to update its state.
         if self.enabled:
             self.schedule_update_ha_state(False)
-        _LOGGER.info("Thread %s: SENSOR EVENT HANDLER ended" % threading.current_thread().name)
 
     @cloud_io
     def update(self):
-        _LOGGER.info("Thread %s: SENSOR UPDATE started" % threading.current_thread().name)
         # TODO: loading the entire device data at every iteration might be stressful. Need to re-engineer this
         self._device.get_status(force_status_refresh=False)
         self._is_online = self._device.online
@@ -44,8 +41,6 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
         # Update electricity stats
         if self._is_online:
             self._sensor_info = self._device.get_electricity()
-
-        _LOGGER.info("Thread %s: SENSOR UPDATE done" % threading.current_thread().name)
 
     def force_state_update(self):
         if self.enabled:
