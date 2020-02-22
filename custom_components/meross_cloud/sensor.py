@@ -6,6 +6,8 @@ from meross_iot.cloud.devices.power_plugs import GenericPlug
 
 from .common import (DOMAIN, MANAGER, SENSORS,
                      calculate_sensor_id, AbstractMerossEntityWrapper, cloud_io, HA_SENSOR)
+import threading
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,20 +27,25 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
         self._is_online = self._device.online
 
     def device_event_handler(self, evt):
+        _LOGGER.info("Thread %s: SENSOR EVENT HANDLER started" % threading.current_thread().name)
         # This device is handled via polling.
         # However, if an event is detected, we immediately ask HA to update its state.
         if self.enabled:
             self.schedule_update_ha_state(False)
+        _LOGGER.info("Thread %s: SENSOR EVENT HANDLER ended" % threading.current_thread().name)
 
     @cloud_io
     def update(self):
+        _LOGGER.info("Thread %s: SENSOR UPDATE started" % threading.current_thread().name)
         # TODO: loading the entire device data at every iteration might be stressful. Need to re-engineer this
-        self._device.get_status(force_status_refresh=True)
+        self._device.get_status(force_status_refresh=False)
         self._is_online = self._device.online
 
         # Update electricity stats
         if self._is_online:
             self._sensor_info = self._device.get_electricity()
+
+        _LOGGER.info("Thread %s: SENSOR UPDATE done" % threading.current_thread().name)
 
     def force_state_update(self):
         if self.enabled:
@@ -132,6 +139,12 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
             'model': self._device.type + " " + self._device.hwversion,
             'sw_version': self._device.fwversion
         }
+
+    async def async_added_to_hass(self) -> None:
+        self._device.register_event_callback(self.common_handler)
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._device.unregister_event_callback(self.common_handler)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):

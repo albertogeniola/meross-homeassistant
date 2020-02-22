@@ -297,6 +297,12 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
     def turn_aux_heat_off(self) -> None:
         pass
 
+    async def async_added_to_hass(self) -> None:
+        self._device.register_event_callback(self.common_handler)
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._device.unregister_event_callback(self.common_handler)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     def sync_logic():

@@ -86,7 +86,6 @@ class AbstractMerossEntityWrapper(ABC):
 
         # Load the current device status
         self._is_online = self._device.online
-        device.register_event_callback(self.common_handler)
 
     def common_handler(self,
                        evt  # type: MerossEvent

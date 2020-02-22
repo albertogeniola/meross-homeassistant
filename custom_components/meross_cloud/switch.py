@@ -1,9 +1,10 @@
 from homeassistant.components.switch import SwitchDevice
+from homeassistant.helpers.entity_registry import EVENT_ENTITY_REGISTRY_UPDATED
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.meross_event import DeviceOnlineStatusEvent, DeviceSwitchStatusEvent
 from .common import DOMAIN, MANAGER, calculate_switch_id, AbstractMerossEntityWrapper, cloud_io, HA_SWITCH
 import logging
-import asyncio
+import threading
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -32,11 +33,12 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
         # Device state
         self._is_on = None
         self._is_online = self._device.online
-        if self._is_online and self.enabled:
+        if self._is_online:
             self.update()
 
     @cloud_io
     def update(self):
+        _LOGGER.info("Thread %s: SWITCH UPDATE" % threading.current_thread().name)
         self._device.get_status(force_status_refresh=True)
         self._is_online = self._device.online
 
@@ -44,10 +46,10 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
             self._is_on = self._device.get_channel_status(self._channel_id)
 
     def force_state_update(self):
-        if self.enabled:
-            self.schedule_update_ha_state(True)
+        self.schedule_update_ha_state(True)
 
     def device_event_handler(self, evt):
+        _LOGGER.info("Thread %s: SWITCH EVENT HANDLER started" % threading.current_thread().name)
         if isinstance(evt, DeviceSwitchStatusEvent):
             if evt.channel_id == self._channel_id:
                 self._is_on = evt.switch_state
@@ -55,9 +57,8 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
             _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
 
         # When receiving an event, let's immediately trigger the update state
-        # Only update the state if the device is enabled
-        if self.enabled:
-            self.schedule_update_ha_state(False)
+        self.schedule_update_ha_state(False)
+        _LOGGER.info("Thread %s: SWITCH EVENT HANDLER stopped" % threading.current_thread().name)
 
     @property
     def unique_id(self) -> str:
@@ -101,6 +102,12 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
     @cloud_io
     def turn_on(self, **kwargs) -> None:
         self._device.turn_on_channel(self._channel_id)
+
+    async def async_added_to_hass(self) -> None:
+        self._device.register_event_callback(self.common_handler)
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._device.unregister_event_callback(self.common_handler)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
