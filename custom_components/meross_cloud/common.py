@@ -68,8 +68,8 @@ def cloud_io(func):
             instance.reset_error_state()
             return value
         except CommandTimeoutException:
-            _LOGGER.error("A timeout exception occurred while executing function %s " % str(func))
             _LOGGER.debug("Exception info")
+            _LOGGER.error("A timeout exception occurred while executing function %s " % str(func))
             instance.notify_error()
 
     return wrapper_decorator
@@ -86,6 +86,7 @@ class AbstractMerossEntityWrapper(ABC):
 
         # Load the current device status
         self._is_online = self._device.online
+        self._error = False
 
     @abstractmethod
     def device_event_handler(self, evt):
@@ -97,8 +98,11 @@ class AbstractMerossEntityWrapper(ABC):
         pass
 
     def reset_error_state(self):
-        self._cloud_errors = 0
-        self._is_online = True
+        if self._error:
+            self._cloud_errors = 0
+            self._is_online = True
+            self.force_state_update(ui_only=True)
+            self._error = False
 
     def notify_error(self):
         if self._cloud_errors == CONNECTION_TIMEOUT_THRESHOLD:
@@ -106,6 +110,8 @@ class AbstractMerossEntityWrapper(ABC):
                             "offline, or the MerossCloud cannot be reached or we are offline."
                             "" % CONNECTION_TIMEOUT_THRESHOLD)
             self._is_online = False
+            self.force_state_update(ui_only=True)
+            self._error = True
 
         self._cloud_errors += 1
 
