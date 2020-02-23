@@ -69,8 +69,10 @@ def cloud_io(func):
             return value
         except CommandTimeoutException:
             _LOGGER.debug("Exception info")
-            _LOGGER.error("A timeout exception occurred while executing function %s " % str(func))
-            instance.notify_error()
+
+            if not instance._error:
+                _LOGGER.error("A timeout exception occurred while executing function %s " % str(func))
+                instance.notify_error()
 
     return wrapper_decorator
 
