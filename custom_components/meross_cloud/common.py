@@ -107,8 +107,7 @@ class AbstractMerossEntityWrapper(ABC):
                             "" % CONNECTION_TIMEOUT_THRESHOLD)
             self._is_online = False
 
-        elif self._cloud_errors < CONNECTION_TIMEOUT_THRESHOLD:
-            self._cloud_errors += 1
+        self._cloud_errors += 1
 
 
 class MerossCloudConnectionWatchdog(object):
