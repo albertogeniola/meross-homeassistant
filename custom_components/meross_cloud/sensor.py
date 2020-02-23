@@ -3,6 +3,7 @@ import logging
 from homeassistant.const import ATTR_VOLTAGE
 from homeassistant.helpers.entity import Entity
 from meross_iot.cloud.devices.power_plugs import GenericPlug
+from meross_iot.meross_event import DeviceOnlineStatusEvent
 
 from .common import (DOMAIN, MANAGER, SENSORS,
                      calculate_sensor_id, AbstractMerossEntityWrapper, cloud_io, HA_SENSOR)
@@ -27,10 +28,17 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
         self._is_online = self._device.online
 
     def device_event_handler(self, evt):
-        # This device is handled via polling.
-        # However, if an event is detected, we immediately ask HA to update its state.
-        if self.enabled:
-            self.schedule_update_ha_state(False)
+        # Any event received from the device causes the reset of the error state
+        self.reset_error_state()
+
+        # Handle here events that are common to all the wrappers
+        if isinstance(evt, DeviceOnlineStatusEvent):
+            _LOGGER.info("Device %s reported online status: %s" % (self._device.name, evt.status))
+            if evt.status not in ["online", "offline"]:
+                raise ValueError("Invalid online status")
+            self._is_online = evt.status == "online"
+
+        self.schedule_update_ha_state(False)
 
     @cloud_io
     def update(self):
@@ -42,9 +50,12 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
         if self._is_online:
             self._sensor_info = self._device.get_electricity()
 
-    def force_state_update(self):
-        if self.enabled:
-            self.schedule_update_ha_state(force_refresh=True)
+    def force_state_update(self, ui_only=False):
+        if not self.enabled:
+            return
+
+        force_refresh = not ui_only
+        self.schedule_update_ha_state(force_refresh=force_refresh)
 
     @property
     def available(self) -> bool:
@@ -136,10 +147,10 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
         }
 
     async def async_added_to_hass(self) -> None:
-        self._device.register_event_callback(self.common_handler)
+        self._device.register_event_callback(self.device_event_handler)
 
     async def async_will_remove_from_hass(self) -> None:
-        self._device.unregister_event_callback(self.common_handler)
+        self._device.unregister_event_callback(self.device_event_handler)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):

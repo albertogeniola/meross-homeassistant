@@ -7,7 +7,8 @@ from homeassistant.components.climate.const import HVAC_MODE_AUTO, HVAC_MODE_HEA
 from homeassistant.const import TEMP_CELSIUS
 from meross_iot.cloud.devices.subdevices.thermostats import ValveSubDevice, ThermostatV3Mode, ThermostatMode
 from meross_iot.manager import MerossManager
-from meross_iot.meross_event import ThermostatTemperatureChange, ThermostatModeChange, DeviceSwitchStatusEvent
+from meross_iot.meross_event import ThermostatTemperatureChange, ThermostatModeChange, DeviceSwitchStatusEvent, \
+    DeviceOnlineStatusEvent
 
 from .common import DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io, HA_CLIMATE
 
@@ -48,7 +49,16 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
             self.update()
 
     def device_event_handler(self, evt):
-        if isinstance(evt, ThermostatTemperatureChange):
+        # Any event received from the device causes the reset of the error state
+        self.reset_error_state()
+
+        # Handle here events that are common to all the wrappers
+        if isinstance(evt, DeviceOnlineStatusEvent):
+            _LOGGER.info("Device %s reported online status: %s" % (self._device.name, evt.status))
+            if evt.status not in ["online", "offline"]:
+                raise ValueError("Invalid online status")
+            self._is_online = evt.status == "online"
+        elif isinstance(evt, ThermostatTemperatureChange):
             self._current_temperature = float(evt.temperature.get('room'))/10
             self._target_temperature = float(evt.temperature.get('currentSet')) / 10
             self._heating = evt.temperature.get('heating') == 1
@@ -59,12 +69,14 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
         else:
             _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
 
-        if self.enabled:
-            self.schedule_update_ha_state(False)
+        self.schedule_update_ha_state(False)
 
-    def force_state_update(self):
-        if self.enabled:
-            self.schedule_update_ha_state(True)
+    def force_state_update(self, ui_only=False):
+        if not self.enabled:
+            return
+
+        force_refresh = not ui_only
+        self.schedule_update_ha_state(force_refresh=force_refresh)
 
     @cloud_io
     def update(self):
@@ -298,10 +310,10 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
         pass
 
     async def async_added_to_hass(self) -> None:
-        self._device.register_event_callback(self.common_handler)
+        self._device.register_event_callback(self.device_event_handler)
 
     async def async_will_remove_from_hass(self) -> None:
-        self._device.unregister_event_callback(self.common_handler)
+        self._device.unregister_event_callback(self.device_event_handler)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):

@@ -44,11 +44,25 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
         if self._is_online:
             self._is_on = self._device.get_channel_status(self._channel_id)
 
-    def force_state_update(self):
-        self.schedule_update_ha_state(True)
+    def force_state_update(self, ui_only=False):
+        if not self.enabled:
+            return
+
+        force_refresh = not ui_only
+        self.schedule_update_ha_state(force_refresh=force_refresh)
 
     def device_event_handler(self, evt):
-        if isinstance(evt, DeviceSwitchStatusEvent):
+        # Any event received from the device causes the reset of the error state
+        self.reset_error_state()
+
+        # Handle here events that are common to all the wrappers
+        if isinstance(evt, DeviceOnlineStatusEvent):
+            _LOGGER.info("Device %s reported online status: %s" % (self._device.name, evt.status))
+            if evt.status not in ["online", "offline"]:
+                raise ValueError("Invalid online status")
+            self._is_online = evt.status == "online"
+
+        elif isinstance(evt, DeviceSwitchStatusEvent):
             if evt.channel_id == self._channel_id:
                 self._is_on = evt.switch_state
         else:
@@ -101,10 +115,10 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
         self._device.turn_on_channel(self._channel_id)
 
     async def async_added_to_hass(self) -> None:
-        self._device.register_event_callback(self.common_handler)
+        self._device.register_event_callback(self.device_event_handler)
 
     async def async_will_remove_from_hass(self) -> None:
-        self._device.unregister_event_callback(self.common_handler)
+        self._device.unregister_event_callback(self.device_event_handler)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):

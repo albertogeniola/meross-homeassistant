@@ -4,7 +4,7 @@ from homeassistant.components.cover import (SUPPORT_CLOSE, SUPPORT_OPEN,
 from homeassistant.const import (STATE_CLOSED, STATE_CLOSING, STATE_OPEN,
                                  STATE_OPENING, STATE_UNKNOWN)
 from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
-from meross_iot.meross_event import MerossEventType, DeviceDoorStatusEvent
+from meross_iot.meross_event import MerossEventType, DeviceDoorStatusEvent, DeviceOnlineStatusEvent
 from .common import (DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io, HA_COVER)
 
 _LOGGER = logging.getLogger(__name__)
@@ -36,9 +36,12 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
         if self._is_online:
             self.update()
 
-    def force_state_update(self):
-        if self.enabled:
-            self.schedule_update_ha_state(True)
+    def force_state_update(self, ui_only=False):
+        if not self.enabled:
+            return
+
+        force_refresh = not ui_only
+        self.schedule_update_ha_state(force_refresh=force_refresh)
 
     @cloud_io
     def update(self):
@@ -52,7 +55,17 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
                 self._state = STATE_CLOSED
 
     def device_event_handler(self, evt):
-        if isinstance(evt, DeviceDoorStatusEvent) and evt.channel == self._channel:
+        # Any event received from the device causes the reset of the error state
+        self.reset_error_state()
+
+        # Handle here events that are common to all the wrappers
+        if isinstance(evt, DeviceOnlineStatusEvent):
+            _LOGGER.info("Device %s reported online status: %s" % (self._device.name, evt.status))
+            if evt.status not in ["online", "offline"]:
+                raise ValueError("Invalid online status")
+            self._is_online = evt.status == "online"
+
+        elif isinstance(evt, DeviceDoorStatusEvent) and evt.channel == self._channel:
             # The underlying library only exposes "open" and "closed" statuses
             if evt.door_state == 'open':
                 self._state = STATE_OPEN
@@ -64,8 +77,7 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
             _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
 
         # When receiving an event, let's immediately trigger the update state
-        if self.enabled:
-            self.schedule_update_ha_state(False)
+        self.schedule_update_ha_state(False)
 
     @property
     def name(self) -> str:
@@ -150,10 +162,10 @@ class OpenGarageCover(CoverDevice, AbstractMerossEntityWrapper):
         }
 
     async def async_added_to_hass(self) -> None:
-        self._device.register_event_callback(self.common_handler)
+        self._device.register_event_callback(self.device_event_handler)
 
     async def async_will_remove_from_hass(self) -> None:
-        self._device.unregister_event_callback(self.common_handler)
+        self._device.unregister_event_callback(self.device_event_handler)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):

@@ -87,28 +87,13 @@ class AbstractMerossEntityWrapper(ABC):
         # Load the current device status
         self._is_online = self._device.online
 
-    def common_handler(self,
-                       evt  # type: MerossEvent
-                       ):
-        # Any event received from the device causes the reset of the error state
-        self.reset_error_state()
-
-        # Handle here events that are common to all the wrappers
-        if isinstance(evt, DeviceOnlineStatusEvent):
-            if evt.status not in ["online", "offline"]:
-                raise ValueError("Invalid online status")
-            self._is_online = evt.status == "online"
-        else:
-            # Call the specific class-implementation event
-            self.device_event_handler(evt)
-
     @abstractmethod
     def device_event_handler(self, evt):
         pass
 
     @abstractmethod
     @cloud_io
-    def force_state_update(self):
+    def force_state_update(self, ui_only=False):
         pass
 
     def reset_error_state(self):
@@ -116,14 +101,14 @@ class AbstractMerossEntityWrapper(ABC):
         self._is_online = True
 
     def notify_error(self):
-        self._cloud_errors += 1
-        if self._cloud_errors > CONNECTION_TIMEOUT_THRESHOLD:
+        if self._cloud_errors == CONNECTION_TIMEOUT_THRESHOLD:
             _LOGGER.warning("Detected more than %d connection errors. This means either the device is "
                             "offline, or the MerossCloud cannot be reached or we are offline."
                             "" % CONNECTION_TIMEOUT_THRESHOLD)
             self._is_online = False
-            # TODO: start a timed poller
-            # TODO: update state?
+
+        elif self._cloud_errors < CONNECTION_TIMEOUT_THRESHOLD:
+            self._cloud_errors += 1
 
 
 class MerossCloudConnectionWatchdog(object):
