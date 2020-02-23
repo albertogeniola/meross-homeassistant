@@ -26,7 +26,7 @@ If you have HACS, well, it's a piece of cake! Just search for "Meross" (Full nam
 Clock on Install: when done, proceed with component setup.
 
 ### Option B: Classic installation (custom_component)
-1. Download the latest zip release archive from [here](https://github.com/albertogeniola/meross-homeassistant/releases/latest/download/meross_cloud.zip) (or clone the git master branch)
+1. Download the latest zip release archive from [here](https://github.com/albertogeniola/meross-homeassistant/releases/latest) (or clone the git master branch)
 1. Unzip/copy the meross_cloud direcotry within the `custom_components` directory of your homeassistant installation.
 The `custom_components` directory resides within your homeassistant configuration directory.
 Usually, the configuration directory is within your home (`~/.homeassistant/`).
