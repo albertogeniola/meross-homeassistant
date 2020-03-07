@@ -74,6 +74,10 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
         self.schedule_update_ha_state(False)
 
     @property
+    def should_poll(self) -> bool:
+        return False
+
+    @property
     def available(self) -> bool:
         # A device is available if it's online
         return self._is_online

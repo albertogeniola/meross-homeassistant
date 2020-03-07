@@ -7,7 +7,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.typing import HomeAssistantType
 from meross_iot.api import UnauthorizedException
-from meross_iot.logger import h, ROOT_MEROSS_LOGGER
+from meross_iot.logger import h, ROOT_MEROSS_LOGGER, set_log_level
 from meross_iot.manager import MerossManager
 from .common import (DOMAIN, ATTR_CONFIG, MEROSS_PLATFORMS, HA_COVER, HA_LIGHT, HA_SENSOR,
                      HA_SWITCH, MANAGER, SENSORS, dismiss_notification,
@@ -100,7 +100,7 @@ async def async_setup(hass, config):
 
     # TODO: check whether the integration has been already configured previously via User Config Entry or
     #       discovery
-
+    set_log_level(root=logging.INFO, connection=logging.DEBUG, network=logging.INFO)
     conf = config.get(DOMAIN)
     hass.data[DOMAIN] = {}
     hass.data[DOMAIN][ATTR_CONFIG] = conf

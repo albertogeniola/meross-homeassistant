@@ -169,9 +169,12 @@ class MerossCloudConnectionWatchdog(object):
 
     def __retry_connection(self):
         try:
+            self._manager.stop()
             _LOGGER.info("Retrying connection to MerossCloud...")
             self._manager.start()
-        except:
+        except Exception as e:
+            _LOGGER.debug("Connection to MerossCloud failed.")
+            _LOGGER.exception("Connection to MerossCloud failed.")
             _LOGGER.error("Connection to MerossCloud failed. Rescheduling")
             self._schedule_connection_retry(self._retry_interval)
 
