@@ -50,15 +50,30 @@ class MerossSmartHumidifier(FanEntity, AbstractMerossEntityWrapper):
 
         self.schedule_update_ha_state(False)
 
+    @cloud_io
+    def update(self):
+        state = self._device.get_status(True)
+        self._is_online = self._device.online
+
+        if self._is_online:
+            self._is_on, self._humidifier_mode = self.parse_spry_mode(self._device.get_spray_mode())
+
     def force_state_update(self, ui_only=False):
-        # TODO
-        pass
+        if not self.enabled:
+            return
+
+        force_refresh = not ui_only
+        self.schedule_update_ha_state(force_refresh=force_refresh)
 
     async def async_added_to_hass(self) -> None:
         self._device.register_event_callback(self.device_event_handler)
 
     async def async_will_remove_from_hass(self) -> None:
         self._device.unregister_event_callback(self.device_event_handler)
+
+    @property
+    def available(self) -> bool:
+        return self._is_online
 
     @property
     def is_on(self) -> bool:
