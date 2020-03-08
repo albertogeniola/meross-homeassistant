@@ -98,9 +98,6 @@ async def async_setup(hass, config):
     :return:
     """
 
-    # TODO: check whether the integration has been already configured previously via User Config Entry or
-    #       discovery
-    set_log_level(root=logging.INFO, connection=logging.DEBUG, network=logging.INFO)
     conf = config.get(DOMAIN)
     hass.data[DOMAIN] = {}
     hass.data[DOMAIN][ATTR_CONFIG] = conf
