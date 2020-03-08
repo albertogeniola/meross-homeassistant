@@ -1,11 +1,14 @@
 import logging
-from typing import Optional, List
+from typing import Optional, List, Union, Any
 
 from homeassistant.components.climate import ClimateDevice, SUPPORT_TARGET_TEMPERATURE, SUPPORT_PRESET_MODE
 from homeassistant.components.climate.const import HVAC_MODE_AUTO, HVAC_MODE_HEAT, HVAC_MODE_OFF, PRESET_NONE, \
     CURRENT_HVAC_HEAT, CURRENT_HVAC_OFF, CURRENT_HVAC_IDLE
-from homeassistant.const import TEMP_CELSIUS
+from homeassistant.components.fan import FanEntity
+from homeassistant.const import TEMP_CELSIUS, STATE_UNKNOWN, STATE_OFF
+from homeassistant.helpers.entity import Entity
 from meross_iot.cloud.devices.subdevices.thermostats import ValveSubDevice, ThermostatV3Mode, ThermostatMode
+from meross_iot.cloud.devices.humidifier import GenericHumidifier, SprayMode
 from meross_iot.manager import MerossManager
 from meross_iot.meross_event import ThermostatTemperatureChange, ThermostatModeChange, DeviceSwitchStatusEvent, \
     DeviceOnlineStatusEvent
@@ -318,14 +321,18 @@ class ValveEntityWrapper(ClimateDevice, AbstractMerossEntityWrapper):
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     def sync_logic():
-        thermostat_devices = []
+
+        climante_devices = []
         manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+
+        # Add smart thermostat valves
         valves = manager.get_devices_by_kind(ValveSubDevice)
         for valve in valves:  # type: ValveSubDevice
             w = ValveEntityWrapper(device=valve)
-            thermostat_devices.append(w)
+            climante_devices.append(w)
             hass.data[DOMAIN][HA_CLIMATE][w.unique_id] = w
-        return thermostat_devices
+
+        return climante_devices
 
     thermostat_devices = await hass.async_add_executor_job(sync_logic)
     async_add_entities(thermostat_devices)
