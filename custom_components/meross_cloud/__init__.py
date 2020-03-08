@@ -11,7 +11,7 @@ from meross_iot.logger import h, ROOT_MEROSS_LOGGER, set_log_level
 from meross_iot.manager import MerossManager
 from .common import (DOMAIN, ATTR_CONFIG, MEROSS_PLATFORMS, HA_COVER, HA_LIGHT, HA_SENSOR,
                      HA_SWITCH, MANAGER, SENSORS, dismiss_notification,
-                     notify_error, CLOUD_HANDLER, MerossCloudConnectionWatchdog, HA_CLIMATE)
+                     notify_error, CLOUD_HANDLER, MerossCloudConnectionWatchdog, HA_CLIMATE, HA_FAN)
 
 # Unset the default stream handler for logger of the meross_iot library
 ROOT_MEROSS_LOGGER.removeHandler(h)
@@ -61,6 +61,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         hass.data[DOMAIN][HA_LIGHT] = {}
         hass.data[DOMAIN][HA_SENSOR] = {}
         hass.data[DOMAIN][HA_SWITCH] = {}
+        hass.data[DOMAIN][HA_FAN] = {}
 
         _LOGGER.info("Starting meross manager")
         manager.start()
