@@ -126,6 +126,16 @@ class MerossSmartHumidifier(FanEntity, AbstractMerossEntityWrapper):
         return self._device_name
 
     @property
+    def device_info(self):
+        return {
+            'identifiers': {(DOMAIN, self._id)},
+            'name': self._device_name,
+            'manufacturer': 'Meross',
+            'model': self._device.type + " " + self._device.hwversion,
+            'sw_version': self._device.fwversion
+        }
+
+    @property
     def should_poll(self) -> bool:
         """
         This device handles stat update via push notification
