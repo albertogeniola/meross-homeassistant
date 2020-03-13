@@ -6,6 +6,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.typing import HomeAssistantType
+from homeassistant.exceptions import ConfigEntryNotReady
 from meross_iot.api import UnauthorizedException
 from meross_iot.logger import h, ROOT_MEROSS_LOGGER, set_log_level
 from meross_iot.manager import MerossManager
@@ -82,11 +83,13 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         _LOGGER.exception("Your Meross login credentials are invalid or the network could not be reached "
                           "at the moment.")
 
-        return False
+        raise ConfigEntryNotReady()
+        #return False
 
     except Exception as e:
-        _LOGGER.exception("An exception occurred while setting up the meross manager.")
-        return False
+        _LOGGER.exception("An exception occurred while setting up the meross manager. Setup will be retried...")
+        raise ConfigEntryNotReady()
+        #return False
 
 
 async def async_setup(hass, config):
