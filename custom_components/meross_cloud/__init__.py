@@ -83,11 +83,13 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         _LOGGER.exception("Your Meross login credentials are invalid or the network could not be reached "
                           "at the moment.")
 
-        return False
+        raise ConfigEntryNotReady()
+        #return False
 
-    except:
+    except Exception as e:
         _LOGGER.exception("An exception occurred while setting up the meross manager. Setup will be retried...")
         raise ConfigEntryNotReady()
+        #return False
 
 
 async def async_setup(hass, config):
