@@ -46,9 +46,15 @@ class PowerSensorWrapper(Entity, AbstractMerossEntityWrapper):
         self._device.get_status(force_status_refresh=False)
         self._is_online = self._device.online
 
-        # Update electricity stats
-        if self._is_online:
+        # Update electricity stats only if the device is online and currently turned on
+        if self._is_online and self._device.get_status():
             self._sensor_info = self._device.get_electricity()
+        else:
+            self._sensor_info = {
+                'voltage': 0,
+                'current': 0,
+                'power': 0
+            }
 
     def force_state_update(self, ui_only=False):
         if not self.enabled:

@@ -9,7 +9,7 @@ from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutEx
 from meross_iot.cloud.device import AbstractMerossDevice
 from meross_iot.manager import MerossManager
 from meross_iot.meross_event import DeviceOnlineStatusEvent, DeviceSwitchStatusEvent, MerossEvent, ClientConnectionEvent
-from threading import Timer
+from threading import Timer, Condition, RLock
 import logging
 
 
