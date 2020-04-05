@@ -5,14 +5,16 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.typing import HomeAssistantType
 from meross_iot.api import UnauthorizedException
-from meross_iot.logger import h, ROOT_MEROSS_LOGGER, set_log_level
+from meross_iot.logger import ROOT_MEROSS_LOGGER, h, set_log_level
 from meross_iot.manager import MerossManager
-from .common import (DOMAIN, ATTR_CONFIG, MEROSS_PLATFORMS, HA_COVER, HA_LIGHT, HA_SENSOR,
-                     HA_SWITCH, MANAGER, SENSORS, dismiss_notification,
-                     notify_error, CLOUD_HANDLER, MerossCloudConnectionWatchdog, HA_CLIMATE, HA_FAN)
+
+from .common import (ATTR_CONFIG, CLOUD_HANDLER, DOMAIN, HA_CLIMATE, HA_COVER,
+                     HA_FAN, HA_LIGHT, HA_SENSOR, HA_SWITCH, MANAGER,
+                     MEROSS_PLATFORMS, SENSORS, MerossCloudConnectionWatchdog,
+                     dismiss_notification, notify_error)
 
 # Unset the default stream handler for logger of the meross_iot library
 ROOT_MEROSS_LOGGER.removeHandler(h)
@@ -115,4 +117,3 @@ async def async_setup(hass, config):
         )
 
     return True
-

@@ -1,17 +1,19 @@
 import functools
+import logging
 from abc import ABC, abstractmethod
+from threading import Condition, RLock, Timer
 from typing import Union
 
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import HomeAssistantType
 from meross_iot.cloud.client_status import ClientStatus
-from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.cloud.device import AbstractMerossDevice
+from meross_iot.cloud.exceptions.CommandTimeoutException import \
+    CommandTimeoutException
 from meross_iot.manager import MerossManager
-from meross_iot.meross_event import DeviceOnlineStatusEvent, DeviceSwitchStatusEvent, MerossEvent, ClientConnectionEvent
-from threading import Timer, Condition, RLock
-import logging
-
+from meross_iot.meross_event import (ClientConnectionEvent,
+                                     DeviceOnlineStatusEvent,
+                                     DeviceSwitchStatusEvent, MerossEvent)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -189,4 +191,3 @@ class MerossCloudConnectionWatchdog(object):
                     device.force_state_update()
                 except:
                     _LOGGER.exception("Error occurred while refreshing status for device %s" % device.name)
-

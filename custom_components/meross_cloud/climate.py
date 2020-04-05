@@ -1,19 +1,30 @@
 import logging
-from typing import Optional, List, Union, Any
+from typing import Any, List, Optional, Union
 
-from homeassistant.components.climate import ClimateDevice, SUPPORT_TARGET_TEMPERATURE, SUPPORT_PRESET_MODE
-from homeassistant.components.climate.const import HVAC_MODE_AUTO, HVAC_MODE_HEAT, HVAC_MODE_OFF, PRESET_NONE, \
-    CURRENT_HVAC_HEAT, CURRENT_HVAC_OFF, CURRENT_HVAC_IDLE
+from homeassistant.components.climate import (SUPPORT_PRESET_MODE,
+                                              SUPPORT_TARGET_TEMPERATURE,
+                                              ClimateDevice)
+from homeassistant.components.climate.const import (CURRENT_HVAC_HEAT,
+                                                    CURRENT_HVAC_IDLE,
+                                                    CURRENT_HVAC_OFF,
+                                                    HVAC_MODE_AUTO,
+                                                    HVAC_MODE_HEAT,
+                                                    HVAC_MODE_OFF, PRESET_NONE)
 from homeassistant.components.fan import FanEntity
-from homeassistant.const import TEMP_CELSIUS, STATE_UNKNOWN, STATE_OFF
+from homeassistant.const import STATE_OFF, STATE_UNKNOWN, TEMP_CELSIUS
 from homeassistant.helpers.entity import Entity
-from meross_iot.cloud.devices.subdevices.thermostats import ValveSubDevice, ThermostatV3Mode, ThermostatMode
 from meross_iot.cloud.devices.humidifier import GenericHumidifier, SprayMode
+from meross_iot.cloud.devices.subdevices.thermostats import (ThermostatMode,
+                                                             ThermostatV3Mode,
+                                                             ValveSubDevice)
 from meross_iot.manager import MerossManager
-from meross_iot.meross_event import ThermostatTemperatureChange, ThermostatModeChange, DeviceSwitchStatusEvent, \
-    DeviceOnlineStatusEvent
+from meross_iot.meross_event import (DeviceOnlineStatusEvent,
+                                     DeviceSwitchStatusEvent,
+                                     ThermostatModeChange,
+                                     ThermostatTemperatureChange)
 
-from .common import DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io, HA_CLIMATE
+from .common import (DOMAIN, HA_CLIMATE, MANAGER, AbstractMerossEntityWrapper,
+                     cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -340,4 +351,3 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):
     pass
-

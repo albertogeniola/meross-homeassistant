@@ -1,14 +1,14 @@
 import logging
+import threading
 
 from homeassistant.const import ATTR_VOLTAGE
 from homeassistant.helpers.entity import Entity
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.meross_event import DeviceOnlineStatusEvent
 
-from .common import (DOMAIN, MANAGER, SENSORS,
-                     calculate_sensor_id, AbstractMerossEntityWrapper, cloud_io, HA_SENSOR)
-import threading
-
+from .common import (DOMAIN, HA_SENSOR, MANAGER, SENSORS,
+                     AbstractMerossEntityWrapper, calculate_sensor_id,
+                     cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 

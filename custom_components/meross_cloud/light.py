@@ -1,12 +1,18 @@
 import logging
+
 import homeassistant.util.color as color_util
-from homeassistant.components.light import (Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP,
-                                            ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS)
+from homeassistant.components.light import (ATTR_BRIGHTNESS, ATTR_COLOR_TEMP,
+                                            ATTR_HS_COLOR, SUPPORT_BRIGHTNESS,
+                                            SUPPORT_COLOR, SUPPORT_COLOR_TEMP,
+                                            Light)
 from meross_iot.cloud.devices.light_bulbs import GenericBulb
 from meross_iot.manager import MerossManager
-from meross_iot.meross_event import BulbSwitchStateChangeEvent, BulbLightStateChangeEvent, DeviceOnlineStatusEvent
+from meross_iot.meross_event import (BulbLightStateChangeEvent,
+                                     BulbSwitchStateChangeEvent,
+                                     DeviceOnlineStatusEvent)
 
-from .common import DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io, HA_LIGHT
+from .common import (DOMAIN, HA_LIGHT, MANAGER, AbstractMerossEntityWrapper,
+                     cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -218,4 +224,3 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):
     pass
-

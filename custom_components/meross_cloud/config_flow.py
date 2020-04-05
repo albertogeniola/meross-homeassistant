@@ -81,6 +81,3 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="single_instance_allowed")
 
         return await self.async_step_user(import_config)
-
-
-

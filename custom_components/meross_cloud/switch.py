@@ -1,11 +1,14 @@
-from homeassistant.components.switch import SwitchDevice
-from homeassistant.helpers.entity_registry import EVENT_ENTITY_REGISTRY_UPDATED
-from meross_iot.cloud.devices.power_plugs import GenericPlug
-from meross_iot.meross_event import DeviceOnlineStatusEvent, DeviceSwitchStatusEvent
-from .common import DOMAIN, MANAGER, calculate_switch_id, AbstractMerossEntityWrapper, cloud_io, HA_SWITCH
 import logging
 import threading
 
+from homeassistant.components.switch import SwitchDevice
+from homeassistant.helpers.entity_registry import EVENT_ENTITY_REGISTRY_UPDATED
+from meross_iot.cloud.devices.power_plugs import GenericPlug
+from meross_iot.meross_event import (DeviceOnlineStatusEvent,
+                                     DeviceSwitchStatusEvent)
+
+from .common import (DOMAIN, HA_SWITCH, MANAGER, AbstractMerossEntityWrapper,
+                     calculate_switch_id, cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -142,4 +145,3 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):
     pass
-

@@ -1,11 +1,15 @@
 import logging
-from homeassistant.components.cover import (SUPPORT_CLOSE, SUPPORT_OPEN,
-                                            CoverDevice, DEVICE_CLASS_GARAGE)
+
+from homeassistant.components.cover import (
+    DEVICE_CLASS_GARAGE, SUPPORT_CLOSE, SUPPORT_OPEN, CoverDevice)
 from homeassistant.const import (STATE_CLOSED, STATE_CLOSING, STATE_OPEN,
                                  STATE_OPENING, STATE_UNKNOWN)
 from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
-from meross_iot.meross_event import MerossEventType, DeviceDoorStatusEvent, DeviceOnlineStatusEvent
-from .common import (DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io, HA_COVER)
+from meross_iot.meross_event import (DeviceDoorStatusEvent,
+                                     DeviceOnlineStatusEvent, MerossEventType)
+
+from .common import (DOMAIN, HA_COVER, MANAGER, AbstractMerossEntityWrapper,
+                     cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 

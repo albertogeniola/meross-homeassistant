@@ -1,12 +1,14 @@
 import logging
-from typing import Optional, Any
+from typing import Any, Optional
 
-from homeassistant.components.fan import FanEntity, SUPPORT_SET_SPEED
+from homeassistant.components.fan import SUPPORT_SET_SPEED, FanEntity
 from meross_iot.cloud.devices.humidifier import GenericHumidifier, SprayMode
 from meross_iot.manager import MerossManager
-from meross_iot.meross_event import DeviceOnlineStatusEvent, HumidifierSpryEvent
+from meross_iot.meross_event import (DeviceOnlineStatusEvent,
+                                     HumidifierSpryEvent)
 
-from .common import DOMAIN, MANAGER, AbstractMerossEntityWrapper, cloud_io, HA_FAN
+from .common import (DOMAIN, HA_FAN, MANAGER, AbstractMerossEntityWrapper,
+                     cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 
