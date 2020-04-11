@@ -1,22 +1,22 @@
 import logging
-import threading
 
 from homeassistant.components.switch import SwitchDevice
-from homeassistant.helpers.entity_registry import EVENT_ENTITY_REGISTRY_UPDATED
 from meross_iot.cloud.devices.power_plugs import GenericPlug
+from meross_iot.manager import MerossManager
 from meross_iot.meross_event import (DeviceOnlineStatusEvent,
                                      DeviceSwitchStatusEvent)
 
-from .common import (DOMAIN, HA_SWITCH, MANAGER, AbstractMerossEntityWrapper,
-                     calculate_switch_id, cloud_io)
+from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, ConnectionWatchDog)
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
+class SwitchEntityWrapper(SwitchDevice):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
 
     def __init__(self, device: GenericPlug, channel: int):
+        self._device = device
+
         # If the current device has more than 1 channel, we need to setup the device name and id accordingly
         if len(device.get_channels()) > 1:
             self._id = calculate_switch_id(device.uuid, channel)
@@ -25,8 +25,6 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
         else:
             self._id = device.uuid
             self._entity_name = device.name
-
-        super().__init__(device)
 
         # Device properties
         self._channel_id = channel
@@ -39,7 +37,6 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
         if self._is_online:
             self.update()
 
-    @cloud_io
     def update(self):
         self._device.get_status(force_status_refresh=True)
         self._is_online = self._device.online
@@ -47,17 +44,7 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
         if self._is_online:
             self._is_on = self._device.get_channel_status(self._channel_id)
 
-    def force_state_update(self, ui_only=False):
-        if not self.enabled:
-            return
-
-        force_refresh = not ui_only
-        self.schedule_update_ha_state(force_refresh=force_refresh)
-
     def device_event_handler(self, evt):
-        # Any event received from the device causes the reset of the error state
-        self.reset_error_state()
-
         # Handle here events that are common to all the wrappers
         if isinstance(evt, DeviceOnlineStatusEvent):
             _LOGGER.info("Device %s reported online status: %s" % (self._device.name, evt.status))
@@ -109,11 +96,9 @@ class SwitchEntityWrapper(SwitchDevice, AbstractMerossEntityWrapper):
     def is_on(self) -> bool:
         return self._is_on
 
-    @cloud_io
     def turn_off(self, **kwargs) -> None:
         self._device.turn_off_channel(self._channel_id)
 
-    @cloud_io
     def turn_on(self, **kwargs) -> None:
         self._device.turn_on_channel(self._channel_id)
 
@@ -138,6 +123,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 switch_entities.append(w)
                 hass.data[DOMAIN][HA_SWITCH][w.unique_id] = w
         return switch_entities
+
+    # Register a connection watchdog to notify devices when connection to the cloud MQTT goes down.
+    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+    watchdog = ConnectionWatchDog(hass=hass, platform=HA_SWITCH)
+    manager.register_event_handler(watchdog.connection_handler)
 
     switch_entities = await hass.async_add_executor_job(sync_logic)
     async_add_entities(switch_entities)

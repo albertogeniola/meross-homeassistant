@@ -11,8 +11,7 @@ from meross_iot.meross_event import (BulbLightStateChangeEvent,
                                      BulbSwitchStateChangeEvent,
                                      DeviceOnlineStatusEvent)
 
-from .common import (DOMAIN, HA_LIGHT, MANAGER, AbstractMerossEntityWrapper,
-                     cloud_io)
+from .common import (DOMAIN, HA_LIGHT, MANAGER, ConnectionWatchDog)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,11 +30,11 @@ def expand_status(status):
     return out
 
 
-class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
+class LightEntityWrapper(Light):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
 
     def __init__(self, device: GenericBulb, channel: int):
-        super().__init__(device)
+        self._device = device
 
         # Device state
         self._state = {}
@@ -52,8 +51,6 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
             self.update()
 
     def device_event_handler(self, evt):
-        # Any event received from the device causes the reset of the error state
-        self.reset_error_state()
 
         # Handle here events that are common to all the wrappers
         if isinstance(evt, DeviceOnlineStatusEvent):
@@ -149,14 +146,6 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
             'sw_version': self._device.fwversion
         }
 
-    def force_state_update(self, ui_only=False):
-        if not self.enabled:
-            return
-
-        force_refresh = not ui_only
-        self.schedule_update_ha_state(force_refresh=force_refresh)
-
-    @cloud_io
     def update(self):
         self._device.get_status(force_status_refresh=True)
         self._is_online = self._device.online
@@ -171,11 +160,9 @@ class LightEntityWrapper(Light, AbstractMerossEntityWrapper):
 
             self._state = self._device.get_status(self._channel_id, force_status_refresh=True)
 
-    @cloud_io
     def turn_off(self, **kwargs) -> None:
         self._device.turn_off(channel=self._channel_id)
 
-    @cloud_io
     def turn_on(self, **kwargs) -> None:
         if not self.is_on:
             self._device.turn_on(channel=self._channel_id)
@@ -218,6 +205,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             hass.data[DOMAIN][HA_LIGHT][w.unique_id] = w
         return bulb_devices
 
+    # Register a connection watchdog to notify devices when connection to the cloud MQTT goes down.
+    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+    watchdog = ConnectionWatchDog(hass=hass, platform=HA_LIGHT)
+    manager.register_event_handler(watchdog.connection_handler)
     bulb_devices = await hass.async_add_executor_job(sync_logic)
     async_add_entities(bulb_devices)
 
