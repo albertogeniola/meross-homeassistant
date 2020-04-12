@@ -119,4 +119,3 @@ my work. On the other hand, buying me a beer will certainly make me happier: **a
 
 [![Buy me a coffe!](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/albertogeniola)
 
-[![Beerpay](https://beerpay.io/albertogeniola/meross-homeassistant/badge.svg?style=beer-square)](https://beerpay.io/albertogeniola/meross-homeassistant)  [![Beerpay](https://beerpay.io/albertogeniola/meross-homeassistant/make-wish.svg?style=flat-square)](https://beerpay.io/albertogeniola/meross-homeassistant?focus=wish)
