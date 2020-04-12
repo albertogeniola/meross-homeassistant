@@ -13,7 +13,7 @@ from meross_iot.manager import MerossManager
 
 from .common import (ATTR_CONFIG, CLOUD_HANDLER, DOMAIN, HA_CLIMATE, HA_COVER,
                      HA_FAN, HA_LIGHT, HA_SENSOR, HA_SWITCH, MANAGER,
-                     MEROSS_PLATFORMS, SENSORS, dismiss_notification, notify_error)
+                     MEROSS_PLATFORMS, SENSORS, dismiss_notification, notify_error, log_exception)
 
 # Unset the default stream handler for logger of the meross_iot library
 ROOT_MEROSS_LOGGER.removeHandler(h)
@@ -29,18 +29,6 @@ CONFIG_SCHEMA = vol.Schema({
 }, extra=vol.ALLOW_EXTRA)
 
 
-def print_version():
-    try:
-        import json
-        import os
-        fname = os.path.join(os.path.dirname(__file__), "manifest.json")
-        with open(fname, "rt") as f:
-            data = json.load(f)
-            _LOGGER.info("MerossCloudVersion: %s" % data.get("meross_cloud_version"))
-    except:
-        _LOGGER.error("Failed to print version")
-
-
 async def async_setup_entry(hass: HomeAssistantType, config_entry):
     """
     This class is called by the HomeAssistant framework when a configuration entry is provided.
@@ -49,8 +37,6 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     """
 
     try:
-        print_version()
-
         # These will contain the initialized devices
         # The following call can cause am UnauthorizedException if bad login credentials are provided
         # or if a network exception occurs.
@@ -78,14 +64,14 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     except UnauthorizedException as e:
         notify_error(hass, "http_connection", "Meross Cloud", "Could not connect to the Meross cloud. Please check"
                                                               " your internet connection and your Meross credentials")
-        _LOGGER.exception("Your Meross login credentials are invalid or the network could not be reached "
-                          "at the moment.")
+        log_exception("Your Meross login credentials are invalid or the network could not be reached "
+                          "at the moment.", logger=_LOGGER)
 
         raise ConfigEntryNotReady()
         #return False
 
     except Exception as e:
-        _LOGGER.exception("An exception occurred while setting up the meross manager. Setup will be retried...")
+        log_exception("An exception occurred while setting up the meross manager. Setup will be retried...", logger=_LOGGER)
         raise ConfigEntryNotReady()
         #return False
 

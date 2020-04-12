@@ -8,7 +8,7 @@ from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
 from meross_iot.meross_event import (DeviceDoorStatusEvent,
                                      DeviceOnlineStatusEvent)
 
-from .common import (DOMAIN, HA_COVER, MANAGER, ConnectionWatchDog)
+from .common import (DOMAIN, HA_COVER, MANAGER, ConnectionWatchDog, cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 

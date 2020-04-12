@@ -1,17 +1,15 @@
 import logging
 
 from homeassistant.components.switch import SwitchDevice
+from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.manager import MerossManager
-from meross_iot.meross_event import (DeviceOnlineStatusEvent,
-                                     DeviceSwitchStatusEvent)
-
-from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, ConnectionWatchDog, cloud_io)
+from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, ConnectionWatchDog, cloud_io, MerossEntityWrapper)
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class SwitchEntityWrapper(SwitchDevice):
+class SwitchEntityWrapper(SwitchDevice, MerossEntityWrapper):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
 
     def __init__(self, device: GenericPlug, channel: int):
@@ -20,47 +18,37 @@ class SwitchEntityWrapper(SwitchDevice):
         # If the current device has more than 1 channel, we need to setup the device name and id accordingly
         if len(device.get_channels()) > 1:
             self._id = calculate_switch_id(device.uuid, channel)
-            channelData = device.get_channels()[channel]
-            self._entity_name = "{} - {}".format(device.name, channelData.get('devName', 'Main Switch'))
+            channel_data = device.get_channels()[channel]
+            self._entity_name = "{} - {}".format(device.name, channel_data.get('devName', 'Main Switch'))
         else:
             self._id = device.uuid
             self._entity_name = device.name
 
         # Device properties
         self._channel_id = channel
-        self._device_id = device.uuid
-        self._device_name = device.name
-
-        # Device state
-        self._is_on = None
-        self._is_online = self._device.online
-        if self._is_online:
-            self.update()
+        self._available = True  # Assume the mqtt client is connected
+        self._first_update_done = False
 
     @cloud_io()
     def update(self):
-        self._device.get_status(force_status_refresh=True)
-        self._is_online = self._device.online
-
-        if self._is_online:
-            self._is_on = self._device.get_channel_status(self._channel_id)
+        if self._device.online:
+            self._device.get_status(force_status_refresh=True)
+            self._first_update_done = True
 
     def device_event_handler(self, evt):
-        # Handle here events that are common to all the wrappers
-        if isinstance(evt, DeviceOnlineStatusEvent):
-            _LOGGER.info("Device %s reported online status: %s" % (self._device.name, evt.status))
-            if evt.status not in ["online", "offline"]:
-                raise ValueError("Invalid online status")
-            self._is_online = evt.status == "online"
-
-        elif isinstance(evt, DeviceSwitchStatusEvent):
-            if evt.channel_id == self._channel_id:
-                self._is_on = evt.switch_state
-        else:
-            _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
-
-        # When receiving an event, let's immediately trigger the update state
+        # Update the device state when an event occurs
         self.schedule_update_ha_state(False)
+
+    def notify_client_state(self, status: ClientStatus):
+        # When a connection change occurs, update the internal state
+        if status == ClientStatus.SUBSCRIBED:
+            # If we are connecting back, schedule a full refresh of the device
+            self.schedule_update_ha_state(True)
+        else:
+            # In any other case, mark the device unavailable
+            # and only update the UI
+            self._available = False
+            self.schedule_update_ha_state(False)
 
     @property
     def unique_id(self) -> str:
@@ -75,8 +63,8 @@ class SwitchEntityWrapper(SwitchDevice):
     @property
     def device_info(self):
         return {
-            'identifiers': {(DOMAIN, self._device_id)},
-            'name': self._device_name,
+            'identifiers': {(DOMAIN, self._device.uuid)},
+            'name': self._device.name,
             'manufacturer': 'Meross',
             'model': self._device.type + " " + self._device.hwversion,
             'sw_version': self._device.fwversion
@@ -84,8 +72,9 @@ class SwitchEntityWrapper(SwitchDevice):
 
     @property
     def available(self) -> bool:
-        # A device is available if it's online
-        return self._is_online
+        # A device is available if the client library is connected to the MQTT broker and if the
+        # device we are contacting is online
+        return self._available and self._device.online
 
     @property
     def should_poll(self) -> bool:
@@ -94,8 +83,14 @@ class SwitchEntityWrapper(SwitchDevice):
         return False
 
     @property
+    @cloud_io(default_return_value=False)
     def is_on(self) -> bool:
-        return self._is_on
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+
+        return self._device.get_status(channel=self._channel_id)
 
     @cloud_io()
     def turn_off(self, **kwargs) -> None:

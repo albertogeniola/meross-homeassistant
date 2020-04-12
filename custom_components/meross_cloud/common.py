@@ -1,9 +1,12 @@
 import logging
 import functools
+from abc import ABC
 
 from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.meross_event import (ClientConnectionEvent)
+
+from custom_components.meross_cloud.version import MEROSS_CLOUD_VERSION
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,36 +49,26 @@ def dismiss_notification(hass, notification_id):
 def notify_error(hass, notification_id, title, message):
     hass.async_create_task(
         hass.services.async_call(domain='persistent_notification', service='create', service_data={
-                                           'title': title,
-                                           'message': message,
-                                           'notification_id': "%s.%s" % (DOMAIN, notification_id)})
+            'title': title,
+            'message': message,
+            'notification_id': "%s.%s" % (DOMAIN, notification_id)})
     )
 
 
-# TODO: better implement the following
-# The following is a ugly workaround to fix the connection problems we are experiencing so far.
-# The library needs a refactor.
 class ConnectionWatchDog(object):
     def __init__(self, hass, platform):
         self._hass = hass
         self._platform = platform
 
-    # TODO: Handle online status via abstract class?
     def connection_handler(self, event, *args, **kwargs):
         if isinstance(event, ClientConnectionEvent):
-            if event.status == ClientStatus.CONNECTION_DROPPED:
-                # Notify offline status
-                for dev in self._hass.data[self._platform].entities:
-                    dev._is_online = False
-                    dev.schedule_update_ha_state(False)
-            elif event.status == ClientStatus.SUBSCRIBED:
-                for dev in self._hass.data[self._platform].entities:
-                    # API
-                    for d in self._hass.data[DOMAIN][MANAGER]._http_client.list_devices():
-                        if dev._device.uuid == d['uuid']:
-                            dev._is_online = d.get('onlineStatus', 0) == 1
-                            # if the device is online, force a status refresh
-                            dev.schedule_update_ha_state(dev._is_online)
+            for dev in self._hass.data[self._platform].entities:  # type: MerossEntityWrapper
+                dev.notify_client_state(status=event.status)
+
+
+class MerossEntityWrapper(ABC):
+    def notify_client_state(self, status: ClientStatus):
+        pass
 
 
 def cloud_io(default_return_value=None):
@@ -85,7 +78,7 @@ def cloud_io(default_return_value=None):
             try:
                 return func(*args, **kwargs)
             except CommandTimeoutException as e:
-                _LOGGER.warning("")
+                log_exception("Error occurred while handling cloud_io function.", logger=_LOGGER)
                 if default_return_value is not None:
                     return default_return_value
                 else:
@@ -93,3 +86,13 @@ def cloud_io(default_return_value=None):
         return func_wrapper
     return cloud_io_inner
 
+
+def log_exception(message: str = None, logger: logging = None):
+    if logger is None:
+        logger = logging.getLogger(__name__)
+
+    if message is None:
+        message = "An exception occurred"
+
+    formatted_message = f"Component version: {MEROSS_CLOUD_VERSION}, Message: \"{message}\""
+    logger.exception(formatted_message)

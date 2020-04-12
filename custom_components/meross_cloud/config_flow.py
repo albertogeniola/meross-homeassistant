@@ -1,4 +1,3 @@
-"""Config flow for TP-Link."""
 import logging
 from urllib.error import HTTPError
 
@@ -7,7 +6,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
 from meross_iot.api import MerossHttpClient, UnauthorizedException
-from requests import ConnectTimeout
+from requests.exceptions import ConnectTimeout
 
 from .common import DOMAIN
 
