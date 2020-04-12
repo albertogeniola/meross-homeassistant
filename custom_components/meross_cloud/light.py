@@ -11,7 +11,7 @@ from meross_iot.meross_event import (BulbLightStateChangeEvent,
                                      BulbSwitchStateChangeEvent,
                                      DeviceOnlineStatusEvent)
 
-from .common import (DOMAIN, HA_LIGHT, MANAGER, ConnectionWatchDog)
+from .common import (DOMAIN, HA_LIGHT, MANAGER, ConnectionWatchDog, cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -146,6 +146,7 @@ class LightEntityWrapper(Light):
             'sw_version': self._device.fwversion
         }
 
+    @cloud_io()
     def update(self):
         self._device.get_status(force_status_refresh=True)
         self._is_online = self._device.online
@@ -160,9 +161,11 @@ class LightEntityWrapper(Light):
 
             self._state = self._device.get_status(self._channel_id, force_status_refresh=True)
 
+    @cloud_io()
     def turn_off(self, **kwargs) -> None:
         self._device.turn_off(channel=self._channel_id)
 
+    @cloud_io()
     def turn_on(self, **kwargs) -> None:
         if not self.is_on:
             self._device.turn_on(channel=self._channel_id)

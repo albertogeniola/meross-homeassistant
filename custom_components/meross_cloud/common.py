@@ -1,6 +1,8 @@
 import logging
+import functools
 
 from meross_iot.cloud.client_status import ClientStatus
+from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.meross_event import (ClientConnectionEvent)
 
 _LOGGER = logging.getLogger(__name__)
@@ -74,3 +76,20 @@ class ConnectionWatchDog(object):
                             dev._is_online = d.get('onlineStatus', 0) == 1
                             # if the device is online, force a status refresh
                             dev.schedule_update_ha_state(dev._is_online)
+
+
+def cloud_io(default_return_value=None):
+    def cloud_io_inner(func):
+        @functools.wraps(func)
+        def func_wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except CommandTimeoutException as e:
+                _LOGGER.warning("")
+                if default_return_value is not None:
+                    return default_return_value
+                else:
+                    return None
+        return func_wrapper
+    return cloud_io_inner
+

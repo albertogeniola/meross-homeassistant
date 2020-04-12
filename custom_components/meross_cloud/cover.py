@@ -38,6 +38,7 @@ class OpenGarageCover(CoverDevice):
         if self._is_online:
             self.update()
 
+    @cloud_io()
     def update(self):
         data = self._device.get_status(force_status_refresh=True)
         self._is_online = self._device.online
@@ -98,6 +99,7 @@ class OpenGarageCover(CoverDevice):
     def is_closing(self):
         return self._state == STATE_CLOSING
 
+    @cloud_io()
     def close_cover(self, **kwargs):
         """Close the cover."""
         if self._state not in [STATE_CLOSED, STATE_CLOSING]:
@@ -109,6 +111,7 @@ class OpenGarageCover(CoverDevice):
             if self.enabled:
                 self.schedule_update_ha_state(False)
 
+    @cloud_io()
     def open_cover(self, **kwargs):
         """Open the cover."""
         if self._state not in [STATE_OPEN, STATE_OPENING]:

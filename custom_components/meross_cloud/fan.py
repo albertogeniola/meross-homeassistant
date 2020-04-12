@@ -7,7 +7,7 @@ from meross_iot.manager import MerossManager
 from meross_iot.meross_event import (DeviceOnlineStatusEvent,
                                      HumidifierSpryEvent)
 
-from .common import (DOMAIN, HA_FAN, MANAGER, ConnectionWatchDog)
+from .common import (DOMAIN, HA_FAN, MANAGER, ConnectionWatchDog, cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,6 +51,7 @@ class MerossSmartHumidifier(FanEntity):
 
         self.schedule_update_ha_state(False)
 
+    @cloud_io()
     def update(self):
         state = self._device.get_status(True)
         self._is_online = self._device.online
@@ -87,14 +88,17 @@ class MerossSmartHumidifier(FanEntity):
         """Get the list of available speeds."""
         return [e.name for e in SprayMode if e != SprayMode.OFF]
 
+    @cloud_io()
     def set_speed(self, speed: str) -> None:
         mode = SprayMode[speed]
         self._device.set_spray_mode(mode)
 
+    @cloud_io()
     def set_direction(self, direction: str) -> None:
         # Not supported
         pass
 
+    @cloud_io()
     def turn_on(self, speed: Optional[str] = None, **kwargs) -> None:
         # Assume the user wants to trigger the last mode
         mode = self._humidifier_mode
@@ -107,6 +111,7 @@ class MerossSmartHumidifier(FanEntity):
 
         self._device.set_spray_mode(mode)
 
+    @cloud_io()
     def turn_off(self, **kwargs: Any) -> None:
         self._device.set_spray_mode(SprayMode.OFF)
 

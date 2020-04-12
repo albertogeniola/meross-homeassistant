@@ -6,7 +6,7 @@ from meross_iot.manager import MerossManager
 from meross_iot.meross_event import (DeviceOnlineStatusEvent,
                                      DeviceSwitchStatusEvent)
 
-from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, ConnectionWatchDog)
+from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, ConnectionWatchDog, cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,6 +37,7 @@ class SwitchEntityWrapper(SwitchDevice):
         if self._is_online:
             self.update()
 
+    @cloud_io()
     def update(self):
         self._device.get_status(force_status_refresh=True)
         self._is_online = self._device.online
@@ -96,9 +97,11 @@ class SwitchEntityWrapper(SwitchDevice):
     def is_on(self) -> bool:
         return self._is_on
 
+    @cloud_io()
     def turn_off(self, **kwargs) -> None:
         self._device.turn_off_channel(self._channel_id)
 
+    @cloud_io()
     def turn_on(self, **kwargs) -> None:
         self._device.turn_on_channel(self._channel_id)
 

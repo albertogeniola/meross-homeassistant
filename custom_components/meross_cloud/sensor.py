@@ -5,7 +5,7 @@ from homeassistant.helpers.entity import Entity
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.meross_event import DeviceOnlineStatusEvent
 
-from .common import (DOMAIN, HA_SENSOR, MANAGER, calculate_sensor_id, ConnectionWatchDog)
+from .common import (DOMAIN, HA_SENSOR, MANAGER, calculate_sensor_id, ConnectionWatchDog, cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ class PowerSensorWrapper(Entity):
 
         self.schedule_update_ha_state(False)
 
+    @cloud_io()
     def update(self):
         # TODO: loading the entire device data at every iteration might be stressful. Need to re-engineer this
         self._device.get_status(force_status_refresh=False)

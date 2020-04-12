@@ -20,7 +20,7 @@ from meross_iot.meross_event import (DeviceOnlineStatusEvent,
                                      ThermostatModeChange,
                                      ThermostatTemperatureChange)
 
-from .common import (DOMAIN, HA_CLIMATE, MANAGER, ConnectionWatchDog)
+from .common import (DOMAIN, HA_CLIMATE, MANAGER, ConnectionWatchDog, cloud_io)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -79,6 +79,7 @@ class ValveEntityWrapper(ClimateDevice):
 
         self.schedule_update_ha_state(False)
 
+    @cloud_io()
     def update(self):
         state = self._device.get_status(True)
         self._is_online = self._device.online
@@ -162,12 +163,14 @@ class ValveEntityWrapper(ClimateDevice):
     def hvac_modes(self) -> List[str]:
         return [HVAC_MODE_OFF, HVAC_MODE_AUTO, HVAC_MODE_HEAT]
 
+    @cloud_io()
     def set_temperature(self, **kwargs) -> None:
         target = kwargs.get('temperature')
         self._device.set_target_temperature(target, callback=none_callback, timeout=THERMOSTAT_TIMEOUT)
         # Assume update will work, thus update local state immediately
         self._target_temperature = target
 
+    @cloud_io()
     def set_hvac_mode(self, hvac_mode: str) -> None:
         # NOTE: this method will also update the local state as the thermostat will take too much time to get the
         # command ACK.turn_on
@@ -223,6 +226,7 @@ class ValveEntityWrapper(ClimateDevice):
         else:
             _LOGGER.warning("Unsupported mode for this device")
 
+    @cloud_io()
     def set_preset_mode(self, preset_mode: str) -> None:
         if self._device.type == "mts100v3":
             self._device_mode = ThermostatV3Mode[preset_mode]  # Update local state
