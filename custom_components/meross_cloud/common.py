@@ -78,7 +78,7 @@ def cloud_io(default_return_value=None):
             try:
                 return func(*args, **kwargs)
             except CommandTimeoutException as e:
-                log_exception("Error occurred while handling cloud_io function.", logger=_LOGGER)
+                log_exception("A command timeout occurred while handling cloud_io function.", logger=_LOGGER)
                 if default_return_value is not None:
                     return default_return_value
                 else:
