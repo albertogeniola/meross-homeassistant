@@ -68,7 +68,6 @@ class MerossSmartHumidifier(FanEntity, MerossEntityWrapper):
             return None
 
         # This device is considered "on" if spry mode is continuous or intermittent
-        # TODO
         spry_mode = SprayMode(self._device.get_status().get('spray')[0].get('mode'))
         return spry_mode != SprayMode.OFF
 
