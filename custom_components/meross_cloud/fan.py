@@ -2,17 +2,18 @@ import logging
 from typing import Any, Optional
 
 from homeassistant.components.fan import SUPPORT_SET_SPEED, FanEntity
+from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.humidifier import GenericHumidifier, SprayMode
 from meross_iot.manager import MerossManager
 from meross_iot.meross_event import (DeviceOnlineStatusEvent,
                                      HumidifierSpryEvent)
 
-from .common import (DOMAIN, HA_FAN, MANAGER, ConnectionWatchDog, cloud_io)
+from .common import (DOMAIN, HA_FAN, MANAGER, ConnectionWatchDog, cloud_io, MerossEntityWrapper)
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class MerossSmartHumidifier(FanEntity):
+class MerossSmartHumidifier(FanEntity, MerossEntityWrapper):
     """
     At the time of writing, Homeassistant does not offer any specific device implementation that we can extend
     for implementing the smart humidifier. We'll exploit the fan entity to do so
@@ -21,43 +22,31 @@ class MerossSmartHumidifier(FanEntity):
     def __init__(self, device: GenericHumidifier):
         self._device = device
         self._id = device.uuid
-        self._device_name = device.name
 
         # Device state
-        self._humidifier_mode = None
-        self._is_on = None
-        self._is_online = self._device.online
-
-    def parse_spry_mode(self, spry_mode):
-        if spry_mode == SprayMode.OFF:
-            return False, self._humidifier_mode
-        elif spry_mode == SprayMode.INTERMITTENT:
-            return True, SprayMode.INTERMITTENT
-        elif spry_mode == SprayMode.CONTINUOUS:
-            return True, SprayMode.CONTINUOUS
-        else:
-            raise ValueError("Unsupported spry mode.")
-
-    def device_event_handler(self, evt):
-        if isinstance(evt, DeviceOnlineStatusEvent):
-            _LOGGER.info("Device %s reported online status: %s" % (self._device.name, evt.status))
-            if evt.status not in ["online", "offline"]:
-                raise ValueError("Invalid online status")
-            self._is_online = evt.status == "online"
-        elif isinstance(evt, HumidifierSpryEvent):
-            self._is_on, self._humidifier_mode = self.parse_spry_mode(evt.spry_mode)
-        else:
-            _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
-
-        self.schedule_update_ha_state(False)
+        self._available = True  # Assume the mqtt client is connected
+        self._first_update_done = False
 
     @cloud_io()
     def update(self):
-        state = self._device.get_status(True)
-        self._is_online = self._device.online
+        if self._device.online:
+            self._device.get_status(force_status_refresh=True)
+            self._first_update_done = True
 
-        if self._is_online:
-            self._is_on, self._humidifier_mode = self.parse_spry_mode(self._device.get_spray_mode())
+    def device_event_handler(self, evt):
+        # Update the device state when an event occurs
+        self.schedule_update_ha_state(False)
+
+    def notify_client_state(self, status: ClientStatus):
+        # When a connection change occurs, update the internal state
+        if status == ClientStatus.SUBSCRIBED:
+            # If we are connecting back, schedule a full refresh of the device
+            self.schedule_update_ha_state(True)
+        else:
+            # In any other case, mark the device unavailable
+            # and only update the UI
+            self._available = False
+            self.schedule_update_ha_state(False)
 
     async def async_added_to_hass(self) -> None:
         self._device.register_event_callback(self.device_event_handler)
@@ -67,17 +56,31 @@ class MerossSmartHumidifier(FanEntity):
 
     @property
     def available(self) -> bool:
-        return self._is_online
+        # A device is available if the client library is connected to the MQTT broker and if the
+        # device we are contacting is online
+        return self._available and self._device.online
 
     @property
     def is_on(self) -> bool:
-        return self._is_on
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+
+        # This device is considered "on" if spry mode is continuous or intermittent
+        # TODO
+        spry_mode = SprayMode(self._device.get_status().get('spray')[0].get('mode'))
+        return spry_mode != SprayMode.OFF
 
     @property
+    @cloud_io(default_return_value=None)
     def speed(self) -> Optional[str]:
-        if self._humidifier_mode is None:
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
             return None
-        return self._humidifier_mode.name
+        spry_mode = SprayMode(self._device.get_status().get('spray')[0].get('mode'))
+        return spry_mode.name
 
     @property
     def supported_features(self) -> int:
@@ -86,7 +89,7 @@ class MerossSmartHumidifier(FanEntity):
     @property
     def speed_list(self) -> list:
         """Get the list of available speeds."""
-        return [e.name for e in SprayMode if e != SprayMode.OFF]
+        return [e.name for e in SprayMode]
 
     @cloud_io()
     def set_speed(self, speed: str) -> None:
@@ -100,14 +103,10 @@ class MerossSmartHumidifier(FanEntity):
 
     @cloud_io()
     def turn_on(self, speed: Optional[str] = None, **kwargs) -> None:
-        # Assume the user wants to trigger the last mode
-        mode = self._humidifier_mode
-        # If a specific speed was provided, override the last mode
-        if speed is not None:
+        if speed is None:
+            mode = SprayMode.CONTINUOUS
+        else:
             mode = SprayMode[speed]
-        # Otherwise, assume we want intermittent mode
-        if mode is None:
-            mode = SprayMode.INTERMITTENT
 
         self._device.set_spray_mode(mode)
 
@@ -117,13 +116,13 @@ class MerossSmartHumidifier(FanEntity):
 
     @property
     def name(self) -> Optional[str]:
-        return self._device_name
+        return self._device.name
 
     @property
     def device_info(self):
         return {
             'identifiers': {(DOMAIN, self._id)},
-            'name': self._device_name,
+            'name': self._device.name,
             'manufacturer': 'Meross',
             'model': self._device.type + " " + self._device.hwversion,
             'sw_version': self._device.fwversion

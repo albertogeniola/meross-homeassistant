@@ -11,6 +11,7 @@ from homeassistant.components.climate.const import (CURRENT_HVAC_HEAT,
                                                     HVAC_MODE_HEAT,
                                                     HVAC_MODE_OFF, PRESET_NONE)
 from homeassistant.const import TEMP_CELSIUS
+from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.subdevices.thermostats import (ThermostatMode,
                                                              ThermostatV3Mode,
                                                              ValveSubDevice)
@@ -20,7 +21,7 @@ from meross_iot.meross_event import (DeviceOnlineStatusEvent,
                                      ThermostatModeChange,
                                      ThermostatTemperatureChange)
 
-from .common import (DOMAIN, HA_CLIMATE, MANAGER, ConnectionWatchDog, cloud_io)
+from .common import (DOMAIN, HA_CLIMATE, MANAGER, ConnectionWatchDog, cloud_io, MerossEntityWrapper)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,14 +33,13 @@ def none_callback(err, resp):
     pass
 
 
-class ValveEntityWrapper(ClimateDevice):
+class ValveEntityWrapper(ClimateDevice, MerossEntityWrapper):
     """Wrapper class to adapt the Meross thermostat into the Homeassistant platform"""
 
     def __init__(self, device: ValveSubDevice):
         self._device = device
 
         self._id = self._device.uuid + ":" + self._device.subdevice_id
-        self._device_name = self._device.name
 
         # For now, we assume that every Meross Thermostat supports the following modes.
         # This might be improved in the future by looking at the device abilities via get_abilities()
@@ -47,95 +47,92 @@ class ValveEntityWrapper(ClimateDevice):
         self._flags |= SUPPORT_TARGET_TEMPERATURE
         self._flags |= SUPPORT_PRESET_MODE
 
-        # Device state
-        self._current_temperature = None
-        self._is_on = None
-        self._device_mode = None
+        self._available = True  # Assume the mqtt client is connected
+        self._first_update_done = False
         self._target_temperature = None
-        self._heating = None
-
-        self._is_online = self._device.online
-        if self._is_online:
-            self.update()
-
-    def device_event_handler(self, evt):
-
-        # Handle here events that are common to all the wrappers
-        if isinstance(evt, DeviceOnlineStatusEvent):
-            _LOGGER.info("Device %s reported online status: %s" % (self._device.name, evt.status))
-            if evt.status not in ["online", "offline"]:
-                raise ValueError("Invalid online status")
-            self._is_online = evt.status == "online"
-        elif isinstance(evt, ThermostatTemperatureChange):
-            self._current_temperature = float(evt.temperature.get('room'))/10
-            self._target_temperature = float(evt.temperature.get('currentSet')) / 10
-            self._heating = evt.temperature.get('heating') == 1
-        elif isinstance(evt, ThermostatModeChange):
-            self._device_mode = evt.mode
-        elif isinstance(evt, DeviceSwitchStatusEvent):
-            self._is_on = evt.switch_state == 1
-        else:
-            _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
-
-        self.schedule_update_ha_state(False)
 
     @cloud_io()
     def update(self):
-        state = self._device.get_status(True)
-        self._is_online = self._device.online
+        if self._device.online:
+            self._device.get_status(force_status_refresh=True)
+            self._target_temperature = float(self._device.get_status().get('temperature').get('currentSet'))/10
+            self._first_update_done = True
 
-        if self._is_online:
-            self._is_on = state.get('togglex').get('onoff') == 1
-            mode = state.get('mode').get('state')
+    def device_event_handler(self, evt):
+        if isinstance(evt, ThermostatTemperatureChange):
+            self._target_temperature = float(self._device.get_status().get('temperature').get('currentSet')) / 10
 
-            if self._device.type == "mts100v3":
-                self._device_mode = ThermostatV3Mode(mode)
-            elif self._device.type == "mts100":
-                self._device_mode = ThermostatMode(mode)
-            else:
-                _LOGGER.warning("Unknown device type %s" % self._device.type)
+        self.schedule_update_ha_state(False)
 
-            temp = state.get('temperature')
-            self._current_temperature = float(temp.get('room')) / 10
-            self._target_temperature = float(temp.get('currentSet')) / 10
-            self._heating = temp.get('heating') == 1
+    def notify_client_state(self, status: ClientStatus):
+        # When a connection change occurs, update the internal state
+        if status == ClientStatus.SUBSCRIBED:
+            # If we are connecting back, schedule a full refresh of the device
+            self.schedule_update_ha_state(True)
+        else:
+            # In any other case, mark the device unavailable
+            # and only update the UI
+            self._available = False
+            self.schedule_update_ha_state(False)
 
     @property
+    @cloud_io(default_return_value=None)
     def current_temperature(self) -> float:
-        return self._current_temperature
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+
+        return float(self._device.get_status().get('temperature').get('room'))/10
 
     @property
+    @cloud_io(default_return_value=None)
     def hvac_action(self) -> str:
-        if not self._is_on:
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+
+        status = self._device.get_status()
+        is_on = status.get('togglex').get('onoff') == 1
+        heating = status.get('temperature').get('heating') == 1
+        if not is_on:
             return CURRENT_HVAC_OFF
-        elif self._heating:
+        elif heating:
             return CURRENT_HVAC_HEAT
         else:
             return CURRENT_HVAC_IDLE
 
     @property
+    @cloud_io(default_return_value=HVAC_MODE_OFF)
     def hvac_mode(self) -> str:
-        if not self._is_on:
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+
+        status = self._device.get_status()
+        is_on = status.get('togglex').get('onoff') == 1
+        mode = status.get('mode').get('state')
+
+        if not is_on:
             return HVAC_MODE_OFF
-        elif self._device_mode == ThermostatV3Mode.AUTO:
+        elif mode == 3:
             return HVAC_MODE_AUTO
-        elif self._device_mode == ThermostatV3Mode.CUSTOM:
-            return HVAC_MODE_HEAT
-        elif self._device_mode == ThermostatMode.SCHEDULE:
-            return HVAC_MODE_AUTO
-        elif self._device_mode == ThermostatMode.CUSTOM:
+        elif mode == 0:
             return HVAC_MODE_HEAT
         else:
             return HVAC_MODE_HEAT
 
     @property
     def available(self) -> bool:
-        # A device is available if it's online
-        return self._is_online
+        # A device is available if the client library is connected to the MQTT broker and if the
+        # device we are contacting is online
+        return self._available and self._device.online
 
     @property
     def name(self) -> str:
-        return self._device_name
+        return self._device.name
 
     @property
     def unique_id(self) -> str:
@@ -149,7 +146,7 @@ class ValveEntityWrapper(ClimateDevice):
     def device_info(self):
         return {
             'identifiers': {(DOMAIN, self._id)},
-            'name': self._device_name,
+            'name': self._device.name,
             'manufacturer': 'Meross',
             'model': self._device.type,
             'via_device': (DOMAIN, self._device.uuid)
@@ -239,7 +236,14 @@ class ValveEntityWrapper(ClimateDevice):
 
     @property
     def target_temperature(self) -> Optional[float]:
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+        #if self._target_temperature is not None:
         return self._target_temperature
+        #else:
+        #    return float(self._device.get_status().get('temperature').get('currentSet'))/10
 
     @property
     def target_temperature_step(self) -> Optional[float]:
@@ -247,16 +251,19 @@ class ValveEntityWrapper(ClimateDevice):
 
     @property
     def preset_mode(self) -> Optional[str]:
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+
         return self._device.mode.name
 
     @property
     def preset_modes(self) -> Optional[List[str]]:
-        if isinstance(self._device_mode, ThermostatV3Mode):
+        if self._device.type == 'mts100v3':
             return [e.name for e in ThermostatV3Mode]
-        elif isinstance(self._device_mode, ThermostatMode):
+        elif self._device.type == 'mts100':
             return [e.name for e in ThermostatMode]
-        elif self._device_mode is None:
-            return []
         else:
             _LOGGER.warning("Unknown valve mode type.")
             return [PRESET_NONE]
