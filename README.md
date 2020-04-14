@@ -1,9 +1,6 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
 ![Build](https://img.shields.io/azure-devops/build/albertogeniola/c4128d1b-c23c-418d-95c5-2de061954ee5/3/master?style=for-the-badge)
 
-## !!! Meross API server down !!!
-Startig from April 13 2020 19:30 UTC+0:00, Meross HTTP API has been failing to respond to the LOGIN HTTP API, causing the Library to fail. This is not an issue with the library itself, but with the Meross ecosystem. If you want to double check with the Meross APP, you might logout and then login with the Android/IOS Meross application. Be carefoul though as doing so you might not be able to login again until Meross fixes the problem on their servers. 
-
 # Meross HomeAssistant component
 A full featured Homeassistant component to drive Meross devices. 
 This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
