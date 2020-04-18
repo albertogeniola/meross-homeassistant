@@ -7,6 +7,5 @@
   "requirements": ["git+https://github.com/albertogeniola/MerossIot.git@dev-20200418.19#meross-iot"],
   "config_flow": true,
   "meross_cloud_version": "DEV-0.3.4.2-2",
-   "quality_scale": "gold",
-
+   "quality_scale": "gold"
 }
