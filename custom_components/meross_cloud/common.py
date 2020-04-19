@@ -63,7 +63,7 @@ class ConnectionWatchDog(object):
 
     def connection_handler(self, event, *args, **kwargs):
         if isinstance(event, ClientConnectionEvent):
-            for dev in self._hass.data[DOMAIN][self._platform]:  # type: MerossEntityWrapper
+            for uuid, dev in self._hass.data[DOMAIN][self._platform].items():
                 try:
                     dev.notify_client_state(status=event.status)
                 except:
