@@ -25,6 +25,7 @@ HA_CLIMATE = 'climate'
 HA_FAN = 'fan'
 MEROSS_PLATFORMS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
 CONNECTION_TIMEOUT_THRESHOLD = 5
+CONF_STORED_CREDS = 'stored_credentials'
 
 
 def calculate_switch_id(uuid: str, channel: int):
@@ -62,8 +63,11 @@ class ConnectionWatchDog(object):
 
     def connection_handler(self, event, *args, **kwargs):
         if isinstance(event, ClientConnectionEvent):
-            for dev in self._hass.data[self._platform].entities:  # type: MerossEntityWrapper
-                dev.notify_client_state(status=event.status)
+            for uuid, dev in self._hass.data[DOMAIN][self._platform].items():
+                try:
+                    dev.notify_client_state(status=event.status)
+                except:
+                    _LOGGER.exception("Error occurred while notifying connection change")
 
 
 class MerossEntityWrapper(ABC):
