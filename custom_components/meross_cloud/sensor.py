@@ -6,7 +6,7 @@ from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.meross_event import DeviceOnlineStatusEvent
 
-from .common import (DOMAIN, HA_SENSOR, MANAGER, calculate_sensor_id, ConnectionWatchDog, cloud_io, MerossEntityWrapper)
+from .common import (DOMAIN, HA_SENSOR, MANAGER, calculate_sensor_id, ConnectionWatchDog, MerossEntityWrapper)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +22,6 @@ class PowerSensorWrapper(Entity, MerossEntityWrapper):
         self._sensor_info = None
         self._available = True  # Assume the mqtt client is connected
 
-    @cloud_io()
     def update(self):
         # Given that the device is online, we force a full state refresh.
         # This is necessary as this device is handled with HA should_poll=True
@@ -53,6 +52,10 @@ class PowerSensorWrapper(Entity, MerossEntityWrapper):
             # and only update the UI
             self._available = False
             self.schedule_update_ha_state(False)
+
+    @property
+    def assumed_state(self) -> bool:
+        return not self._first_update_done
 
     @property
     def available(self) -> bool:

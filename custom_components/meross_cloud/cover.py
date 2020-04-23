@@ -9,7 +9,7 @@ from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
 from meross_iot.meross_event import (DeviceDoorStatusEvent,
                                      DeviceOnlineStatusEvent)
 
-from .common import (DOMAIN, HA_COVER, MANAGER, ConnectionWatchDog, cloud_io, MerossEntityWrapper)
+from .common import (DOMAIN, HA_COVER, MANAGER, ConnectionWatchDog, MerossEntityWrapper)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,7 +35,6 @@ class OpenGarageCover(CoverDevice, MerossEntityWrapper):
         self._opening = False
         self._closing = False
 
-    @cloud_io()
     def update(self):
         if self._device.online:
             self._device.get_status(force_status_refresh=True)
@@ -69,6 +68,10 @@ class OpenGarageCover(CoverDevice, MerossEntityWrapper):
             self.schedule_update_ha_state(False)
 
     @property
+    def assumed_state(self) -> bool:
+        return not self._first_update_done
+
+    @property
     def name(self) -> str:
         """Return the name of the cover."""
         return self._device.name
@@ -80,7 +83,6 @@ class OpenGarageCover(CoverDevice, MerossEntityWrapper):
         return self._available and self._device.online
 
     @property
-    @cloud_io(default_return_value=True)
     def is_closed(self):
         if not self._first_update_done:
             # Schedule update and return
@@ -91,7 +93,6 @@ class OpenGarageCover(CoverDevice, MerossEntityWrapper):
         return not self._device.get_status(False).get(self._channel)
 
     @property
-    @cloud_io(default_return_value=False)
     def is_open(self):
         if not self._first_update_done:
             # Schedule update and return
@@ -102,7 +103,6 @@ class OpenGarageCover(CoverDevice, MerossEntityWrapper):
         return self._device.get_status(False).get(self._channel)
 
     @property
-    @cloud_io(default_return_value=False)
     def is_opening(self):
         if not self._first_update_done:
             # Schedule update and return
@@ -113,7 +113,6 @@ class OpenGarageCover(CoverDevice, MerossEntityWrapper):
         return self._opening
 
     @property
-    @cloud_io(default_return_value=False)
     def is_closing(self):
         if not self._first_update_done:
             # Schedule update and return
@@ -121,7 +120,6 @@ class OpenGarageCover(CoverDevice, MerossEntityWrapper):
             return None
         return self._closing
 
-    @cloud_io()
     def close_cover(self, **kwargs):
         """Close the cover."""
         is_closed = not self._device.get_status(False).get(self._channel)
@@ -133,7 +131,6 @@ class OpenGarageCover(CoverDevice, MerossEntityWrapper):
             if self.enabled:
                 self.schedule_update_ha_state(False)
 
-    @cloud_io()
     def open_cover(self, **kwargs):
         """Open the cover."""
         is_open = self._device.get_status(False).get(self._channel)

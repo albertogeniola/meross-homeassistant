@@ -11,7 +11,7 @@ from meross_iot.manager import MerossManager
 from meross_iot.meross_event import (BulbLightStateChangeEvent,
                                      BulbSwitchStateChangeEvent,
                                      DeviceOnlineStatusEvent)
-from .common import (DOMAIN, HA_LIGHT, MANAGER, ConnectionWatchDog, cloud_io, log_exception)
+from .common import (DOMAIN, HA_LIGHT, MANAGER, ConnectionWatchDog, log_exception)
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -48,7 +48,6 @@ class LightEntityWrapper(Light):
         self._flags |= SUPPORT_COLOR
         self._flags |= SUPPORT_COLOR_TEMP
     
-    @cloud_io()
     def update(self):
         if self._device.online:
             self._device.get_status(force_status_refresh=True)
@@ -100,6 +99,10 @@ class LightEntityWrapper(Light):
             self.schedule_update_ha_state(False)
 
     @property
+    def assumed_state(self) -> bool:
+        return not self._first_update_done
+
+    @property
     def should_poll(self) -> bool:
         return False
 
@@ -109,7 +112,6 @@ class LightEntityWrapper(Light):
         return self._available and self._device.online
 
     @property
-    @cloud_io(default_return_value=False)
     def is_on(self) -> bool:
         if not self._first_update_done:
             # Schedule update and return
@@ -119,7 +121,6 @@ class LightEntityWrapper(Light):
         return self._device.get_channel_status(channel=self._channel_id).get('onoff')
 
     @property
-    @cloud_io(default_return_value=0)
     def brightness(self):
         if not self._first_update_done:
             # Schedule update and return
@@ -134,7 +135,6 @@ class LightEntityWrapper(Light):
         return float(luminance) / 100 * 255
 
     @property
-    @cloud_io(default_return_value=0)
     def hs_color(self):
         if not self._first_update_done:
             # Schedule update and return
@@ -148,7 +148,6 @@ class LightEntityWrapper(Light):
         return None
 
     @property
-    @cloud_io(default_return_value=0)
     def color_temp(self):
         if not self._first_update_done:
             # Schedule update and return
@@ -184,11 +183,9 @@ class LightEntityWrapper(Light):
             'sw_version': self._device.fwversion
         }
 
-    @cloud_io()
     def turn_off(self, **kwargs) -> None:
         self._device.turn_off(channel=self._channel_id)
 
-    @cloud_io()
     def turn_on(self, **kwargs) -> None:
         if not self.is_on:
             self._device.turn_on(channel=self._channel_id)

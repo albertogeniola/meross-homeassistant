@@ -75,22 +75,6 @@ class MerossEntityWrapper(ABC):
         pass
 
 
-def cloud_io(default_return_value=None):
-    def cloud_io_inner(func):
-        @functools.wraps(func)
-        def func_wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except CommandTimeoutException as e:
-                log_exception("A command timeout occurred while handling cloud_io function.", logger=_LOGGER)
-                if default_return_value is not None:
-                    return default_return_value
-                else:
-                    return None
-        return func_wrapper
-    return cloud_io_inner
-
-
 def log_exception(message: str = None, logger: logging = None):
     if logger is None:
         logger = logging.getLogger(__name__)

@@ -4,7 +4,7 @@ from homeassistant.components.switch import SwitchDevice
 from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.manager import MerossManager
-from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, ConnectionWatchDog, cloud_io, MerossEntityWrapper)
+from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, ConnectionWatchDog, MerossEntityWrapper)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,7 +29,6 @@ class SwitchEntityWrapper(SwitchDevice, MerossEntityWrapper):
         self._available = True  # Assume the mqtt client is connected
         self._first_update_done = False
 
-    @cloud_io()
     def update(self):
         if self._device.online:
             self._device.get_status(force_status_refresh=True)
@@ -83,7 +82,6 @@ class SwitchEntityWrapper(SwitchDevice, MerossEntityWrapper):
         return False
 
     @property
-    @cloud_io(default_return_value=False)
     def is_on(self) -> bool:
         if not self._first_update_done:
             # Schedule update and return
@@ -96,11 +94,9 @@ class SwitchEntityWrapper(SwitchDevice, MerossEntityWrapper):
     def assumed_state(self) -> bool:
         return not self._first_update_done
 
-    @cloud_io()
     def turn_off(self, **kwargs) -> None:
         self._device.turn_off_channel(self._channel_id)
 
-    @cloud_io()
     def turn_on(self, **kwargs) -> None:
         self._device.turn_on_channel(self._channel_id)
 

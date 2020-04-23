@@ -8,7 +8,7 @@ from meross_iot.manager import MerossManager
 from meross_iot.meross_event import (DeviceOnlineStatusEvent,
                                      HumidifierSpryEvent)
 
-from .common import (DOMAIN, HA_FAN, MANAGER, ConnectionWatchDog, cloud_io, MerossEntityWrapper)
+from .common import (DOMAIN, HA_FAN, MANAGER, ConnectionWatchDog, MerossEntityWrapper)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,7 +27,6 @@ class MerossSmartHumidifier(FanEntity, MerossEntityWrapper):
         self._available = True  # Assume the mqtt client is connected
         self._first_update_done = False
 
-    @cloud_io()
     def update(self):
         if self._device.online:
             self._device.get_status(force_status_refresh=True)
@@ -55,6 +54,10 @@ class MerossSmartHumidifier(FanEntity, MerossEntityWrapper):
         self._device.unregister_event_callback(self.device_event_handler)
 
     @property
+    def assumed_state(self) -> bool:
+        return not self._first_update_done
+
+    @property
     def available(self) -> bool:
         # A device is available if the client library is connected to the MQTT broker and if the
         # device we are contacting is online
@@ -72,7 +75,6 @@ class MerossSmartHumidifier(FanEntity, MerossEntityWrapper):
         return spry_mode != SprayMode.OFF
 
     @property
-    @cloud_io(default_return_value=None)
     def speed(self) -> Optional[str]:
         if not self._first_update_done:
             # Schedule update and return
@@ -90,17 +92,14 @@ class MerossSmartHumidifier(FanEntity, MerossEntityWrapper):
         """Get the list of available speeds."""
         return [e.name for e in SprayMode]
 
-    @cloud_io()
     def set_speed(self, speed: str) -> None:
         mode = SprayMode[speed]
         self._device.set_spray_mode(mode)
 
-    @cloud_io()
     def set_direction(self, direction: str) -> None:
         # Not supported
         pass
 
-    @cloud_io()
     def turn_on(self, speed: Optional[str] = None, **kwargs) -> None:
         if speed is None:
             mode = SprayMode.CONTINUOUS
@@ -109,7 +108,6 @@ class MerossSmartHumidifier(FanEntity, MerossEntityWrapper):
 
         self._device.set_spray_mode(mode)
 
-    @cloud_io()
     def turn_off(self, **kwargs: Any) -> None:
         self._device.set_spray_mode(SprayMode.OFF)
 
