@@ -88,9 +88,13 @@ class SwitchEntityWrapper(SwitchDevice, MerossEntityWrapper):
         if not self._first_update_done:
             # Schedule update and return
             self.schedule_update_ha_state(True)
-            return None
+            return False
 
         return self._device.get_status(channel=self._channel_id)
+    
+    @property
+    def assumed_state(self) -> bool:
+        return not self._first_update_done
 
     @cloud_io()
     def turn_off(self, **kwargs) -> None:
