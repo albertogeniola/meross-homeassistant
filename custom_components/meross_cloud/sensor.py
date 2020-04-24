@@ -54,10 +54,6 @@ class PowerSensorWrapper(Entity, MerossEntityWrapper):
             self.schedule_update_ha_state(False)
 
     @property
-    def assumed_state(self) -> bool:
-        return not self._first_update_done
-
-    @property
     def available(self) -> bool:
         return self._available and self._device.online
 
