@@ -6,10 +6,11 @@ from homeassistant.const import (STATE_CLOSED, STATE_CLOSING, STATE_OPEN,
                                  STATE_OPENING, STATE_UNKNOWN)
 from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
+from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.meross_event import (DeviceDoorStatusEvent,
                                      DeviceOnlineStatusEvent)
 
-from .common import (DOMAIN, HA_COVER, MANAGER, ConnectionWatchDog, MerossEntityWrapper)
+from .common import (DOMAIN, HA_COVER, MANAGER, ConnectionWatchDog, MerossEntityWrapper, log_exception)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,12 +38,16 @@ class OpenGarageCover(CoverDevice, MerossEntityWrapper):
 
     def update(self):
         if self._device.online:
-            self._device.get_status(force_status_refresh=True)
-            # Reset derived states
-            self._opening = False
-            self._closing = False
-            # Mark first update done
-            self._first_update_done = True
+            try:
+                self._device.get_status(force_status_refresh=True)
+                # Reset derived states
+                self._opening = False
+                self._closing = False
+                # Mark first update done
+                self._first_update_done = True
+            except CommandTimeoutException as e:
+                log_exception(logger=_LOGGER)
+                raise
 
     def device_event_handler(self, evt):
         # Whenever an open/closed push notitication is received, make sure to reset the
@@ -58,14 +63,12 @@ class OpenGarageCover(CoverDevice, MerossEntityWrapper):
 
     def notify_client_state(self, status: ClientStatus):
         # When a connection change occurs, update the internal state
-        if status == ClientStatus.SUBSCRIBED:
-            # If we are connecting back, schedule a full refresh of the device
-            self.schedule_update_ha_state(True)
-        else:
-            # In any other case, mark the device unavailable
-            # and only update the UI
-            self._available = False
-            self.schedule_update_ha_state(False)
+        # If we are connecting back, schedule a full refresh of the device
+        # In any other case, mark the device unavailable
+        # and only update the UI
+        client_online = status == ClientStatus.SUBSCRIBED
+        self._available = client_online
+        self.schedule_update_ha_state(client_online)
 
     @property
     def assumed_state(self) -> bool:

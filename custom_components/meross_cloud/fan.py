@@ -4,11 +4,12 @@ from typing import Any, Optional
 from homeassistant.components.fan import SUPPORT_SET_SPEED, FanEntity
 from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.humidifier import GenericHumidifier, SprayMode
+from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.manager import MerossManager
 from meross_iot.meross_event import (DeviceOnlineStatusEvent,
                                      HumidifierSpryEvent)
 
-from .common import (DOMAIN, HA_FAN, MANAGER, ConnectionWatchDog, MerossEntityWrapper)
+from .common import (DOMAIN, HA_FAN, MANAGER, ConnectionWatchDog, MerossEntityWrapper, log_exception)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,8 +30,12 @@ class MerossSmartHumidifier(FanEntity, MerossEntityWrapper):
 
     def update(self):
         if self._device.online:
-            self._device.get_status(force_status_refresh=True)
-            self._first_update_done = True
+            try:
+                self._device.get_status(force_status_refresh=True)
+                self._first_update_done = True
+            except CommandTimeoutException as e:
+                log_exception(logger=_LOGGER)
+                raise
 
     def device_event_handler(self, evt):
         # Update the device state when an event occurs
@@ -38,14 +43,12 @@ class MerossSmartHumidifier(FanEntity, MerossEntityWrapper):
 
     def notify_client_state(self, status: ClientStatus):
         # When a connection change occurs, update the internal state
-        if status == ClientStatus.SUBSCRIBED:
-            # If we are connecting back, schedule a full refresh of the device
-            self.schedule_update_ha_state(True)
-        else:
-            # In any other case, mark the device unavailable
-            # and only update the UI
-            self._available = False
-            self.schedule_update_ha_state(False)
+        # If we are connecting back, schedule a full refresh of the device
+        # In any other case, mark the device unavailable
+        # and only update the UI
+        client_online = status == ClientStatus.SUBSCRIBED
+        self._available = client_online
+        self.schedule_update_ha_state(client_online)
 
     async def async_added_to_hass(self) -> None:
         self._device.register_event_callback(self.device_event_handler)

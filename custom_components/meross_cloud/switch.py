@@ -3,8 +3,12 @@ import logging
 from homeassistant.components.switch import SwitchDevice
 from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.power_plugs import GenericPlug
+from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.manager import MerossManager
-from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, ConnectionWatchDog, MerossEntityWrapper)
+from pygments.unistring import Co
+
+from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, ConnectionWatchDog, MerossEntityWrapper,
+                     log_exception)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,8 +35,12 @@ class SwitchEntityWrapper(SwitchDevice, MerossEntityWrapper):
 
     def update(self):
         if self._device.online:
-            self._device.get_status(force_status_refresh=True)
-            self._first_update_done = True
+            try:
+                self._device.get_status(force_status_refresh=True)
+                self._first_update_done = True
+            except CommandTimeoutException as e:
+                log_exception(logger=_LOGGER)
+                raise
 
     def device_event_handler(self, evt):
         # Update the device state when an event occurs
@@ -40,14 +48,12 @@ class SwitchEntityWrapper(SwitchDevice, MerossEntityWrapper):
 
     def notify_client_state(self, status: ClientStatus):
         # When a connection change occurs, update the internal state
-        if status == ClientStatus.SUBSCRIBED:
-            # If we are connecting back, schedule a full refresh of the device
-            self.schedule_update_ha_state(True)
-        else:
-            # In any other case, mark the device unavailable
-            # and only update the UI
-            self._available = False
-            self.schedule_update_ha_state(False)
+        # If we are connecting back, schedule a full refresh of the device
+        # In any other case, mark the device unavailable
+        # and only update the UI
+        client_online = status == ClientStatus.SUBSCRIBED
+        self._available = client_online
+        self.schedule_update_ha_state(client_online)
 
     @property
     def unique_id(self) -> str:

@@ -4,9 +4,11 @@ from homeassistant.const import ATTR_VOLTAGE
 from homeassistant.helpers.entity import Entity
 from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.power_plugs import GenericPlug
+from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.meross_event import DeviceOnlineStatusEvent
 
-from .common import (DOMAIN, HA_SENSOR, MANAGER, calculate_sensor_id, ConnectionWatchDog, MerossEntityWrapper)
+from .common import (DOMAIN, HA_SENSOR, MANAGER, calculate_sensor_id, ConnectionWatchDog, MerossEntityWrapper,
+                     log_exception)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,17 +28,21 @@ class PowerSensorWrapper(Entity, MerossEntityWrapper):
         # Given that the device is online, we force a full state refresh.
         # This is necessary as this device is handled with HA should_poll=True
         # flag, so the UPDATE should every time update its status.
-        self._device.get_status(force_status_refresh=self._device.online)
+        try:
+            self._device.get_status(force_status_refresh=self._device.online)
 
-        # Update electricity stats only if the device is online and currently turned on
-        if self.available and self._device.get_status():
-            self._sensor_info = self._device.get_electricity()
-        else:
-            self._sensor_info = {
-                'voltage': 0,
-                'current': 0,
-                'power': 0
-            }
+            # Update electricity stats only if the device is online and currently turned on
+            if self.available and self._device.get_status():
+                self._sensor_info = self._device.get_electricity()
+            else:
+                self._sensor_info = {
+                    'voltage': 0,
+                    'current': 0,
+                    'power': 0
+                }
+        except CommandTimeoutException as e:
+            log_exception(logger=_LOGGER)
+            raise
 
     def device_event_handler(self, evt):
         # Update the device state when an event occurs
@@ -44,14 +50,12 @@ class PowerSensorWrapper(Entity, MerossEntityWrapper):
 
     def notify_client_state(self, status: ClientStatus):
         # When a connection change occurs, update the internal state
-        if status == ClientStatus.SUBSCRIBED:
-            # If we are connecting back, schedule a full refresh of the device
-            self.schedule_update_ha_state(True)
-        else:
-            # In any other case, mark the device unavailable
-            # and only update the UI
-            self._available = False
-            self.schedule_update_ha_state(False)
+        # If we are connecting back, schedule a full refresh of the device
+        # In any other case, mark the device unavailable
+        # and only update the UI
+        client_online = status == ClientStatus.SUBSCRIBED
+        self._available = client_online
+        self.schedule_update_ha_state(client_online)
 
     @property
     def available(self) -> bool:

@@ -7,6 +7,7 @@ from homeassistant.components.light import (ATTR_BRIGHTNESS, ATTR_COLOR_TEMP,
                                             Light)
 from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.light_bulbs import GenericBulb
+from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.manager import MerossManager
 from meross_iot.meross_event import (BulbLightStateChangeEvent,
                                      BulbSwitchStateChangeEvent,
@@ -50,15 +51,19 @@ class LightEntityWrapper(Light):
     
     def update(self):
         if self._device.online:
-            self._device.get_status(force_status_refresh=True)
-            self._flags = 0
-            if self._device.supports_luminance():
-                self._flags |= SUPPORT_BRIGHTNESS
-            if self._device.is_rgb():
-                self._flags |= SUPPORT_COLOR
-            if self._device.is_light_temperature():
-                self._flags |= SUPPORT_COLOR_TEMP
-            self._first_update_done = True
+            try:
+                self._device.get_status(force_status_refresh=True)
+                self._flags = 0
+                if self._device.supports_luminance():
+                    self._flags |= SUPPORT_BRIGHTNESS
+                if self._device.is_rgb():
+                    self._flags |= SUPPORT_COLOR
+                if self._device.is_light_temperature():
+                    self._flags |= SUPPORT_COLOR_TEMP
+                self._first_update_done = True
+            except CommandTimeoutException as e:
+                log_exception(logger=_LOGGER)
+                raise
 
     def device_event_handler(self, evt):
         # Update the device state as soon as an event occurs
@@ -89,14 +94,12 @@ class LightEntityWrapper(Light):
 
     def notify_client_state(self, status: ClientStatus):
         # When a connection change occurs, update the internal state
-        if status == ClientStatus.SUBSCRIBED:
-            # If we are connecting back, schedule a full refresh of the device
-            self.schedule_update_ha_state(True)
-        else:
-            # In any other case, mark the device unavailable
-            # and only update the UI
-            self._available = False
-            self.schedule_update_ha_state(False)
+        # If we are connecting back, schedule a full refresh of the device
+        # In any other case, mark the device unavailable
+        # and only update the UI
+        client_online = status == ClientStatus.SUBSCRIBED
+        self._available = client_online
+        self.schedule_update_ha_state(client_online)
 
     @property
     def assumed_state(self) -> bool:
