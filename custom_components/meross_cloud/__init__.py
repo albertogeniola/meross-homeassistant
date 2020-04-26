@@ -104,6 +104,23 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         raise ConfigEntryNotReady()
 
 
+async def async_unload_entry(hass, entry):
+    """Unload a config entry."""
+    # Unload entities first
+    _LOGGER.info("Removing Meross Cloud integration.")
+    _LOGGER.info("Cleaning up resources...")
+    for platform in MEROSS_PLATFORMS:
+        _LOGGER.info(f"Cleaning up platform {platform}")
+        await hass.config_entries.async_forward_entry_unload(entry, platform)
+    # Invalidate the token
+    manager = hass.data[DOMAIN][MANAGER]
+    _LOGGER.info("Stopping manager...")
+    manager.stop()
+    _LOGGER.info("Invalidating user token...")
+    manager._http_client.logout()
+    _LOGGER.info("Meross cloud component removal done.")
+
+
 async def async_setup(hass, config):
     """
     This method gets called if HomeAssistant has a valid me ross_cloud: configuration entry within
