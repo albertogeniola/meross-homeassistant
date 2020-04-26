@@ -11,6 +11,7 @@ from .common import (DOMAIN, HA_SENSOR, MANAGER, calculate_sensor_id, Connection
                      log_exception)
 
 _LOGGER = logging.getLogger(__name__)
+PARALLEL_UPDATES = 1
 
 
 class PowerSensorWrapper(Entity, MerossEntityWrapper):
@@ -55,7 +56,7 @@ class PowerSensorWrapper(Entity, MerossEntityWrapper):
         # and only update the UI
         client_online = status == ClientStatus.SUBSCRIBED
         self._available = client_online
-        self.schedule_update_ha_state(client_online)
+        self.schedule_update_ha_state(True)
 
     @property
     def available(self) -> bool:
@@ -152,6 +153,7 @@ class PowerSensorWrapper(Entity, MerossEntityWrapper):
     async def async_will_remove_from_hass(self) -> None:
         self._device.unregister_event_callback(self.device_event_handler)
 
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     def sync_logic():
         sensor_entities = []
@@ -176,7 +178,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     manager.register_event_handler(watchdog.connection_handler)
 
     sensor_entities = await hass.async_add_executor_job(sync_logic)
-    async_add_entities(sensor_entities)
+    async_add_entities(sensor_entities, True)
 
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):

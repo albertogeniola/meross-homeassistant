@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 
 from homeassistant.components.switch import SwitchDevice
 from meross_iot.cloud.client_status import ClientStatus
@@ -11,6 +12,7 @@ from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, Connection
                      log_exception)
 
 _LOGGER = logging.getLogger(__name__)
+PARALLEL_UPDATES = 1
 
 
 class SwitchEntityWrapper(SwitchDevice, MerossEntityWrapper):
@@ -40,7 +42,7 @@ class SwitchEntityWrapper(SwitchDevice, MerossEntityWrapper):
                 self._first_update_done = True
             except CommandTimeoutException as e:
                 log_exception(logger=_LOGGER, device=self._device)
-                raise
+                pass
 
     def device_event_handler(self, evt):
         # Update the device state when an event occurs
@@ -53,7 +55,7 @@ class SwitchEntityWrapper(SwitchDevice, MerossEntityWrapper):
         # and only update the UI
         client_online = status == ClientStatus.SUBSCRIBED
         self._available = client_online
-        self.schedule_update_ha_state(client_online)
+        self.schedule_update_ha_state(True)
 
     @property
     def unique_id(self) -> str:
@@ -134,7 +136,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     manager.register_event_handler(watchdog.connection_handler)
 
     switch_entities = await hass.async_add_executor_job(sync_logic)
-    async_add_entities(switch_entities)
+    async_add_entities(switch_entities, True)
 
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):

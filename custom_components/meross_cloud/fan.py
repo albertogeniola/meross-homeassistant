@@ -12,6 +12,7 @@ from meross_iot.meross_event import (DeviceOnlineStatusEvent,
 from .common import (DOMAIN, HA_FAN, MANAGER, ConnectionWatchDog, MerossEntityWrapper, log_exception)
 
 _LOGGER = logging.getLogger(__name__)
+PARALLEL_UPDATES = 1
 
 
 class MerossSmartHumidifier(FanEntity, MerossEntityWrapper):
@@ -48,7 +49,7 @@ class MerossSmartHumidifier(FanEntity, MerossEntityWrapper):
         # and only update the UI
         client_online = status == ClientStatus.SUBSCRIBED
         self._available = client_online
-        self.schedule_update_ha_state(client_online)
+        self.schedule_update_ha_state(True)
 
     async def async_added_to_hass(self) -> None:
         self._device.register_event_callback(self.device_event_handler)
@@ -158,4 +159,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     manager.register_event_handler(watchdog.connection_handler)
 
     devices = await hass.async_add_executor_job(sync_logic)
-    async_add_entities(devices)
+    async_add_entities(devices, True)
+
+
+def setup_platform(hass, config, async_add_entities, discovery_info=None):
+    pass

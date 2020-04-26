@@ -14,6 +14,7 @@ from meross_iot.meross_event import (BulbLightStateChangeEvent,
                                      DeviceOnlineStatusEvent)
 from .common import (DOMAIN, HA_LIGHT, MANAGER, ConnectionWatchDog, log_exception)
 _LOGGER = logging.getLogger(__name__)
+PARALLEL_UPDATES = 1
 
 
 def rgb_int_to_tuple(color):
@@ -99,7 +100,7 @@ class LightEntityWrapper(Light):
         # and only update the UI
         client_online = status == ClientStatus.SUBSCRIBED
         self._available = client_online
-        self.schedule_update_ha_state(client_online)
+        self.schedule_update_ha_state(True)
 
     @property
     def assumed_state(self) -> bool:
@@ -236,7 +237,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     watchdog = ConnectionWatchDog(hass=hass, platform=HA_LIGHT)
     manager.register_event_handler(watchdog.connection_handler)
     bulb_devices = await hass.async_add_executor_job(sync_logic)
-    async_add_entities(bulb_devices)
+    async_add_entities(bulb_devices, True)
 
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):

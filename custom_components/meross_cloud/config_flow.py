@@ -11,6 +11,7 @@ from datetime import datetime
 from .common import DOMAIN, CONF_STORED_CREDS
 
 _LOGGER = logging.getLogger(__name__)
+PARALLEL_UPDATES = 1
 
 
 class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -31,6 +32,9 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle a flow initialized by the user interface"""
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
+
+        await self.async_set_unique_id(DOMAIN)
+        self._abort_if_unique_id_configured()
 
         if not user_input:
             return self._show_form()

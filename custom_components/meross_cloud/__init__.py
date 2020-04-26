@@ -53,7 +53,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
                                 discovery_interval=30.0,
                                 auto_reconnect=True,
                                 logout_on_stop=False)
-
+        hass.data[DOMAIN] = {}
         hass.data[DOMAIN][MANAGER] = manager
         hass.data[DOMAIN][HA_CLIMATE] = {}
         hass.data[DOMAIN][HA_COVER] = {}
@@ -118,7 +118,22 @@ async def async_unload_entry(hass, entry):
     manager.stop()
     _LOGGER.info("Invalidating user token...")
     manager._http_client.logout()
+
+    _LOGGER.info("Cleaning up memory...")
+    for plat in MEROSS_PLATFORMS:
+        hass.data[DOMAIN][plat].clear()
+        del hass.data[DOMAIN][plat]
+    del hass.data[DOMAIN][MANAGER]
+    hass.data[DOMAIN].clear()
+    del hass.data[DOMAIN]
+
     _LOGGER.info("Meross cloud component removal done.")
+    return True
+
+
+async def async_remove_entry(hass, entry) -> None:
+    _LOGGER.info("UNLOADING...")
+    pass
 
 
 async def async_setup(hass, config):

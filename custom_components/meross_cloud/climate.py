@@ -28,6 +28,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 THERMOSTAT_TIMEOUT = 120.0
+PARALLEL_UPDATES = 1
 
 
 def none_callback(err, resp):
@@ -75,7 +76,7 @@ class ValveEntityWrapper(ClimateDevice, MerossEntityWrapper):
         # and only update the UI
         client_online = status == ClientStatus.SUBSCRIBED
         self._available = client_online
-        self.schedule_update_ha_state(client_online)
+        self.schedule_update_ha_state(True)
 
     @property
     def assumed_state(self) -> bool:
@@ -345,7 +346,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     manager.register_event_handler(watchdog.connection_handler)
 
     thermostat_devices = await hass.async_add_executor_job(sync_logic)
-    async_add_entities(thermostat_devices)
+    async_add_entities(thermostat_devices, True)
 
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):

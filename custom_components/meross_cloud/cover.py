@@ -15,6 +15,7 @@ from .common import (DOMAIN, HA_COVER, MANAGER, ConnectionWatchDog, MerossEntity
 _LOGGER = logging.getLogger(__name__)
 
 ATTR_DOOR_STATE = 'door_state'
+PARALLEL_UPDATES = 1
 
 
 class OpenGarageCover(CoverDevice, MerossEntityWrapper):
@@ -201,7 +202,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     manager.register_event_handler(watchdog.connection_handler)
 
     cover_entities = await hass.async_add_executor_job(sync_logic)
-    async_add_entities(cover_entities)
+    async_add_entities(cover_entities, True)
 
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):
