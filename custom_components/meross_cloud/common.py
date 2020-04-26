@@ -3,6 +3,7 @@ import functools
 from abc import ABC
 
 from meross_iot.cloud.client_status import ClientStatus
+from meross_iot.cloud.device import AbstractMerossDevice
 from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.meross_event import (ClientConnectionEvent)
 
@@ -67,7 +68,7 @@ class ConnectionWatchDog(object):
                 try:
                     dev.notify_client_state(status=event.status)
                 except:
-                    _LOGGER.exception("Error occurred while notifying connection change")
+                    log_exception("Error occurred while notifying connection change", device=dev._device)
 
 
 class MerossEntityWrapper(ABC):
@@ -75,12 +76,25 @@ class MerossEntityWrapper(ABC):
         pass
 
 
-def log_exception(message: str = None, logger: logging = None):
+def log_exception(message: str = None, logger: logging = None, device: AbstractMerossDevice = None):
     if logger is None:
         logger = logging.getLogger(__name__)
 
     if message is None:
         message = "An exception occurred"
 
-    formatted_message = f"Component version: {MEROSS_CLOUD_VERSION}, Message: \"{message}\""
+    device_info = "<Unavailable>"
+    if device is not None:
+        device_info = f"\tName: {device.name}\n" \
+                      f"\tUUID: {device.uuid}\n" \
+                      f"\tType: {device.type}\n\t" \
+                      f"HW Version: {device.hwversion}\n" \
+                      f"\tFW Version: {device.fwversion}"
+
+    formatted_message = f"Error occurred.\n" \
+                        f"-------------------------------------\n" \
+                        f"Component version: {MEROSS_CLOUD_VERSION}\n" \
+                        f"Device info: \n" \
+                        f"{device_info}\n" \
+                        f"Error Message: \"{message}\""
     logger.exception(formatted_message)

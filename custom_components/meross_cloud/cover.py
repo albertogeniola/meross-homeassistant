@@ -46,7 +46,7 @@ class OpenGarageCover(CoverDevice, MerossEntityWrapper):
                 # Mark first update done
                 self._first_update_done = True
             except CommandTimeoutException as e:
-                log_exception(logger=_LOGGER)
+                log_exception(logger=_LOGGER, device=self._device)
                 raise
 
     def device_event_handler(self, evt):

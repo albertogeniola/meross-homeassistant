@@ -62,7 +62,7 @@ class LightEntityWrapper(Light):
                     self._flags |= SUPPORT_COLOR_TEMP
                 self._first_update_done = True
             except CommandTimeoutException as e:
-                log_exception(logger=_LOGGER)
+                log_exception(logger=_LOGGER, device=self._device)
                 raise
 
     def device_event_handler(self, evt):

@@ -38,46 +38,22 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     """
 
     try:
-        # TODO: Check config entry
-        #  If credentials are stored and the email is new, trash the credentials and use the email/pwd
-        #  to generate new ctored credentials
-        """
-        {'username': 'albertogeniola@gmail.com', 'password': 'ciaociao', 'stored_credentials': {'token': '227f95590c4816cb70e73df2e5c8ef8cd1a059ff31a5441c9694b48e92063b8f', 'key': 'b11d6c6af9fa3f476bccad7e060ef1ff', 'user_id': '46884', 'user_email': 'albertogeniola@gmail.com', 'issued_on': '2020-04-16T22:59:31.790794'}}
-        """
-        username = config_entry.data.get(CONF_USERNAME)
-        password = config_entry.data.get(CONF_PASSWORD)
+        # Retrieve the stored credentials from config-flow
         str_creds = config_entry.data.get(CONF_STORED_CREDS)
-        manager = None
+        issued_on = datetime.fromisoformat(str_creds.get('issued_on'))
+        creds = MerossCloudCreds(
+            token=str_creds.get('token'),
+            key=str_creds.get('key'),
+            user_id=str_creds.get('user_id'),
+            user_email=str_creds.get('user_email'),
+            issued_on=issued_on
+        )
+        _LOGGER.info(f"Found application token issued on {creds.issued_on} to {creds.user_email}. Using it.")
+        manager = MerossManager(cloud_credentials=creds,
+                                discovery_interval=30.0,
+                                auto_reconnect=True,
+                                logout_on_stop=False)
 
-        if str_creds is not None:
-            try:
-                issued_on = datetime.fromisoformat(str_creds.get('issued_on'))
-                creds = MerossCloudCreds(
-                    token=str_creds.get('token'),
-                    key=str_creds.get('key'),
-                    user_id=str_creds.get('user_id'),
-                    user_email=str_creds.get('user_email'),
-                    issued_on=issued_on
-                )
-                _LOGGER.info(f"Found application token issued on {creds.issued_on} to {creds.user_email}. Using it.")
-                manager = MerossManager(cloud_credentials=creds,
-                                        discovery_interval=30.0,
-                                        auto_reconnect=True,
-                                        logout_on_stop=False)
-            except:
-                _LOGGER.warning("Failed to parse stored credentials. Ignoring it.")
-        else:
-            _LOGGER.info("No token was found. Falling back to stored email/password to get a new one.")
-            manager = MerossManager.from_email_and_password(meross_email=config_entry.data.get(CONF_USERNAME),
-                                                            meross_password=config_entry.data.get(CONF_PASSWORD),
-                                                            discovery_interval=30.0,
-                                                            auto_reconnect=True,
-                                                            logout_on_stop=False)
-            # TODO: store configuration!
-
-        # These will contain the initialized devices
-        # The following call can cause am UnauthorizedException if bad login credentials are provided
-        # or if a network exception occurs.
         hass.data[DOMAIN][MANAGER] = manager
         hass.data[DOMAIN][HA_CLIMATE] = {}
         hass.data[DOMAIN][HA_COVER] = {}
@@ -88,6 +64,23 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
 
         _LOGGER.info("Starting meross manager")
         manager.start()
+
+        http_devices = manager._http_client.list_devices()
+        http_info = "\n".join([f"{x}" for x in http_devices])
+
+        start_message = f"\n" \
+                        f"===============================\n" \
+                        f"Meross Cloud Custom component\n" \
+                        f"Developed by Alberto Geniola\n" \
+                        f"-------------------------------\n" \
+                        f"This custom component is under development and not yet ready for production use.\n" \
+                        f"In case of errors/misbehave, please report it here: \n" \
+                        f"https://github.com/albertogeniola/meross-homeassistant/issues\n" \
+                        f"-------------------------------\n" \
+                        f"List of devices reported by HTTP API:\n" \
+                        f"{http_info}" \
+                        f"\n==============================="
+        _LOGGER.info(start_message)
 
         _LOGGER.info("Starting meross cloud connection watchdog")
 

@@ -29,19 +29,19 @@ class PowerSensorWrapper(Entity, MerossEntityWrapper):
         # This is necessary as this device is handled with HA should_poll=True
         # flag, so the UPDATE should every time update its status.
         try:
+            self._sensor_info = {
+                'voltage': 0,
+                'current': 0,
+                'power': 0
+            }
             self._device.get_status(force_status_refresh=self._device.online)
 
             # Update electricity stats only if the device is online and currently turned on
             if self.available and self._device.get_status():
                 self._sensor_info = self._device.get_electricity()
-            else:
-                self._sensor_info = {
-                    'voltage': 0,
-                    'current': 0,
-                    'power': 0
-                }
+
         except CommandTimeoutException as e:
-            log_exception(logger=_LOGGER)
+            log_exception(logger=_LOGGER, device=self._device)
             raise
 
     def device_event_handler(self, evt):

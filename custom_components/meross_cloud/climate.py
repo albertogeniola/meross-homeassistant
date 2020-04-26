@@ -59,7 +59,7 @@ class ValveEntityWrapper(ClimateDevice, MerossEntityWrapper):
                 self._target_temperature = float(self._device.get_status().get('temperature').get('currentSet'))/10
                 self._first_update_done = True
             except CommandTimeoutException as e:
-                log_exception(logger=_LOGGER)
+                log_exception(logger=_LOGGER, device=self._device)
                 raise
 
     def device_event_handler(self, evt):

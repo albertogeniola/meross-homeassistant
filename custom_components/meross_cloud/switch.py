@@ -39,7 +39,7 @@ class SwitchEntityWrapper(SwitchDevice, MerossEntityWrapper):
                 self._device.get_status(force_status_refresh=True)
                 self._first_update_done = True
             except CommandTimeoutException as e:
-                log_exception(logger=_LOGGER)
+                log_exception(logger=_LOGGER, device=self._device)
                 raise
 
     def device_event_handler(self, evt):
@@ -95,7 +95,7 @@ class SwitchEntityWrapper(SwitchDevice, MerossEntityWrapper):
             return False
 
         return self._device.get_status(channel=self._channel_id)
-    
+
     @property
     def assumed_state(self) -> bool:
         return not self._first_update_done
