@@ -5,9 +5,6 @@
 A full featured Homeassistant component to drive Meross devices. 
 This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
 
-## ☠ IMPORTANT NOTE ☠
-Meross has changed some device implementation. Devices with latest firmware might not be supported at the moment. Altough I've already asked to Meross Engineers to provide specs in order to support the latest changes on their side, I've not received any answer yet. For this reason, please consider that newest devices might not be compatible. 
-
 ## Towards Homeassistant official integration
 My personal goal is to make this component fully compliant with Homeassistant, so 
 that it may be added as the official library to handle Meross devices. 
