@@ -9,10 +9,9 @@ from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.light_bulbs import GenericBulb
 from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.manager import MerossManager
-from meross_iot.meross_event import (BulbLightStateChangeEvent,
-                                     BulbSwitchStateChangeEvent,
-                                     DeviceOnlineStatusEvent)
+
 from .common import (DOMAIN, HA_LIGHT, MANAGER, ConnectionWatchDog, log_exception)
+
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
 

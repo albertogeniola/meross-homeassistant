@@ -1,6 +1,7 @@
 """Meross devices platform loader"""
 import logging
 from datetime import datetime
+
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
@@ -49,11 +50,15 @@ def print_startup_message(http_devices):
 
 
 def get_or_renew_creds(email, password, stored_creds):
-    http_client = MerossHttpClient(cloud_credentials=stored_creds)
     try:
+        if stored_creds is None:
+            http_client = MerossHttpClient.from_user_password(email=email, password=password)
+        else:
+            http_client = MerossHttpClient(cloud_credentials=stored_creds)
+
         # Test device listing. If goes ok, return it immediately
         http_devices = http_client.list_devices()
-        return stored_creds, http_devices
+        return http_client.get_cloud_credentials(), http_devices
 
     except TokenException:
         # In case the current token is expired or invalid, let's try to re-login.
@@ -77,15 +82,17 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     email = config_entry.data.get(CONF_USERNAME)
     password = config_entry.data.get(CONF_PASSWORD)
     str_creds = config_entry.data.get(CONF_STORED_CREDS)
-    issued_on = datetime.fromisoformat(str_creds.get('issued_on'))
-    creds = MerossCloudCreds(
-        token=str_creds.get('token'),
-        key=str_creds.get('key'),
-        user_id=str_creds.get('user_id'),
-        user_email=str_creds.get('user_email'),
-        issued_on=issued_on
-    )
-    _LOGGER.info(f"Found application token issued on {creds.issued_on} to {creds.user_email}. Using it.")
+    creds = None
+    if str_creds is not None:
+        issued_on = datetime.fromisoformat(str_creds.get('issued_on'))
+        creds = MerossCloudCreds(
+            token=str_creds.get('token'),
+            key=str_creds.get('key'),
+            user_id=str_creds.get('user_id'),
+            user_email=str_creds.get('user_email'),
+            issued_on=issued_on
+        )
+        _LOGGER.info(f"Found application token issued on {creds.issued_on} to {creds.user_email}. Using it.")
 
     try:
         creds, http_devices = get_or_renew_creds(email=email, password=password, stored_creds=creds)

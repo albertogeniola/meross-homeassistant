@@ -1,12 +1,10 @@
 import logging
-from datetime import timedelta
 
 from homeassistant.components.switch import SwitchDevice
 from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.manager import MerossManager
-from pygments.unistring import Co
 
 from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, ConnectionWatchDog, MerossEntityWrapper,
                      log_exception)

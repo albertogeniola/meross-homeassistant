@@ -1,10 +1,8 @@
 import logging
-import functools
 from abc import ABC
 
 from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.device import AbstractMerossDevice
-from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.meross_event import (ClientConnectionEvent)
 
 from custom_components.meross_cloud.version import MEROSS_CLOUD_VERSION

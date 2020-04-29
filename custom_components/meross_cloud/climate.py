@@ -17,10 +17,7 @@ from meross_iot.cloud.devices.subdevices.thermostats import (ThermostatMode,
                                                              ValveSubDevice)
 from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.manager import MerossManager
-from meross_iot.meross_event import (DeviceOnlineStatusEvent,
-                                     DeviceSwitchStatusEvent,
-                                     ThermostatModeChange,
-                                     ThermostatTemperatureChange)
+from meross_iot.meross_event import (ThermostatTemperatureChange)
 
 from .common import (DOMAIN, HA_CLIMATE, MANAGER, ConnectionWatchDog, MerossEntityWrapper, log_exception)
 

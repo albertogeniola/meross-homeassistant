@@ -6,8 +6,6 @@ from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.humidifier import GenericHumidifier, SprayMode
 from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.manager import MerossManager
-from meross_iot.meross_event import (DeviceOnlineStatusEvent,
-                                     HumidifierSpryEvent)
 
 from .common import (DOMAIN, HA_FAN, MANAGER, ConnectionWatchDog, MerossEntityWrapper, log_exception)
 

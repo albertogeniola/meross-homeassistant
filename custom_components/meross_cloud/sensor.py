@@ -5,7 +5,6 @@ from homeassistant.helpers.entity import Entity
 from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
-from meross_iot.meross_event import DeviceOnlineStatusEvent
 
 from .common import (DOMAIN, HA_SENSOR, MANAGER, calculate_sensor_id, ConnectionWatchDog, MerossEntityWrapper,
                      log_exception)

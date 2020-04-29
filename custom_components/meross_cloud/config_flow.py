@@ -7,7 +7,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
 from meross_iot.api import MerossHttpClient, UnauthorizedException
 from requests.exceptions import ConnectTimeout
-from datetime import datetime
+
 from .common import DOMAIN, CONF_STORED_CREDS
 
 _LOGGER = logging.getLogger(__name__)
