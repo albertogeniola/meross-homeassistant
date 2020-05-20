@@ -1,6 +1,6 @@
 import logging
 
-from homeassistant.components.switch import SwitchDevice
+from homeassistant.components.switch import SwitchEntity
 from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.power_plugs import GenericPlug
 from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
@@ -13,7 +13,7 @@ _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
 
 
-class SwitchEntityWrapper(SwitchDevice, MerossEntityWrapper):
+class SwitchEntityWrapper(SwitchEntity, MerossEntityWrapper):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
 
     def __init__(self, device: GenericPlug, channel: int):
