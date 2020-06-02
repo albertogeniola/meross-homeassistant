@@ -5,7 +5,9 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
-from meross_iot.api import MerossHttpClient, UnauthorizedException
+from meross_iot.http_api import MerossHttpClient
+from meross_iot.model.credentials import MerossCloudCreds
+from meross_iot.model.http.exception import UnauthorizedException
 from requests.exceptions import ConnectTimeout
 
 from .common import DOMAIN, CONF_STORED_CREDS
@@ -44,10 +46,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Test the connection to the Meross Cloud.
         try:
-            creds = await self.hass.async_add_executor_job(
-                self._test_authorization, username, password
-            )
-
+            creds = await self._test_authorization(username, password)
         except UnauthorizedException as ex:
             _LOGGER.error("Unable to connect to Meross HTTP api: %s", str(ex))
             return self._show_form({"base": "invalid_credentials"})
@@ -71,9 +70,9 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     @staticmethod
-    def _test_authorization(username, password):
-        client = MerossHttpClient.from_user_password(email=username, password=password)
-        return client.get_cloud_credentials()
+    async def _test_authorization(username: str, password: str) -> MerossCloudCreds:
+        client = await MerossHttpClient.async_from_user_password(email=username, password=password)
+        return client.cloud_credentials
 
     @callback
     def _show_form(self, errors=None):

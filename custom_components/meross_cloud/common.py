@@ -1,9 +1,7 @@
 import logging
 from abc import ABC
 
-from meross_iot.cloud.client_status import ClientStatus
-from meross_iot.cloud.device import AbstractMerossDevice
-from meross_iot.meross_event import (ClientConnectionEvent)
+from meross_iot.controller.device import BaseDevice
 
 from custom_components.meross_cloud.version import MEROSS_CLOUD_VERSION
 
@@ -22,9 +20,13 @@ HA_SENSOR = 'sensor'
 HA_COVER = 'cover'
 HA_CLIMATE = 'climate'
 HA_FAN = 'fan'
-MEROSS_PLATFORMS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
+#MEROSS_PLATFORMS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
+MEROSS_PLATFORMS = (HA_SWITCH,)
 CONNECTION_TIMEOUT_THRESHOLD = 5
 CONF_STORED_CREDS = 'stored_credentials'
+
+
+RELAXED_SCAN_INTERVAL = 120.0
 
 
 def calculate_switch_id(uuid: str, channel: int):
@@ -55,26 +57,7 @@ def notify_error(hass, notification_id, title, message):
     )
 
 
-class ConnectionWatchDog(object):
-    def __init__(self, hass, platform):
-        self._hass = hass
-        self._platform = platform
-
-    def connection_handler(self, event, *args, **kwargs):
-        if isinstance(event, ClientConnectionEvent):
-            for uuid, dev in self._hass.data[DOMAIN][self._platform].items():
-                try:
-                    dev.notify_client_state(status=event.status)
-                except:
-                    log_exception("Error occurred while notifying connection change", device=dev._device)
-
-
-class MerossEntityWrapper(ABC):
-    def notify_client_state(self, status: ClientStatus):
-        pass
-
-
-def log_exception(message: str = None, logger: logging = None, device: AbstractMerossDevice = None):
+def log_exception(message: str = None, logger: logging = None, device: BaseDevice = None):
     if logger is None:
         logger = logging.getLogger(__name__)
 
@@ -86,8 +69,8 @@ def log_exception(message: str = None, logger: logging = None, device: AbstractM
         device_info = f"\tName: {device.name}\n" \
                       f"\tUUID: {device.uuid}\n" \
                       f"\tType: {device.type}\n\t" \
-                      f"HW Version: {device.hwversion}\n" \
-                      f"\tFW Version: {device.fwversion}"
+                      f"HW Version: {device.hardware_version}\n" \
+                      f"\tFW Version: {device.firmware_version}"
 
     formatted_message = f"Error occurred.\n" \
                         f"-------------------------------------\n" \

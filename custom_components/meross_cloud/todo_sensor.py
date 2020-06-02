@@ -159,7 +159,7 @@ class PowerSensorWrapper(Entity, MerossEntityWrapper):
         self._device.unregister_event_callback(self.device_event_handler)
         self._ignore_update = True
 
-
+sensor_entities = await hass.async_add_executor_job(sync_logic)
 async def async_setup_entry(hass, config_entry, async_add_entities):
     def sync_logic():
         sensor_entities = []
