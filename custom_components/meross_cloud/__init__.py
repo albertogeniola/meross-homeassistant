@@ -22,6 +22,8 @@ from .common import (ATTR_CONFIG, CLOUD_HANDLER, DOMAIN, HA_CLIMATE, HA_COVER,
                      MEROSS_PLATFORMS, SENSORS, dismiss_notification, notify_error, log_exception, CONF_STORED_CREDS)
 
 # Unset the default stream handler for logger of the meross_iot library
+from .version import MEROSS_CLOUD_VERSION
+
 ROOT_MEROSS_LOGGER.removeHandler(h)
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,6 +49,7 @@ def print_startup_message(http_devices: List[HttpDeviceInfo]):
                     f"In case of errors/misbehave, please report it here: \n" \
                     f"https://github.com/albertogeniola/meross-homeassistant/issues\n" \
                     f"-------------------------------\n" \
+                    f"Low level library version: {MEROSS_CLOUD_VERSION}\n" \
                     f"List of devices reported by HTTP API:\n" \
                     f"{http_info}" \
                     f"\n==============================="

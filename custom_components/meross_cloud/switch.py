@@ -97,13 +97,15 @@ class SwitchEntityWrapper(SwitchDevice):
     def turn_off(self, **kwargs: Any) -> None:
         self.hass.async_add_executor_job(self.async_turn_off)
 
+    async def _async_push_notification_received(self, *args, **kwargs):
+        _LOGGER.debug("Received push notification...")
+        self.async_schedule_update_ha_state(force_refresh=False)
+
     async def async_added_to_hass(self) -> None:
-        # TODO: event handling?
-        pass
+        self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
 
     async def async_will_remove_from_hass(self) -> None:
-        # TODO: event handling?
-        pass
+        self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
