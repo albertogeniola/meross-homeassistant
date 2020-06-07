@@ -1,14 +1,23 @@
 import logging
-from typing import Any
+from typing import Any, Optional, Iterable
 
 from homeassistant.components.switch import SwitchDevice
+from homeassistant.core import callback
 from meross_iot.controller.device import BaseDevice
-from meross_iot.controller.mixins.toggle import ToggleXMixin
+from meross_iot.controller.mixins.consumption import ConsumptionXMixin
+from meross_iot.controller.mixins.electricity import ElectricityMixin
+from meross_iot.controller.mixins.toggle import ToggleXMixin, ToggleMixin
 from meross_iot.manager import MerossManager
-from meross_iot.model.enums import OnlineStatus
+from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
 from datetime import timedelta
+
+from meross_iot.model.push.bind import BindPushNotification
+from meross_iot.model.push.generic import GenericPushNotification
+from meross_iot.model.push.unbind import UnbindPushNotification
+
 from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, log_exception, RELAXED_SCAN_INTERVAL)
+from datetime import datetime
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
@@ -39,6 +48,8 @@ class SwitchEntityWrapper(SwitchDevice):
 
         # Device properties
         self._channel_id = channel
+        self._last_power_sample = None
+        self._daily_consumtpion = None
 
     async def async_update(self):
         if self._device.online_status == OnlineStatus.ONLINE:
@@ -47,6 +58,13 @@ class SwitchEntityWrapper(SwitchDevice):
             except CommandTimeoutError as e:
                 log_exception(logger=_LOGGER, device=self._device)
                 pass
+
+            # If the device supports power reading, update it
+            if isinstance(self._device, ElectricityMixin):
+                self._last_power_sample = await self._device.async_get_instant_metrics(channel=self._channel_id)
+
+            if isinstance(self._device, ConsumptionXMixin):
+                self._daily_consumtpion = await self._device.async_get_daily_power_consumption(channel=self._channel_id)
 
     @property
     def unique_id(self) -> str:
@@ -97,9 +115,12 @@ class SwitchEntityWrapper(SwitchDevice):
     def turn_off(self, **kwargs: Any) -> None:
         self.hass.async_add_executor_job(self.async_turn_off)
 
-    async def _async_push_notification_received(self, *args, **kwargs):
-        _LOGGER.debug("Received push notification...")
-        self.async_schedule_update_ha_state(force_refresh=False)
+    async def _async_push_notification_received(self, namespace: Namespace, data: dict):
+        if isinstance(namespace, UnbindPushNotification):
+            _LOGGER.info("Received unbind event. Removing the device from HA")
+            await self.platform.async_remove_entity(self.unique_id)
+        else:
+            self.async_schedule_update_ha_state(force_refresh=False)
 
     async def async_added_to_hass(self) -> None:
         self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
@@ -107,19 +128,49 @@ class SwitchEntityWrapper(SwitchDevice):
     async def async_will_remove_from_hass(self) -> None:
         self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
 
+    @property
+    def current_power_w(self) -> Optional[float]:
+        if self._last_power_sample is not None:
+            return self._last_power_sample.power
+
+    @property
+    def today_energy_kwh(self) -> Optional[float]:
+        if self._daily_consumtpion is not None:
+            today = datetime.today()
+            date, total = max(self._daily_consumtpion, key=lambda x: x.get('date'))
+            return total
+
+
+def _add_switch_devices(hass, devices: Iterable[BaseDevice], async_add_entities):
+    switch_entities = []
+    # Identify all the devices that expose the Toggle or ToggleX capabilities
+    devs = filter(lambda d: isinstance(d, ToggleXMixin) or isinstance(d, ToggleMixin), devices)
+    for d in devs:
+        for channel_index, channel in enumerate(d.channels):
+            w = SwitchEntityWrapper(device=d, channel=channel_index)
+            if w.unique_id not in hass.data[DOMAIN][HA_SWITCH]:
+                _LOGGER.debug(f"Device {w.unique_id} is new, will be added to HA")
+                switch_entities.append(w)
+            else:
+                _LOGGER.debug(f"Skipping device {w.unique_id} as it's already present in HA")
+    async_add_entities(switch_entities, True)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    # Identify all the devices that expose the ToggleX capability
-    # TODO: do we need to care about Toggle capability?
+    # When loading the platform, immediately add currently available
+    # switches.
     manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
-    plugs = manager.find_devices(device_class=ToggleXMixin)
-    switch_entities = []
-    for plug in plugs:
-        for channel_index, channel in enumerate(plug.channels):
-            w = SwitchEntityWrapper(device=plug, channel=channel_index)
-            switch_entities.append(w)
-            hass.data[DOMAIN][HA_SWITCH][w.unique_id] = w
-    async_add_entities(switch_entities, True)
+    devices = manager.find_devices()
+    _add_switch_devices(hass=hass, devices=devices, async_add_entities=async_add_entities)
+
+    # Register a listener for the Bind push notification so that we can add new entities at runtime
+    async def async_add_switch(push_notification: GenericPushNotification, target_device: BaseDevice):
+        if isinstance(push_notification, BindPushNotification):
+            devs = manager.find_devices(device_uuids=(push_notification.hwinfo.uuid,))
+            _add_switch_devices(hass=hass, devices=devs, async_add_entities=async_add_entities)
+
+    # Register a listener for new bound devices
+    manager.register_push_notification_handler_coroutine(async_add_switch)
 
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):

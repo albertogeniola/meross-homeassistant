@@ -38,18 +38,20 @@ CONFIG_SCHEMA = vol.Schema({
 
 
 def print_startup_message(http_devices: List[HttpDeviceInfo]):
-    http_info = "\n".join([f"- {x.dev_name} ({x.device_type})" for x in http_devices])
+    http_info = "\n".join([f"- {x.dev_name} ({x.device_type}) - {x.online_status}" for x in http_devices])
 
     start_message = f"\n" \
                     f"===============================\n" \
                     f"Meross Cloud Custom component\n" \
                     f"Developed by Alberto Geniola\n" \
+                    f"Low level library version: {MEROSS_CLOUD_VERSION}\n" \
                     f"-------------------------------\n" \
                     f"This custom component is under development and not yet ready for production use.\n" \
                     f"In case of errors/misbehave, please report it here: \n" \
                     f"https://github.com/albertogeniola/meross-homeassistant/issues\n" \
+                    f"\n" \
+                    f"If you like this extension and you want to support it, please consider donating.\n" \
                     f"-------------------------------\n" \
-                    f"Low level library version: {MEROSS_CLOUD_VERSION}\n" \
                     f"List of devices reported by HTTP API:\n" \
                     f"{http_info}" \
                     f"\n==============================="
@@ -128,6 +130,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
             hass.async_create_task(
                 hass.config_entries.async_forward_entry_setup(config_entry, platform)
             )
+
         return True
 
     except TooManyTokensException:
