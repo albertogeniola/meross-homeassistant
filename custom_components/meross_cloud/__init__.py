@@ -60,16 +60,16 @@ def print_startup_message(http_devices: List[HttpDeviceInfo]):
 
 async def get_or_renew_creds(email: str,
                              password: str,
-                             stored_creds: MerossCloudCreds = None) -> Tuple[MerossHttpClient, List[HttpDeviceInfo]]:
+                             stored_creds: MerossCloudCreds = None) -> Tuple[MerossHttpClient, List[HttpDeviceInfo], bool]:
     try:
         if stored_creds is None:
             http_client = await MerossHttpClient.async_from_user_password(email=email, password=password)
         else:
             http_client = MerossHttpClient(cloud_credentials=stored_creds)
 
-        # Test device listing. If goes ok, return it immediately
+        # Test device listing. If goes ok, return it immediately. There is no need to update the credentials
         http_devices = await http_client.async_list_devices()
-        return http_client, http_devices
+        return http_client, http_devices, False
 
     except TokenExpiredException as e:
         # In case the current token is expired or invalid, let's try to re-login.
@@ -79,7 +79,8 @@ async def get_or_renew_creds(email: str,
         # Build a new client with username/password rather than using stored credentials
         http_client = await MerossHttpClient.async_from_user_password(email=email, password=password)
         http_devices = await http_client.async_list_devices()
-        return http_client, http_devices
+
+        return http_client, http_devices, True
 
 
 async def async_setup_entry(hass: HomeAssistantType, config_entry):
@@ -106,7 +107,21 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         _LOGGER.info(f"Found application token issued on {creds.issued_on} to {creds.user_email}. Using it.")
 
     try:
-        client, http_devices = await get_or_renew_creds(email=email, password=password, stored_creds=creds)
+        client, http_devices, creds_renewed = await get_or_renew_creds(email=email, password=password, stored_creds=creds)
+        if creds_renewed:
+            creds = client.cloud_credentials
+            hass.config_entries.async_update_entry(entry=config_entry, data={
+                CONF_USERNAME: email,
+                CONF_PASSWORD: password,
+                CONF_STORED_CREDS: {
+                    'token': creds.token,
+                    'key': creds.key,
+                    'user_id': creds.user_id,
+                    'user_email': creds.user_email,
+                    'issued_on': creds.issued_on.isoformat()
+                }
+            })
+
         manager = MerossManager(http_client=client, auto_reconnect=True)
 
         hass.data[DOMAIN] = {}
