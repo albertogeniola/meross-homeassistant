@@ -116,9 +116,9 @@ class SwitchEntityWrapper(SwitchDevice):
         self.hass.async_add_executor_job(self.async_turn_off)
 
     async def _async_push_notification_received(self, namespace: Namespace, data: dict):
-        if isinstance(namespace, UnbindPushNotification):
+        if namespace == Namespace.CONTROL_UNBIND:
             _LOGGER.info("Received unbind event. Removing the device from HA")
-            await self.platform.async_remove_entity(self.unique_id)
+            await self.platform.async_remove_entity(self.entity_id)
         else:
             self.async_schedule_update_ha_state(force_refresh=False)
 
