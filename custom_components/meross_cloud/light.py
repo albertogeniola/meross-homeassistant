@@ -1,11 +1,15 @@
 import logging
 from typing import Any, Optional, Iterable
 
+import homeassistant.util.color as color_util
+from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP, ATTR_HS_COLOR, \
+    ATTR_COLOR_TEMP, ATTR_BRIGHTNESS
 from homeassistant.components.switch import SwitchDevice
 from homeassistant.core import callback
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.consumption import ConsumptionXMixin
 from meross_iot.controller.mixins.electricity import ElectricityMixin
+from meross_iot.controller.mixins.light import LightMixin
 from meross_iot.controller.mixins.toggle import ToggleXMixin, ToggleMixin
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
@@ -16,30 +20,32 @@ from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 from meross_iot.model.push.unbind import UnbindPushNotification
 
-from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, log_exception, RELAXED_SCAN_INTERVAL)
-from datetime import datetime
+from .common import (DOMAIN, MANAGER, log_exception, RELAXED_SCAN_INTERVAL,
+                     calculate_light_id, HA_LIGHT)
+
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
 SCAN_INTERVAL = timedelta(seconds=RELAXED_SCAN_INTERVAL)
 
 
-class MerossSwitchDevice(ToggleXMixin, BaseDevice):
+class MerossLightDevice(LightMixin, ToggleXMixin, BaseDevice):
     """
     Type hints helper
     """
     pass
 
 
-class SwitchEntityWrapper(SwitchDevice):
-    """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
+class LightEntityWrapper(Light):
+    """Wrapper class to adapt the Meross bulbs into the Homeassistant platform"""
 
-    def __init__(self, device: MerossSwitchDevice, channel: int):
+    def __init__(self, device: MerossLightDevice, channel: int):
+        # TODO: verify channel is 0
         self._device = device
 
         # If the current device has more than 1 channel, we need to setup the device name and id accordingly
         if len(device.channels) > 1:
-            self._id = calculate_switch_id(device.internal_id, channel)
+            self._id = calculate_light_id(device.internal_id, channel)
             channel_data = device.channels[channel]
             self._entity_name = "{} - {}".format(device.name, channel_data.name)
         else:
@@ -48,9 +54,8 @@ class SwitchEntityWrapper(SwitchDevice):
 
         # Device properties
         self._channel_id = channel
-        self._last_power_sample = None
-        self._daily_consumtpion = None
 
+    # region Device wrapper common methods
     async def async_update(self):
         if self._device.online_status == OnlineStatus.ONLINE:
             try:
@@ -59,13 +64,21 @@ class SwitchEntityWrapper(SwitchDevice):
                 log_exception(logger=_LOGGER, device=self._device)
                 pass
 
-            # If the device supports power reading, update it
-            if isinstance(self._device, ElectricityMixin):
-                self._last_power_sample = await self._device.async_get_instant_metrics(channel=self._channel_id)
+    async def _async_push_notification_received(self, namespace: Namespace, data: dict):
+        if namespace == Namespace.CONTROL_UNBIND:
+            _LOGGER.info("Received unbind event. Removing the device from HA")
+            await self.platform.async_remove_entity(self.entity_id)
+        else:
+            self.async_schedule_update_ha_state(force_refresh=False)
 
-            if isinstance(self._device, ConsumptionXMixin):
-                self._daily_consumtpion = await self._device.async_get_daily_power_consumption(channel=self._channel_id)
+    async def async_added_to_hass(self) -> None:
+        self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
 
+    async def async_will_remove_from_hass(self) -> None:
+        self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
+    # endregion
+
+    # region Device wrapper common properties
     @property
     def unique_id(self) -> str:
         # Since Meross plugs may have more than 1 switch, we need to provide a composed ID
@@ -98,57 +111,97 @@ class SwitchEntityWrapper(SwitchDevice):
         # we also rely on a super-relaxed polling system which allows us to recover from
         # state inconsistency that might arise when connection quality is not good enough.
         return True
+    # endregion
 
-    @property
-    def is_on(self) -> bool:
-        return self._device.is_on(channel=self._channel_id)
-
+    # region Platform-specific command methods
     async def async_turn_off(self, **kwargs) -> None:
         await self._device.async_turn_off(channel=self._channel_id)
 
     async def async_turn_on(self, **kwargs) -> None:
-        await self._device.async_turn_on(channel=self._channel_id)
+        if not self.is_on:
+            await self._device.async_turn_on(channel=self._channel_id)
+
+        # Color is taken from either of these 2 values, but not both.
+        if ATTR_HS_COLOR in kwargs:
+            h, s = kwargs[ATTR_HS_COLOR]
+            rgb = color_util.color_hsv_to_RGB(h, s, 100)
+            _LOGGER.debug("color change: rgb=%r -- h=%r s=%r" % (rgb, h, s))
+            await self._device.async_set_light_color(channel=self._channel_id, rgb=rgb)
+        elif ATTR_COLOR_TEMP in kwargs:
+            mired = kwargs[ATTR_COLOR_TEMP]
+            norm_value = (mired - self.min_mireds) / (self.max_mireds - self.min_mireds)
+            temperature = 100 - (norm_value * 100)
+            _LOGGER.debug("temperature change: mired=%r meross=%r" % (mired, temperature))
+            await self._device.async_set_light_color(channel=self._channel_id, temperature=temperature)
+
+        # Brightness must always be set, so take previous luminance if not explicitly set now.
+        if ATTR_BRIGHTNESS in kwargs:
+            brightness = kwargs[ATTR_BRIGHTNESS] * 100 / 255
+            _LOGGER.debug("brightness change: %r" % brightness)
+            await self._device.async_set_light_color(channel=self._channel_id, luminance=brightness)
 
     def turn_on(self, **kwargs: Any) -> None:
         self.hass.async_add_executor_job(self.async_turn_on, **kwargs)
 
     def turn_off(self, **kwargs: Any) -> None:
         self.hass.async_add_executor_job(self.async_turn_off, **kwargs)
+    # endregion
 
-    async def _async_push_notification_received(self, namespace: Namespace, data: dict):
-        if namespace == Namespace.CONTROL_UNBIND:
-            _LOGGER.info("Received unbind event. Removing the device from HA")
-            await self.platform.async_remove_entity(self.entity_id)
-        else:
-            self.async_schedule_update_ha_state(force_refresh=False)
-
-    async def async_added_to_hass(self) -> None:
-        self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
-
-    async def async_will_remove_from_hass(self) -> None:
-        self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
+    # region Platform specific properties
+    @property
+    def supported_features(self):
+        flags = 0
+        if self._device.get_supports_luminance(channel=self._channel_id):
+            flags |= SUPPORT_BRIGHTNESS
+        if self._device.get_supports_rgb(channel=self._channel_id):
+            flags |= SUPPORT_COLOR
+        if self._device.get_supports_temperature(channel=self._channel_id):
+            flags |= SUPPORT_COLOR_TEMP
+        return flags
 
     @property
-    def current_power_w(self) -> Optional[float]:
-        if self._last_power_sample is not None:
-            return self._last_power_sample.power
+    def is_on(self) -> bool:
+        return self._device.is_on(channel=self._channel_id)
 
     @property
-    def today_energy_kwh(self) -> Optional[float]:
-        if self._daily_consumtpion is not None:
-            today = datetime.today()
-            date, total = max(self._daily_consumtpion, key=lambda x: x.get('date'))
-            return total
+    def brightness(self):
+        if not self._device.get_supports_luminance(self._channel_id):
+            return None
+
+        luminance = self._device.get_luminance()
+        if luminance is not None:
+            return float(luminance) / 100 * 255
+
+        return None
+
+    @property
+    def hs_color(self):
+        if self._device.get_supports_rgb(channel=self._channel_id):
+            rgb = self._device.get_rgb_color()
+            return color_util.color_RGB_to_hs(*rgb)
+        return None
+
+    @property
+    def color_temp(self):
+        if self._device.get_supports_temperature(channel=self._channel_id):
+            value = self._device.get_color_temperature()
+            norm_value = (100 - value) / 100.0
+            return self.min_mireds + (norm_value * (self.max_mireds - self.min_mireds))
+        return None
+    # endregion
 
 
+# ----------------------------------------------
+# PLATFORM METHODS
+# ----------------------------------------------
 def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
     new_entities = []
-    # Identify all the devices that expose the Toggle or ToggleX capabilities
-    devs = filter(lambda d: isinstance(d, ToggleXMixin) or isinstance(d, ToggleMixin), devices)
+    # Identify all the devices that expose the Light capability
+    devs = filter(lambda d: isinstance(d, LightMixin), devices)
     for d in devs:
         for channel_index, channel in enumerate(d.channels):
-            w = SwitchEntityWrapper(device=d, channel=channel_index)
-            if w.unique_id not in hass.data[DOMAIN][HA_SWITCH]:
+            w = LightEntityWrapper(device=d, channel=channel_index)
+            if w.unique_id not in hass.data[DOMAIN][HA_LIGHT]:
                 _LOGGER.debug(f"Device {w.unique_id} is new, will be added to HA")
                 new_entities.append(w)
             else:
@@ -158,7 +211,7 @@ def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     # When loading the platform, immediately add currently available
-    # switches.
+    # bulbs.
     manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
     devices = manager.find_devices()
     _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)

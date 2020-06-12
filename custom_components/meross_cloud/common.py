@@ -21,15 +21,19 @@ HA_COVER = 'cover'
 HA_CLIMATE = 'climate'
 HA_FAN = 'fan'
 #MEROSS_PLATFORMS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
-MEROSS_PLATFORMS = (HA_SWITCH,)
+MEROSS_PLATFORMS = (HA_SWITCH, HA_LIGHT)
 CONNECTION_TIMEOUT_THRESHOLD = 5
 CONF_STORED_CREDS = 'stored_credentials'
 
 
-RELAXED_SCAN_INTERVAL = 120.0
+RELAXED_SCAN_INTERVAL = 180.0
 
 
 def calculate_switch_id(uuid: str, channel: int):
+    return "%s:%s:%d" % (HA_SWITCH, uuid, channel)
+
+
+def calculate_light_id(uuid: str, channel: int):
     return "%s:%s:%d" % (HA_SWITCH, uuid, channel)
 
 
@@ -79,3 +83,4 @@ def log_exception(message: str = None, logger: logging = None, device: BaseDevic
                         f"{device_info}\n" \
                         f"Error Message: \"{message}\""
     logger.exception(formatted_message)
+
