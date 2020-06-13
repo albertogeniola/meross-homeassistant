@@ -126,7 +126,7 @@ class LightEntityWrapper(Light):
             h, s = kwargs[ATTR_HS_COLOR]
             rgb = color_util.color_hsv_to_RGB(h, s, 100)
             _LOGGER.debug("color change: rgb=%r -- h=%r s=%r" % (rgb, h, s))
-            await self._device.async_set_light_color(channel=self._channel_id, rgb=rgb)
+            await self._device.async_set_light_color(channel=self._channel_id, rgb=rgb, onoff=True)
         elif ATTR_COLOR_TEMP in kwargs:
             mired = kwargs[ATTR_COLOR_TEMP]
             norm_value = (mired - self.min_mireds) / (self.max_mireds - self.min_mireds)
@@ -160,8 +160,8 @@ class LightEntityWrapper(Light):
         return flags
 
     @property
-    def is_on(self) -> bool:
-        return self._device.is_on(channel=self._channel_id)
+    def is_on(self) -> Optional[bool]:
+        return self._device.get_light_is_on(channel=self._channel_id)
 
     @property
     def brightness(self):
