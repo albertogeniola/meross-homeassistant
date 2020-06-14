@@ -1,18 +1,9 @@
 import logging
 from typing import Any, Optional, Iterable
 
-import homeassistant.util.color as color_util
 from homeassistant.components.cover import CoverDevice, DEVICE_CLASS_GARAGE, SUPPORT_OPEN, SUPPORT_CLOSE
-from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP, ATTR_HS_COLOR, \
-    ATTR_COLOR_TEMP, ATTR_BRIGHTNESS
-from homeassistant.components.switch import SwitchDevice
-from homeassistant.core import callback
 from meross_iot.controller.device import BaseDevice
-from meross_iot.controller.mixins.consumption import ConsumptionXMixin
-from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.controller.mixins.garage import GarageOpenerMixin
-from meross_iot.controller.mixins.light import LightMixin
-from meross_iot.controller.mixins.toggle import ToggleXMixin, ToggleMixin
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
@@ -20,10 +11,8 @@ from datetime import timedelta
 
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
-from meross_iot.model.push.unbind import UnbindPushNotification
 
-from .common import (DOMAIN, MANAGER, log_exception, RELAXED_SCAN_INTERVAL,
-                     calculate_light_id, HA_LIGHT, calculate_cover_id)
+from .common import (DOMAIN, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, calculate_cover_id, HA_COVER)
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -55,10 +44,6 @@ class CoverEntityWrapper(CoverDevice):
 
         # Device properties
         self._channel_id = channel
-
-        # The following variables are used to track "closing" and "opening" states.
-        self._is_closing = None
-        self._is_opening = None
 
     # region Device wrapper common methods
     async def async_update(self):
@@ -144,11 +129,13 @@ class CoverEntityWrapper(CoverDevice):
 
     @property
     def is_closing(self):
-        return self._is_closing
+        # Not supported yet
+        return None
     
     @property
     def is_opening(self):
-        return self._is_opening
+        # Not supported yet
+        return None
 
     # endregion
 
@@ -163,7 +150,7 @@ def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
     for d in devs:
         for channel_index, channel in enumerate(d.channels):
             w = CoverEntityWrapper(device=d, channel=channel_index)
-            if w.unique_id not in hass.data[DOMAIN][HA_LIGHT]:
+            if w.unique_id not in hass.data[DOMAIN][HA_COVER]:
                 _LOGGER.debug(f"Device {w.unique_id} is new, will be added to HA")
                 new_entities.append(w)
             else:

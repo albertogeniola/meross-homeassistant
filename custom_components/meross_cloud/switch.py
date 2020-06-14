@@ -2,7 +2,6 @@ import logging
 from typing import Any, Optional, Iterable
 
 from homeassistant.components.switch import SwitchDevice
-from homeassistant.core import callback
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.consumption import ConsumptionXMixin
 from meross_iot.controller.mixins.electricity import ElectricityMixin
@@ -14,7 +13,6 @@ from datetime import timedelta
 
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
-from meross_iot.model.push.unbind import UnbindPushNotification
 
 from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, log_exception, RELAXED_SCAN_INTERVAL)
 from datetime import datetime

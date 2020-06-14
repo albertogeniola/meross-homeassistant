@@ -21,12 +21,16 @@ HA_COVER = 'cover'
 HA_CLIMATE = 'climate'
 HA_FAN = 'fan'
 #MEROSS_PLATFORMS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
-MEROSS_PLATFORMS = (HA_SWITCH, HA_LIGHT, HA_COVER)
+MEROSS_PLATFORMS = (HA_SWITCH, HA_LIGHT, HA_COVER, HA_SENSOR)
 CONNECTION_TIMEOUT_THRESHOLD = 5
 CONF_STORED_CREDS = 'stored_credentials'
 
 
 RELAXED_SCAN_INTERVAL = 180.0
+
+
+def calculate_sensor_id(uuid: str, type: str, channel: int = 0,):
+    return "%s:%s:%s:%d" % (HA_SENSOR, uuid, type, channel)
 
 
 def calculate_cover_id(uuid: str, channel: int):
@@ -39,10 +43,6 @@ def calculate_switch_id(uuid: str, channel: int):
 
 def calculate_light_id(uuid: str, channel: int):
     return "%s:%s:%d" % (HA_LIGHT, uuid, channel)
-
-
-def calculate_sensor_id(uuid: str):
-    return "%s:%s" % (HA_SENSOR, uuid)
 
 
 def dismiss_notification(hass, notification_id):
