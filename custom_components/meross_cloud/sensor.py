@@ -1,12 +1,11 @@
 import logging
 from typing import Any, Optional, Iterable, Union
 
-import homeassistant.util.color as color_util
-from homeassistant.const import DEVICE_CLASS_BATTERY, DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS
+from homeassistant.const import DEVICE_CLASS_BATTERY, DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_HUMIDITY, \
+    UNIT_PERCENTAGE
 from homeassistant.helpers.entity import Entity
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.electricity import ElectricityMixin
-from meross_iot.controller.mixins.light import LightMixin
 from meross_iot.controller.subdevice import Ms100Sensor
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
@@ -24,22 +23,30 @@ PARALLEL_UPDATES = 1
 SCAN_INTERVAL = timedelta(seconds=RELAXED_SCAN_INTERVAL)
 
 
-class TemperatureSensorWrapper(Entity):
-    """Wrapper class to adapt the Meross bulbs into the Homeassistant platform"""
+class GenericSensorWrapper(Entity):
+    """Wrapper class to adapt the Meross MSS100 sensor hardware into the Homeassistant platform"""
 
-    def __init__(self, device: Ms100Sensor, channel: int = 0):
+    def __init__(self, sensor_class: str, measurement_unit: str, device_method_or_property: str, device: Ms100Sensor, channel: int = 0):
+        # Make sure the given device supports exposes the device_method_or_property passed as arg
+        if not hasattr(device, device_method_or_property):
+            _LOGGER.error(f"The device {device.uuid} ({device.name}) does not expose property {device_method_or_property}")
+            raise ValueError(f"The device {device} does not expose property {device_method_or_property}")
+
         self._device = device
         self._channel_id = channel
+        self._sensor_class = sensor_class
+        self._device_method_or_property = device_method_or_property
+        self._measurement_unit = measurement_unit
 
         # Each Meross Device might expose more than 1 sensor. In this case, we cannot rely only on the
         # uuid value to uniquely identify a sensor wrapper.
         if len(device.channels) > 1:
-            self._id = calculate_sensor_id(uuid=device.internal_id, type="temperature", channel=channel)
+            self._id = calculate_sensor_id(uuid=device.internal_id, type=sensor_class, channel=channel)
             channel_data = device.channels[channel]
-            self._entity_name = "{} - {} - {}".format(device.name, channel_data.name, "temperature sensor")
+            self._entity_name = "{} - {} - {}".format(device.name, channel_data.name, f"{sensor_class} sensor")
         else:
-            self._id = calculate_sensor_id(uuid=device.internal_id, type="temperature", channel=0)
-            self._entity_name = "{} - {} - {}".format(device.name, "", "temperature sensor")
+            self._id = calculate_sensor_id(uuid=device.internal_id, type=sensor_class, channel=0)
+            self._entity_name = "{} - {} - {}".format(device.name, "", f"{sensor_class} sensor")
 
     # region Device wrapper common methods
     async def async_update(self):
@@ -103,17 +110,39 @@ class TemperatureSensorWrapper(Entity):
     # region Platform specific properties
     @property
     def device_class(self) -> Optional[str]:
-        return DEVICE_CLASS_TEMPERATURE
+        return self._sensor_class
 
     @property
     def state(self) -> Union[None, str, int, float]:
         """Return the state of the entity."""
-        return self._device.last_sampled_temperature
+        attr = getattr(self._device, self._device_method_or_property)
+        if callable(attr):
+            return attr()
+        else:
+            return attr
 
     @property
     def unit_of_measurement(self) -> Optional[str]:
-        return TEMP_CELSIUS
+        return self._measurement_unit
     # endregion
+
+
+class TemperatureSensorWrapper(GenericSensorWrapper):
+    def __init__(self, device: Ms100Sensor, channel: int = 0):
+        super().__init__(sensor_class=DEVICE_CLASS_TEMPERATURE,
+                         measurement_unit=TEMP_CELSIUS,
+                         device_method_or_property='last_sampled_temperature',
+                         device=device,
+                         channel=channel)
+
+
+class HumiditySensorWrapper(GenericSensorWrapper):
+    def __init__(self, device: Ms100Sensor, channel: int = 0):
+        super().__init__(sensor_class=DEVICE_CLASS_HUMIDITY,
+                         measurement_unit=UNIT_PERCENTAGE,
+                         device_method_or_property='last_sampled_humidity',
+                         device=device,
+                         channel=channel)
 
 
 # ----------------------------------------------
@@ -130,7 +159,14 @@ def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
 
     # Add Temperature & Humidity sensors
     for d in humidity_temp_sensors:
-        t = TemperatureSensorWrapper(device=d)
+        h = HumiditySensorWrapper(device=d, channel=0)
+        if h.unique_id not in hass.data[DOMAIN][HA_SENSOR]:
+            _LOGGER.debug(f"Device {h.unique_id} is new, will be added to HA")
+            new_entities.append(h)
+        else:
+            _LOGGER.debug(f"Skipping device {h.unique_id} as it's already present in HA")
+
+        t = TemperatureSensorWrapper(device=d, channel=0)
         if t.unique_id not in hass.data[DOMAIN][HA_SENSOR]:
             _LOGGER.debug(f"Device {t.unique_id} is new, will be added to HA")
             new_entities.append(t)
