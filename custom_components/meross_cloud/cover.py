@@ -2,6 +2,7 @@ import logging
 from typing import Any, Optional, Iterable
 
 import homeassistant.util.color as color_util
+from homeassistant.components.cover import CoverDevice, DEVICE_CLASS_GARAGE, SUPPORT_OPEN, SUPPORT_CLOSE
 from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP, ATTR_HS_COLOR, \
     ATTR_COLOR_TEMP, ATTR_BRIGHTNESS
 from homeassistant.components.switch import SwitchDevice
@@ -9,6 +10,7 @@ from homeassistant.core import callback
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.consumption import ConsumptionXMixin
 from meross_iot.controller.mixins.electricity import ElectricityMixin
+from meross_iot.controller.mixins.garage import GarageOpenerMixin
 from meross_iot.controller.mixins.light import LightMixin
 from meross_iot.controller.mixins.toggle import ToggleXMixin, ToggleMixin
 from meross_iot.manager import MerossManager
@@ -21,7 +23,7 @@ from meross_iot.model.push.generic import GenericPushNotification
 from meross_iot.model.push.unbind import UnbindPushNotification
 
 from .common import (DOMAIN, MANAGER, log_exception, RELAXED_SCAN_INTERVAL,
-                     calculate_light_id, HA_LIGHT)
+                     calculate_light_id, HA_LIGHT, calculate_cover_id)
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,23 +31,22 @@ PARALLEL_UPDATES = 1
 SCAN_INTERVAL = timedelta(seconds=RELAXED_SCAN_INTERVAL)
 
 
-class MerossLightDevice(LightMixin, BaseDevice):
+class MerossCoverWrapper(GarageOpenerMixin, BaseDevice):
     """
     Type hints helper
     """
     pass
 
 
-class LightEntityWrapper(Light):
+class CoverEntityWrapper(CoverDevice):
     """Wrapper class to adapt the Meross bulbs into the Homeassistant platform"""
 
-    def __init__(self, device: MerossLightDevice, channel: int):
-        # TODO: verify channel is 0
+    def __init__(self, device: MerossCoverWrapper, channel: int):
         self._device = device
 
         # If the current device has more than 1 channel, we need to setup the device name and id accordingly
         if len(device.channels) > 1:
-            self._id = calculate_light_id(device.internal_id, channel)
+            self._id = calculate_cover_id(device.internal_id, channel)
             channel_data = device.channels[channel]
             self._entity_name = "{} - {}".format(device.name, channel_data.name)
         else:
@@ -54,6 +55,10 @@ class LightEntityWrapper(Light):
 
         # Device properties
         self._channel_id = channel
+
+        # The following variables are used to track "closing" and "opening" states.
+        self._is_closing = None
+        self._is_opening = None
 
     # region Device wrapper common methods
     async def async_update(self):
@@ -114,80 +119,37 @@ class LightEntityWrapper(Light):
     # endregion
 
     # region Platform-specific command methods
-    async def async_turn_off(self, **kwargs) -> None:
-        await self._device.async_turn_off(channel=self._channel_id)
+    async def async_close_cover(self, **kwargs):
+        await self._device.async_close(channel=self._channel_id)
 
-    async def async_turn_on(self, **kwargs) -> None:
-        if not self.is_on:
-            await self._device.async_turn_on(channel=self._channel_id)
-
-        # Color is taken from either of these 2 values, but not both.
-        if ATTR_HS_COLOR in kwargs:
-            h, s = kwargs[ATTR_HS_COLOR]
-            rgb = color_util.color_hsv_to_RGB(h, s, 100)
-            _LOGGER.debug("color change: rgb=%r -- h=%r s=%r" % (rgb, h, s))
-            await self._device.async_set_light_color(channel=self._channel_id, rgb=rgb, onoff=True)
-        elif ATTR_COLOR_TEMP in kwargs:
-            mired = kwargs[ATTR_COLOR_TEMP]
-            norm_value = (mired - self.min_mireds) / (self.max_mireds - self.min_mireds)
-            temperature = 100 - (norm_value * 100)
-            _LOGGER.debug("temperature change: mired=%r meross=%r" % (mired, temperature))
-            await self._device.async_set_light_color(channel=self._channel_id, temperature=temperature)
-
-        # Brightness must always be set, so take previous luminance if not explicitly set now.
-        if ATTR_BRIGHTNESS in kwargs:
-            brightness = kwargs[ATTR_BRIGHTNESS] * 100 / 255
-            _LOGGER.debug("brightness change: %r" % brightness)
-            await self._device.async_set_light_color(channel=self._channel_id, luminance=brightness)
-
-    def turn_on(self, **kwargs: Any) -> None:
-        self.hass.async_add_executor_job(self.async_turn_on, **kwargs)
-
-    def turn_off(self, **kwargs: Any) -> None:
-        self.hass.async_add_executor_job(self.async_turn_off, **kwargs)
+    async def async_open_cover(self, **kwargs):
+        await self._device.async_open(channel=self._channel_id)
     # endregion
 
     # region Platform specific properties
     @property
+    def device_class(self):
+        """Return the class of this device, from component DEVICE_CLASSES."""
+        return DEVICE_CLASS_GARAGE
+
+    @property
     def supported_features(self):
-        flags = 0
-        if self._device.get_supports_luminance(channel=self._channel_id):
-            flags |= SUPPORT_BRIGHTNESS
-        if self._device.get_supports_rgb(channel=self._channel_id):
-            flags |= SUPPORT_COLOR
-        if self._device.get_supports_temperature(channel=self._channel_id):
-            flags |= SUPPORT_COLOR_TEMP
-        return flags
+        """Flag supported features."""
+        return SUPPORT_OPEN | SUPPORT_CLOSE
 
     @property
-    def is_on(self) -> Optional[bool]:
-        return self._device.get_light_is_on(channel=self._channel_id)
+    def is_closed(self):
+        open_status = self._device.get_is_open(channel=self._channel_id)
+        return not open_status
 
     @property
-    def brightness(self):
-        if not self._device.get_supports_luminance(self._channel_id):
-            return None
-
-        luminance = self._device.get_luminance()
-        if luminance is not None:
-            return float(luminance) / 100 * 255
-
-        return None
-
+    def is_closing(self):
+        return self._is_closing
+    
     @property
-    def hs_color(self):
-        if self._device.get_supports_rgb(channel=self._channel_id):
-            rgb = self._device.get_rgb_color()
-            return color_util.color_RGB_to_hs(*rgb)
-        return None
+    def is_opening(self):
+        return self._is_opening
 
-    @property
-    def color_temp(self):
-        if self._device.get_supports_temperature(channel=self._channel_id):
-            value = self._device.get_color_temperature()
-            norm_value = (100 - value) / 100.0
-            return self.min_mireds + (norm_value * (self.max_mireds - self.min_mireds))
-        return None
     # endregion
 
 
@@ -197,10 +159,10 @@ class LightEntityWrapper(Light):
 def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
     new_entities = []
     # Identify all the devices that expose the Light capability
-    devs = filter(lambda d: isinstance(d, LightMixin), devices)
+    devs = filter(lambda d: isinstance(d, GarageOpenerMixin), devices)
     for d in devs:
         for channel_index, channel in enumerate(d.channels):
-            w = LightEntityWrapper(device=d, channel=channel_index)
+            w = CoverEntityWrapper(device=d, channel=channel_index)
             if w.unique_id not in hass.data[DOMAIN][HA_LIGHT]:
                 _LOGGER.debug(f"Device {w.unique_id} is new, will be added to HA")
                 new_entities.append(w)
