@@ -1,10 +1,11 @@
 import logging
 from typing import Any, Optional, Iterable
 
-from homeassistant.components.switch import SwitchDevice
+from homeassistant.components.switch import SwitchDevice, SwitchEntity
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.consumption import ConsumptionXMixin
 from meross_iot.controller.mixins.electricity import ElectricityMixin
+from meross_iot.controller.mixins.garage import GarageOpenerMixin
 from meross_iot.controller.mixins.toggle import ToggleXMixin, ToggleMixin
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
@@ -29,7 +30,7 @@ class MerossSwitchDevice(ToggleXMixin, BaseDevice):
     pass
 
 
-class SwitchEntityWrapper(SwitchDevice):
+class SwitchEntityWrapper(SwitchEntity):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
 
     def __init__(self, device: MerossSwitchDevice, channel: int):
@@ -165,6 +166,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async def platform_async_add_entities(push_notification: GenericPushNotification, target_device: BaseDevice):
         if isinstance(push_notification, BindPushNotification):
             devs = manager.find_devices(device_uuids=(push_notification.hwinfo.uuid,))
+
+            # Exclude garage openers.
+            devs = filter(lambda d: not isinstance(d, GarageOpenerMixin), devs)
             _add_entities(hass=hass, devices=devs, async_add_entities=async_add_entities)
 
     # Register a listener for new bound devices

@@ -84,4 +84,3 @@ def log_exception(message: str = None, logger: logging = None, device: BaseDevic
                         f"{device_info}\n" \
                         f"Error Message: \"{message}\""
     logger.exception(formatted_message)
-
