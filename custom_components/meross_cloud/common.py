@@ -27,10 +27,11 @@ CONF_STORED_CREDS = 'stored_credentials'
 
 
 RELAXED_SCAN_INTERVAL = 180.0
+SENSOR_SCAN_INTERVAL = 30
 
 
-def calculate_sensor_id(uuid: str, type: str, channel: int = 0,):
-    return "%s:%s:%s:%d" % (HA_SENSOR, uuid, type, channel)
+def calculate_sensor_id(uuid: str, type: str, measurement_unit: str, channel: int = 0,):
+    return "%s:%s:%s:%s:%d" % (HA_SENSOR, uuid, type, measurement_unit, channel)
 
 
 def calculate_cover_id(uuid: str, channel: int):

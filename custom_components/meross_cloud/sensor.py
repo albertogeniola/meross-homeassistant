@@ -1,8 +1,8 @@
 import logging
 from typing import Any, Optional, Iterable, Union
-
+from datetime import datetime
 from homeassistant.const import DEVICE_CLASS_BATTERY, DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_HUMIDITY, \
-    UNIT_PERCENTAGE
+    UNIT_PERCENTAGE, DEVICE_CLASS_POWER, POWER_WATT
 from homeassistant.helpers.entity import Entity
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.electricity import ElectricityMixin
@@ -15,18 +15,19 @@ from datetime import timedelta
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (DOMAIN, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, HA_SENSOR, calculate_sensor_id)
+from .common import (DOMAIN, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, HA_SENSOR, calculate_sensor_id,
+                     SENSOR_SCAN_INTERVAL)
 
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
-SCAN_INTERVAL = timedelta(seconds=RELAXED_SCAN_INTERVAL)
+SCAN_INTERVAL = timedelta(seconds=SENSOR_SCAN_INTERVAL)
 
 
 class GenericSensorWrapper(Entity):
     """Wrapper class to adapt the Meross MSS100 sensor hardware into the Homeassistant platform"""
 
-    def __init__(self, sensor_class: str, measurement_unit: str, device_method_or_property: str, device: Ms100Sensor, channel: int = 0):
+    def __init__(self, sensor_class: str, measurement_unit: str, device_method_or_property: str, device: BaseDevice, channel: int = 0):
         # Make sure the given device supports exposes the device_method_or_property passed as arg
         if not hasattr(device, device_method_or_property):
             _LOGGER.error(f"The device {device.uuid} ({device.name}) does not expose property {device_method_or_property}")
@@ -41,12 +42,11 @@ class GenericSensorWrapper(Entity):
         # Each Meross Device might expose more than 1 sensor. In this case, we cannot rely only on the
         # uuid value to uniquely identify a sensor wrapper.
         if len(device.channels) > 1:
-            self._id = calculate_sensor_id(uuid=device.internal_id, type=sensor_class, channel=channel)
-            channel_data = device.channels[channel]
-            self._entity_name = "{} - {} - {}".format(device.name, channel_data.name, f"{sensor_class} sensor")
+            self._id = calculate_sensor_id(uuid=device.internal_id, type=sensor_class, measurement_unit=measurement_unit, channel=channel)
+            self._entity_name = "{} - {} ({}, channel: {})".format(device.name, f"{sensor_class} sensor", measurement_unit, channel)
         else:
-            self._id = calculate_sensor_id(uuid=device.internal_id, type=sensor_class, channel=0)
-            self._entity_name = "{} - {} - {}".format(device.name, "", f"{sensor_class} sensor")
+            self._id = calculate_sensor_id(uuid=device.internal_id, measurement_unit=measurement_unit, type=sensor_class, channel=0)
+            self._entity_name = "{} - {} ({})".format(device.name, f"{sensor_class} sensor", measurement_unit)
 
     # region Device wrapper common methods
     async def async_update(self):
@@ -135,6 +135,10 @@ class TemperatureSensorWrapper(GenericSensorWrapper):
                          device=device,
                          channel=channel)
 
+    @property
+    def should_poll(self) -> bool:
+        return False
+
 
 class HumiditySensorWrapper(GenericSensorWrapper):
     def __init__(self, device: Ms100Sensor, channel: int = 0):
@@ -143,6 +147,107 @@ class HumiditySensorWrapper(GenericSensorWrapper):
                          device_method_or_property='last_sampled_humidity',
                          device=device,
                          channel=channel)
+
+    @property
+    def should_poll(self) -> bool:
+        return False
+
+
+class ElectricitySensorDevice(ElectricityMixin, BaseDevice):
+    """ Helper type """
+    pass
+
+
+class PowerSensorWrapper(GenericSensorWrapper):
+    def __init__(self, device: ElectricitySensorDevice, channel: int = 0):
+        super().__init__(sensor_class=DEVICE_CLASS_POWER,
+                         measurement_unit=POWER_WATT,
+                         device_method_or_property='get_last_sample',
+                         device=device,
+                         channel=channel)
+
+    # For ElectricityMixin devices we need to explicitly call the async_Get_instant_metrics
+    async def async_update(self):
+        if self._device.online_status == OnlineStatus.ONLINE:
+            try:
+                # We only call the explicit method if the sampled value is older than 10 seconds.
+                power_info = self._device.get_last_sample(channel=self._channel_id)
+                now = datetime.utcnow()
+                if power_info is None or (now - power_info.sample_timestamp).total_seconds() > 10:
+                    # Force device refresh
+                    await self._device.async_get_instant_metrics(channel=self._channel_id)
+
+            except CommandTimeoutError as e:
+                log_exception(logger=_LOGGER, device=self._device)
+                pass
+
+    @property
+    def state(self) -> Union[None, str, int, float]:
+        sample = self._device.get_last_sample(channel=self._channel_id)
+        if sample is not None:
+            return sample.power
+
+
+class CurrentSensorWrapper(GenericSensorWrapper):
+    def __init__(self, device: ElectricitySensorDevice, channel: int = 0):
+        super().__init__(sensor_class=DEVICE_CLASS_POWER,
+                         measurement_unit="A",
+                         device_method_or_property='get_last_sample',
+                         device=device,
+                         channel=channel)
+
+    # For ElectricityMixin devices we need to explicitly call the async_Get_instant_metrics
+    async def async_update(self):
+        if self._device.online_status == OnlineStatus.ONLINE:
+            try:
+                # We only call the explicit method if the sampled value is older than 10 seconds.
+                power_info = self._device.get_last_sample(channel=self._channel_id)
+                now = datetime.utcnow()
+                if power_info is None or (now - power_info.sample_timestamp).total_seconds() > 10:
+                    # Force device refresh
+                    await self._device.async_get_instant_metrics(channel=self._channel_id)
+
+            except CommandTimeoutError as e:
+                log_exception(logger=_LOGGER, device=self._device)
+                pass
+
+    @property
+    def state(self) -> Union[None, str, int, float]:
+        sample = self._device.get_last_sample(channel=self._channel_id)
+        if sample is not None:
+            return sample.current
+        return 0
+
+
+class VoltageSensorWrapper(GenericSensorWrapper):
+    def __init__(self, device: ElectricitySensorDevice, channel: int = 0):
+        super().__init__(sensor_class=DEVICE_CLASS_POWER,
+                         measurement_unit="V",
+                         device_method_or_property='get_last_sample',
+                         device=device,
+                         channel=channel)
+
+    # For ElectricityMixin devices we need to explicitly call the async_Get_instant_metrics
+    async def async_update(self):
+        if self._device.online_status == OnlineStatus.ONLINE:
+            try:
+                # We only call the explicit method if the sampled value is older than 10 seconds.
+                power_info = self._device.get_last_sample(channel=self._channel_id)
+                now = datetime.utcnow()
+                if power_info is None or (now - power_info.sample_timestamp).total_seconds() > 10:
+                    # Force device refresh
+                    await self._device.async_get_instant_metrics(channel=self._channel_id)
+
+            except CommandTimeoutError as e:
+                log_exception(logger=_LOGGER, device=self._device)
+                pass
+
+    @property
+    def state(self) -> Union[None, str, int, float]:
+        sample = self._device.get_last_sample(channel=self._channel_id)
+        if sample is not None:
+            return sample.voltage
+        return 0
 
 
 # ----------------------------------------------
@@ -174,16 +279,28 @@ def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
             _LOGGER.debug(f"Skipping device {t.unique_id} as it's already present in HA")
 
     # Add Power Sensors
-    """
     for d in power_sensors:
         for channel_index, channel in enumerate(d.channels):
-            w = PowerEntityWrapper(device=d, channel=channel_index)
+            w = PowerSensorWrapper(device=d, channel=channel_index)
             if w.unique_id not in hass.data[DOMAIN][HA_SENSOR]:
                 _LOGGER.debug(f"Device {w.unique_id} is new, will be added to HA")
                 new_entities.append(w)
             else:
                 _LOGGER.debug(f"Skipping device {w.unique_id} as it's already present in HA")
-    """
+
+            c = CurrentSensorWrapper(device=d, channel=channel_index)
+            if c.unique_id not in hass.data[DOMAIN][HA_SENSOR]:
+                _LOGGER.debug(f"Device {c.unique_id} is new, will be added to HA")
+                new_entities.append(c)
+            else:
+                _LOGGER.debug(f"Skipping device {c.unique_id} as it's already present in HA")
+
+            v = VoltageSensorWrapper(device=d, channel=channel_index)
+            if v.unique_id not in hass.data[DOMAIN][HA_SENSOR]:
+                _LOGGER.debug(f"Device {v.unique_id} is new, will be added to HA")
+                new_entities.append(v)
+            else:
+                _LOGGER.debug(f"Skipping device {v.unique_id} as it's already present in HA")
     async_add_entities(new_entities, True)
     
 
