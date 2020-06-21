@@ -61,6 +61,14 @@ class GenericSensorWrapper(Entity):
         if namespace == Namespace.CONTROL_UNBIND:
             _LOGGER.info("Received unbind event. Removing the device from HA")
             await self.platform.async_remove_entity(self.entity_id)
+        elif namespace == Namespace.SYSTEM_ONLINE:
+            online = OnlineStatus(int(data.get('online').get('status')))
+            if online == OnlineStatus.ONLINE:
+                # The device has just gone online again. Update its status.
+                self.async_schedule_update_ha_state(force_refresh=True)
+        elif namespace == Namespace.HUB_ONLINE:
+            print(data)
+            # TODO: handle online status
         else:
             self.async_schedule_update_ha_state(force_refresh=False)
 
