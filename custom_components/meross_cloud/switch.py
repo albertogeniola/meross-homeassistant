@@ -1,7 +1,6 @@
 import logging
 from typing import Any, Optional, Iterable
 
-from homeassistant.components.switch import SwitchDevice, SwitchEntity
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.consumption import ConsumptionXMixin
 from meross_iot.controller.mixins.electricity import ElectricityMixin
@@ -11,12 +10,17 @@ from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
 from datetime import timedelta
-
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
-
 from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, log_exception, RELAXED_SCAN_INTERVAL)
 from datetime import datetime
+
+# Conditional import for switch device
+try:
+    from homeassistant.components.switch import SwitchEntity
+except ImportError:
+    from homeassistant.components.switch import SwitchDevice as SwitchEntity
+
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1

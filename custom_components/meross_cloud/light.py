@@ -17,6 +17,12 @@ from meross_iot.model.push.generic import GenericPushNotification
 from .common import (DOMAIN, MANAGER, log_exception, RELAXED_SCAN_INTERVAL,
                      calculate_light_id, HA_LIGHT)
 
+# Conditional Light import with backwards compatibility
+try:
+    from homeassistant.components.light import LightEntity
+except ImportError:
+    from homeassistant.components.light import Light as LightEntity
+
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
@@ -30,7 +36,7 @@ class MerossLightDevice(LightMixin, BaseDevice):
     pass
 
 
-class LightEntityWrapper(Light):
+class LightEntityWrapper(LightEntity):
     """Wrapper class to adapt the Meross bulbs into the Homeassistant platform"""
 
     def __init__(self, device: MerossLightDevice, channel: int):
