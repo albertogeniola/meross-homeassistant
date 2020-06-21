@@ -1,5 +1,4 @@
 import logging
-from abc import ABC
 
 from meross_iot.controller.device import BaseDevice
 

@@ -1,7 +1,9 @@
 import logging
-from typing import Any, Optional, Iterable, Union
 from datetime import datetime
-from homeassistant.const import DEVICE_CLASS_BATTERY, DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_HUMIDITY, \
+from datetime import timedelta
+from typing import Optional, Iterable, Union
+
+from homeassistant.const import DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_HUMIDITY, \
     UNIT_PERCENTAGE, DEVICE_CLASS_POWER, POWER_WATT
 from homeassistant.helpers.entity import Entity
 from meross_iot.controller.device import BaseDevice
@@ -10,14 +12,11 @@ from meross_iot.controller.subdevice import Ms100Sensor
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
-from datetime import timedelta
-
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
 from .common import (DOMAIN, MANAGER, log_exception, HA_SENSOR, calculate_sensor_id,
                      SENSOR_POLL_INTERVAL)
-
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1

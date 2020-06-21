@@ -1,14 +1,13 @@
 import logging
-from typing import Any, Optional, Iterable
+from datetime import timedelta
+from typing import Any, Iterable
 
-from homeassistant.components.cover import CoverDevice, DEVICE_CLASS_GARAGE, SUPPORT_OPEN, SUPPORT_CLOSE
+from homeassistant.components.cover import DEVICE_CLASS_GARAGE, SUPPORT_OPEN, SUPPORT_CLOSE
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.garage import GarageOpenerMixin
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
-from datetime import timedelta
-
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 

@@ -1,6 +1,7 @@
 """Meross devices platform loader"""
 import logging
 from datetime import datetime
+from typing import List, Tuple
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -13,14 +14,11 @@ from meross_iot.logger import ROOT_MEROSS_LOGGER, h
 from meross_iot.manager import MerossManager
 from meross_iot.model.credentials import MerossCloudCreds
 from meross_iot.model.http.device import HttpDeviceInfo
-from typing import List, Tuple
-
 from meross_iot.model.http.exception import TokenExpiredException, TooManyTokensException, UnauthorizedException
 
 from .common import (ATTR_CONFIG, CLOUD_HANDLER, DOMAIN, HA_CLIMATE, HA_COVER,
                      HA_FAN, HA_LIGHT, HA_SENSOR, HA_SWITCH, MANAGER,
                      MEROSS_PLATFORMS, SENSORS, dismiss_notification, notify_error, log_exception, CONF_STORED_CREDS)
-
 # Unset the default stream handler for logger of the meross_iot library
 from .version import MEROSS_CLOUD_VERSION
 

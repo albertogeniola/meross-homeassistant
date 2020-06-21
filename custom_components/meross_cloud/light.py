@@ -1,16 +1,15 @@
 import logging
+from datetime import timedelta
 from typing import Any, Optional, Iterable
 
 import homeassistant.util.color as color_util
-from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP, \
+from homeassistant.components.light import SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP, \
     ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.light import LightMixin
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
-from datetime import timedelta
-
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
