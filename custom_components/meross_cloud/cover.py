@@ -102,10 +102,7 @@ class CoverEntityWrapper(CoverEntity):
 
     @property
     def should_poll(self) -> bool:
-        # Even though we use PUSH notifications to quickly react to cloud-events,
-        # we also rely on a super-relaxed polling system which allows us to recover from
-        # state inconsistency that might arise when connection quality is not good enough.
-        return True
+        return False
     # endregion
 
     # region Platform-specific command methods

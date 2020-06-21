@@ -15,13 +15,13 @@ from datetime import timedelta
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (DOMAIN, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, HA_SENSOR, calculate_sensor_id,
-                     SENSOR_SCAN_INTERVAL)
+from .common import (DOMAIN, MANAGER, log_exception, HA_SENSOR, calculate_sensor_id,
+                     SENSOR_POLL_INTERVAL)
 
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
-SCAN_INTERVAL = timedelta(seconds=SENSOR_SCAN_INTERVAL)
+SCAN_INTERVAL = timedelta(seconds=SENSOR_POLL_INTERVAL)
 
 
 class GenericSensorWrapper(Entity):
@@ -67,9 +67,15 @@ class GenericSensorWrapper(Entity):
                 # The device has just gone online again. Update its status.
                 self.async_schedule_update_ha_state(force_refresh=True)
         elif namespace == Namespace.HUB_ONLINE:
-            print(data)
-            # TODO: handle online status
+            # TODO Verify that this event is only provided to wrappers implementing
+            #  subdevices. If not, then we might have a problem, i.e. we would be triggering
+            #  updates too often
+            online = OnlineStatus(int(data.get('status')))
+            if online == OnlineStatus.ONLINE:
+                # The device has just gone online again. Update its status.
+                self.async_schedule_update_ha_state(force_refresh=True)
         else:
+            # In all other cases, just tell HA to update the internal state representation
             self.async_schedule_update_ha_state(force_refresh=False)
 
     async def async_added_to_hass(self) -> None:
@@ -106,9 +112,7 @@ class GenericSensorWrapper(Entity):
 
     @property
     def should_poll(self) -> bool:
-        # Even though we use PUSH notifications to quickly react to cloud-events,
-        # we also rely on a super-relaxed polling system which allows us to recover from
-        # state inconsistency that might arise when connection quality is not good enough.
+        # In general, sensors require polling )not all of them though)
         return True
     # endregion
 
@@ -145,6 +149,8 @@ class TemperatureSensorWrapper(GenericSensorWrapper):
 
     @property
     def should_poll(self) -> bool:
+        # So far, it looks like MS100 sensor does not require polling as it automatically triger
+        # sensor updates when a variation in temperature or humidity occurs
         return False
 
 
@@ -158,6 +164,8 @@ class HumiditySensorWrapper(GenericSensorWrapper):
 
     @property
     def should_poll(self) -> bool:
+        # So far, it looks like MS100 sensor does not require polling as it automatically triger
+        # sensor updates when a variation in temperature or humidity occurs
         return False
 
 
