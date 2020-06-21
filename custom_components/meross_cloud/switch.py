@@ -125,9 +125,15 @@ class SwitchEntityWrapper(SwitchEntity):
                 # The device has just gone online again. Update its status.
                 self.async_schedule_update_ha_state(force_refresh=True)
         elif namespace == Namespace.HUB_ONLINE:
-            print(data)
-            # TODO: handle online status
+            # TODO Verify that this event is only provided to wrappers implementing
+            #  subdevices. If not, then we might have a problem, i.e. we would be triggering
+            #  updates too often
+            online = OnlineStatus(int(data.get('status')))
+            if online == OnlineStatus.ONLINE:
+                # The device has just gone online again. Update its status.
+                self.async_schedule_update_ha_state(force_refresh=True)
         else:
+            # In all other cases, just tell HA to update the internal state representation
             self.async_schedule_update_ha_state(force_refresh=False)
 
     async def async_added_to_hass(self) -> None:
