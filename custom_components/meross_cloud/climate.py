@@ -2,8 +2,13 @@ import logging
 from typing import List, Optional
 
 from homeassistant.components.climate import (SUPPORT_PRESET_MODE,
-                                              SUPPORT_TARGET_TEMPERATURE,
-                                              ClimateDevice)
+                                              SUPPORT_TARGET_TEMPERATURE)
+# Fallback import in case of old HA releases
+try:
+    from homeassistant.components.climate import ClimateEntity
+except ImportError:
+    from homeassistant.components.climate import ClimateDevice as ClimateEntity
+
 from homeassistant.components.climate.const import (CURRENT_HVAC_HEAT,
                                                     CURRENT_HVAC_IDLE,
                                                     CURRENT_HVAC_OFF,
@@ -32,7 +37,7 @@ def none_callback(err, resp):
     pass
 
 
-class ValveEntityWrapper(ClimateDevice, MerossEntityWrapper):
+class ValveEntityWrapper(ClimateEntity, MerossEntityWrapper):
     """Wrapper class to adapt the Meross thermostat into the Homeassistant platform"""
 
     def __init__(self, device: ValveSubDevice):

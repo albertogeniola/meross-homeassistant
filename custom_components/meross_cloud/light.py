@@ -3,8 +3,14 @@ import logging
 import homeassistant.util.color as color_util
 from homeassistant.components.light import (ATTR_BRIGHTNESS, ATTR_COLOR_TEMP,
                                             ATTR_HS_COLOR, SUPPORT_BRIGHTNESS,
-                                            SUPPORT_COLOR, SUPPORT_COLOR_TEMP,
-                                            Light)
+                                            SUPPORT_COLOR, SUPPORT_COLOR_TEMP)
+
+# Fallback import in case of old HA releases
+try:
+    from homeassistant.components.light import LightEntity
+except ImportError:
+    from homeassistant.components.light import Light as LightEntity
+
 from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.light_bulbs import GenericBulb
 from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
@@ -30,7 +36,7 @@ def expand_status(status):
     return out
 
 
-class LightEntityWrapper(Light):
+class LightEntityWrapper(LightEntity):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
 
     def __init__(self, device: GenericBulb, channel: int):
