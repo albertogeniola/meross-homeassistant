@@ -1,7 +1,14 @@
 import logging
 
 from homeassistant.components.cover import (
-    DEVICE_CLASS_GARAGE, SUPPORT_CLOSE, SUPPORT_OPEN, CoverEntity)
+    DEVICE_CLASS_GARAGE, SUPPORT_CLOSE, SUPPORT_OPEN)
+
+# Fallback import in case of old HA releases
+try:
+    from homeassistant.components.cover import CoverEntity
+except ImportError:
+    from homeassistant.components.cover import CoverDevice as CoverEntity
+
 from meross_iot.cloud.client_status import ClientStatus
 from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
 from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
