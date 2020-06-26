@@ -6,7 +6,7 @@ from typing import List, Tuple
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, EVENT_TIME_CHANGED
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.typing import HomeAssistantType
 from meross_iot.http_api import MerossHttpClient
@@ -21,6 +21,9 @@ from .common import (ATTR_CONFIG, CLOUD_HANDLER, DOMAIN, HA_CLIMATE, HA_COVER,
                      MEROSS_PLATFORMS, SENSORS, dismiss_notification, notify_error, log_exception, CONF_STORED_CREDS)
 # Unset the default stream handler for logger of the meross_iot library
 from .version import MEROSS_CLOUD_VERSION
+from datetime import timedelta
+from homeassistant.helpers.event import async_track_time_interval
+
 
 ROOT_MEROSS_LOGGER.removeHandler(h)
 
@@ -80,6 +83,11 @@ async def get_or_renew_creds(email: str,
 
         return http_client, http_devices, True
 
+"""
+async def run_discovery(manager):
+    _LOGGER.info("Triggering discovery...")
+    await manager.async_device_discovery()
+"""
 
 async def async_setup_entry(hass: HomeAssistantType, config_entry):
     """
@@ -144,6 +152,12 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
                 hass.config_entries.async_forward_entry_setup(config_entry, platform)
             )
 
+        """
+        async def trigger_discovery(time):
+            await run_discovery(manager=manager)
+
+        async_track_time_interval(hass=hass, action=trigger_discovery, interval=timedelta(seconds=30))
+        """
         return True
 
     except TooManyTokensException:

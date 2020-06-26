@@ -59,25 +59,30 @@ class CoverEntityWrapper(CoverEntity):
                 pass
 
     async def _async_push_notification_received(self, namespace: Namespace, data: dict):
+        update_state = False
+        full_update = False
+
         if namespace == Namespace.CONTROL_UNBIND:
             _LOGGER.info("Received unbind event. Removing the device from HA")
             await self.platform.async_remove_entity(self.entity_id)
         elif namespace == Namespace.SYSTEM_ONLINE:
+            _LOGGER.warning(f"Device {self.name} reported online event.")
             online = OnlineStatus(int(data.get('online').get('status')))
-            if online == OnlineStatus.ONLINE:
-                # The device has just gone online again. Update its status.
-                self.async_schedule_update_ha_state(force_refresh=True)
+            update_state = True
+            full_update = online == OnlineStatus.ONLINE
+
         elif namespace == Namespace.HUB_ONLINE:
-            # TODO Verify that this event is only provided to wrappers implementing
-            #  subdevices. If not, then we might have a problem, i.e. we would be triggering
-            #  updates too often
+            _LOGGER.warning(f"Device {self.name} reported (HUB) online event.")
             online = OnlineStatus(int(data.get('status')))
-            if online == OnlineStatus.ONLINE:
-                # The device has just gone online again. Update its status.
-                self.async_schedule_update_ha_state(force_refresh=True)
+            update_state = True
+            full_update = online == OnlineStatus.ONLINE
         else:
-            # In all other cases, just tell HA to update the internal state representation
-            self.async_schedule_update_ha_state(force_refresh=False)
+            update_state = True
+            full_update = False
+
+        # In all other cases, just tell HA to update the internal state representation
+        if update_state:
+            self.async_schedule_update_ha_state(force_refresh=full_update)
 
     async def async_added_to_hass(self) -> None:
         self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)

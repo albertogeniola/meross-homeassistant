@@ -51,31 +51,37 @@ class GenericSensorWrapper(Entity):
     async def async_update(self):
         if self._device.online_status == OnlineStatus.ONLINE:
             try:
+                _LOGGER.warning(f"Calling async_update on {self.name}")
                 await self._device.async_update()
             except CommandTimeoutError as e:
                 log_exception(logger=_LOGGER, device=self._device)
                 pass
 
     async def _async_push_notification_received(self, namespace: Namespace, data: dict):
+        update_state = False
+        full_update = False
+
         if namespace == Namespace.CONTROL_UNBIND:
             _LOGGER.info("Received unbind event. Removing the device from HA")
             await self.platform.async_remove_entity(self.entity_id)
         elif namespace == Namespace.SYSTEM_ONLINE:
+            _LOGGER.warning(f"Device {self.name} reported online event.")
             online = OnlineStatus(int(data.get('online').get('status')))
-            if online == OnlineStatus.ONLINE:
-                # The device has just gone online again. Update its status.
-                self.async_schedule_update_ha_state(force_refresh=True)
+            update_state = True
+            full_update = online == OnlineStatus.ONLINE
+
         elif namespace == Namespace.HUB_ONLINE:
-            # TODO Verify that this event is only provided to wrappers implementing
-            #  subdevices. If not, then we might have a problem, i.e. we would be triggering
-            #  updates too often
+            _LOGGER.warning(f"Device {self.name} reported (HUB) online event.")
             online = OnlineStatus(int(data.get('status')))
-            if online == OnlineStatus.ONLINE:
-                # The device has just gone online again. Update its status.
-                self.async_schedule_update_ha_state(force_refresh=True)
+            update_state = True
+            full_update = online == OnlineStatus.ONLINE
         else:
-            # In all other cases, just tell HA to update the internal state representation
-            self.async_schedule_update_ha_state(force_refresh=False)
+            update_state = True
+            full_update = False
+
+        # In all other cases, just tell HA to update the internal state representation
+        if update_state:
+            self.async_schedule_update_ha_state(force_refresh=full_update)
 
     async def async_added_to_hass(self) -> None:
         self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
@@ -190,7 +196,11 @@ class PowerSensorWrapper(GenericSensorWrapper):
                 now = datetime.utcnow()
                 if power_info is None or (now - power_info.sample_timestamp).total_seconds() > 10:
                     # Force device refresh
+                    _LOGGER.warning(f"Refreshing instant metrics for device {self.name}")
                     await self._device.async_get_instant_metrics(channel=self._channel_id)
+                else:
+                    # Use the cached value
+                    _LOGGER.info(f"Skipping data refresh for {self.name} as its value is recent enough")
 
             except CommandTimeoutError as e:
                 log_exception(logger=_LOGGER, device=self._device)
@@ -220,7 +230,11 @@ class CurrentSensorWrapper(GenericSensorWrapper):
                 now = datetime.utcnow()
                 if power_info is None or (now - power_info.sample_timestamp).total_seconds() > 10:
                     # Force device refresh
+                    _LOGGER.warning(f"Refreshing instant metrics for device {self.name}")
                     await self._device.async_get_instant_metrics(channel=self._channel_id)
+                else:
+                    # Use the cached value
+                    _LOGGER.info(f"Skipping data refresh for {self.name} as its value is recent enough")
 
             except CommandTimeoutError as e:
                 log_exception(logger=_LOGGER, device=self._device)
@@ -251,7 +265,11 @@ class VoltageSensorWrapper(GenericSensorWrapper):
                 now = datetime.utcnow()
                 if power_info is None or (now - power_info.sample_timestamp).total_seconds() > 10:
                     # Force device refresh
+                    _LOGGER.warning(f"Refreshing instant metrics for device {self.name}")
                     await self._device.async_get_instant_metrics(channel=self._channel_id)
+                else:
+                    # Use the cached value
+                    _LOGGER.info(f"Skipping data refresh for {self.name} as its value is recent enough")
 
             except CommandTimeoutError as e:
                 log_exception(logger=_LOGGER, device=self._device)
@@ -328,8 +346,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     # Register a listener for the Bind push notification so that we can add new entities at runtime
     async def platform_async_add_entities(push_notification: GenericPushNotification, target_device: BaseDevice):
-        if isinstance(push_notification, BindPushNotification):
-            devs = manager.find_devices(device_uuids=(push_notification.hwinfo.uuid,))
+        if push_notification.namespace == Namespace.CONTROL_BIND \
+                or push_notification.namespace == Namespace.SYSTEM_ONLINE \
+                or push_notification.namespace == Namespace.HUB_ONLINE:
+
+            # TODO: Discovery needed only when device becomes online?
+            await manager.async_device_discovery(push_notification.namespace == Namespace.HUB_ONLINE,
+                                                 meross_device_uuid=push_notification.originating_device_uuid)
+            devs = manager.find_devices(device_uuids=(push_notification.originating_device_uuid,)) # TODO: implement a discovery that is able to handle a single UUID device.
             _add_entities(hass=hass, devices=devs, async_add_entities=async_add_entities)
 
     # Register a listener for new bound devices
