@@ -169,18 +169,21 @@ class CoverEntityWrapper(CoverEntity):
 # ----------------------------------------------
 # PLATFORM METHODS
 # ----------------------------------------------
-def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
+async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
     new_entities = []
+    registry = await hass.helpers.entity_registry.async_get_registry()
+
     # Identify all the devices that expose the Light capability
     devs = filter(lambda d: isinstance(d, GarageOpenerMixin), devices)
     for d in devs:
         for channel_index, channel in enumerate(d.channels):
             w = CoverEntityWrapper(device=d, channel=channel_index)
-            if w.unique_id not in hass.data[DOMAIN][HA_COVER]:
-                _LOGGER.debug(f"Device {w.unique_id} is new, will be added to HA")
+            existing_entity_id = registry.async_get_entity_id(domain=DOMAIN, platform=HA_COVER, unique_id=w.unique_id)
+            if existing_entity_id is None:
+                _LOGGER.debug(f"Device {w} is new, will be added to HA")
                 new_entities.append(w)
             else:
-                _LOGGER.debug(f"Skipping device {w.unique_id} as it's already present in HA")
+                _LOGGER.debug(f"Skipping device {w} as it's already present in HA")
     async_add_entities(new_entities, True)
 
 
@@ -189,13 +192,13 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     # bulbs.
     manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
     devices = manager.find_devices()
-    _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
+    await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
 
     # Register a listener for the Bind push notification so that we can add new entities at runtime
     async def platform_async_add_entities(push_notification: GenericPushNotification, target_device: BaseDevice):
         if isinstance(push_notification, BindPushNotification):
             devs = manager.find_devices(device_uuids=(push_notification.hwinfo.uuid,))
-            _add_entities(hass=hass, devices=devs, async_add_entities=async_add_entities)
+            await _add_entities(hass=hass, devices=devs, async_add_entities=async_add_entities)
 
     # Register a listener for new bound devices
     manager.register_push_notification_handler_coroutine(platform_async_add_entities)
