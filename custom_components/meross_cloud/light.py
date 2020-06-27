@@ -43,13 +43,9 @@ class LightEntityWrapper(LightEntity):
         self._device = device
 
         # If the current device has more than 1 channel, we need to setup the device name and id accordingly
-        if len(device.channels) > 1:
-            self._id = calculate_light_id(device.internal_id, channel)
-            channel_data = device.channels[channel]
-            self._entity_name = "{} - {}".format(device.name, channel_data.name)
-        else:
-            self._id = device.uuid
-            self._entity_name = device.name
+        self._id = calculate_light_id(device.internal_id, channel)
+        channel_data = device.channels[channel]
+        self._entity_name = "{} ({}) - {}".format(device.name, device.type, channel_data.name)
 
         # Device properties
         self._channel_id = channel

@@ -40,12 +40,8 @@ class GenericSensorWrapper(Entity):
 
         # Each Meross Device might expose more than 1 sensor. In this case, we cannot rely only on the
         # uuid value to uniquely identify a sensor wrapper.
-        if len(device.channels) > 1:
-            self._id = calculate_sensor_id(uuid=device.internal_id, type=sensor_class, measurement_unit=measurement_unit, channel=channel)
-            self._entity_name = "{} - {} ({}, channel: {})".format(device.name, f"{sensor_class} sensor", measurement_unit, channel)
-        else:
-            self._id = calculate_sensor_id(uuid=device.internal_id, measurement_unit=measurement_unit, type=sensor_class, channel=0)
-            self._entity_name = "{} - {} ({})".format(device.name, f"{sensor_class} sensor", measurement_unit)
+        self._id = calculate_sensor_id(uuid=device.internal_id, type=sensor_class, measurement_unit=measurement_unit, channel=channel)
+        self._entity_name = "{} ({}) - {} ({}, {})".format(device.name, device.type, f"{sensor_class} sensor", measurement_unit, channel)
 
     # region Device wrapper common methods
     async def async_update(self):
