@@ -90,9 +90,11 @@ class LightEntityWrapper(LightEntity):
 
     async def async_added_to_hass(self) -> None:
         self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
+        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].add(self.unique_id)
 
     async def async_will_remove_from_hass(self) -> None:
         self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
+        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
     # endregion
 
     # region Device wrapper common properties
