@@ -19,7 +19,7 @@ from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutEx
 from meross_iot.manager import MerossManager
 from meross_iot.meross_event import (ThermostatTemperatureChange)
 
-from .common import (DOMAIN, HA_CLIMATE, MANAGER, ConnectionWatchDog, MerossEntityWrapper, log_exception)
+from .common import (PLATFORM, HA_CLIMATE, MANAGER, ConnectionWatchDog, MerossEntityWrapper, log_exception)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -151,11 +151,11 @@ class ValveEntityWrapper(ClimateDevice, MerossEntityWrapper):
     @property
     def device_info(self):
         return {
-            'identifiers': {(DOMAIN, self._id)},
+            'identifiers': {(PLATFORM, self._id)},
             'name': self._device.name,
             'manufacturer': 'Meross',
             'model': self._device.type,
-            'via_device': (DOMAIN, self._device.uuid)
+            'via_device': (PLATFORM, self._device.uuid)
         }
 
     @property
@@ -333,19 +333,19 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     def sync_logic():
 
         climante_devices = []
-        manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+        manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
 
         # Add smart thermostat valves
         valves = manager.get_devices_by_kind(ValveSubDevice)
         for valve in valves:  # type: ValveSubDevice
             w = ValveEntityWrapper(device=valve)
             climante_devices.append(w)
-            hass.data[DOMAIN][HA_CLIMATE][w.unique_id] = w
+            hass.data[PLATFORM][HA_CLIMATE][w.unique_id] = w
 
         return climante_devices
 
     # Register a connection watchdog to notify devices when connection to the cloud MQTT goes down.
-    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+    manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
     watchdog = ConnectionWatchDog(hass=hass, platform=HA_CLIMATE)
     manager.register_event_handler(watchdog.connection_handler)
 

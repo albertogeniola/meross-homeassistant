@@ -15,7 +15,7 @@ from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (DOMAIN, MANAGER, log_exception, HA_SENSOR, calculate_sensor_id,
+from .common import (PLATFORM, MANAGER, log_exception, HA_SENSOR, calculate_sensor_id,
                      SENSOR_POLL_INTERVAL)
 
 _LOGGER = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ class GenericSensorWrapper(Entity):
     @property
     def device_info(self):
         return {
-            'identifiers': {(DOMAIN, self._device.internal_id)},
+            'identifiers': {(PLATFORM, self._device.internal_id)},
             'name': self._device.name,
             'manufacturer': 'Meross',
             'model': self._device.type + " " + self._device.hardware_version,
@@ -288,7 +288,6 @@ class VoltageSensorWrapper(GenericSensorWrapper):
 # ----------------------------------------------
 async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
     new_entities = []
-    registry = await hass.helpers.entity_registry.async_get_registry()
 
     # For now, we handle the following sensors:
     # -> Temperature-Humidity (Ms100Sensor)
@@ -300,54 +299,44 @@ async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities)
     # Add Temperature & Humidity sensors
     for d in humidity_temp_sensors:
         h = HumiditySensorWrapper(device=d, channel=0)
-        existing_entity_id = registry.async_get_entity_id(domain=DOMAIN, platform=HA_SENSOR, unique_id=h.unique_id)
-        if existing_entity_id is None:
-            _LOGGER.debug(f"Device {h} is new, will be added to HA")
+        if h.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
             new_entities.append(h)
         else:
-            _LOGGER.debug(f"Skipping device {h} as it's already present in HA")
+            _LOGGER.warning(f"Skipping device {h} as it was already added to registry once.")
 
         t = TemperatureSensorWrapper(device=d, channel=0)
-        existing_entity_id = registry.async_get_entity_id(domain=DOMAIN, platform=HA_SENSOR, unique_id=t.unique_id)
-        if existing_entity_id is None:
-            _LOGGER.debug(f"Device {t} is new, will be added to HA")
+        if t.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
             new_entities.append(t)
         else:
-            _LOGGER.debug(f"Skipping device {t} as it's already present in HA")
+            _LOGGER.warning(f"Skipping device {t} as it was already added to registry once.")
 
     # Add Power Sensors
     for d in power_sensors:
         for channel_index, channel in enumerate(d.channels):
             w = PowerSensorWrapper(device=d, channel=channel_index)
-            existing_entity_id = registry.async_get_entity_id(domain=DOMAIN, platform=HA_SENSOR, unique_id=w.unique_id)
-            if existing_entity_id is None:
-                _LOGGER.debug(f"Device {w} is new, will be added to HA")
+            if w.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
                 new_entities.append(w)
             else:
-                _LOGGER.debug(f"Skipping device {w} as it's already present in HA")
+                _LOGGER.warning(f"Skipping device {w} as it was already added to registry once.")
 
             c = CurrentSensorWrapper(device=d, channel=channel_index)
-            existing_entity_id = registry.async_get_entity_id(domain=DOMAIN, platform=HA_SENSOR, unique_id=c.unique_id)
-            if existing_entity_id is None:
-                _LOGGER.debug(f"Device {c} is new, will be added to HA")
+            if c.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
                 new_entities.append(c)
             else:
-                _LOGGER.debug(f"Skipping device {c} as it's already present in HA")
+                _LOGGER.warning(f"Skipping device {c} as it was already added to registry once.")
 
             v = VoltageSensorWrapper(device=d, channel=channel_index)
-            existing_entity_id = registry.async_get_entity_id(domain=DOMAIN, platform=HA_SENSOR, unique_id=v.unique_id)
-            if existing_entity_id is None:
-                _LOGGER.debug(f"Device {v} is new, will be added to HA")
+            if v.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
                 new_entities.append(v)
             else:
-                _LOGGER.debug(f"Skipping device {v} as it's already present in HA")
+                _LOGGER.warning(f"Skipping device {v} as it was already added to registry once.")
     async_add_entities(new_entities, True)
     
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     # When loading the platform, immediately add currently available
     # bulbs.
-    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+    manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
     devices = manager.find_devices()
     await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
 

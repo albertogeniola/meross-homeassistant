@@ -7,11 +7,11 @@ from custom_components.meross_cloud.version import MEROSS_CLOUD_VERSION
 _LOGGER = logging.getLogger(__name__)
 
 # Constants
-DOMAIN = 'meross_cloud'
+PLATFORM = 'meross_cloud'
 ATTR_CONFIG = "config"
 MANAGER = 'manager'
 CLOUD_HANDLER = 'cloud_handler'
-MEROSS_MANAGER = "%s.%s" % (DOMAIN, MANAGER)
+MEROSS_MANAGER = "%s.%s" % (PLATFORM, MANAGER)
 SENSORS = 'sensors'
 HA_SWITCH = 'switch'
 HA_LIGHT = 'light'
@@ -20,7 +20,7 @@ HA_COVER = 'cover'
 HA_CLIMATE = 'climate'
 HA_FAN = 'fan'
 #MEROSS_PLATFORMS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
-MEROSS_PLATFORMS = (HA_SWITCH, HA_LIGHT, HA_COVER, HA_SENSOR)
+MEROSS_COMPONENTS = (HA_SWITCH, HA_LIGHT, HA_COVER, HA_SENSOR)
 CONNECTION_TIMEOUT_THRESHOLD = 5
 CONF_STORED_CREDS = 'stored_credentials'
 
@@ -48,7 +48,7 @@ def calculate_light_id(uuid: str, channel: int):
 def dismiss_notification(hass, notification_id):
     hass.async_create_task(
         hass.services.async_call(domain='persistent_notification', service='dismiss', service_data={
-            'notification_id': "%s.%s" % (DOMAIN, notification_id)})
+            'notification_id': "%s.%s" % (PLATFORM, notification_id)})
     )
 
 
@@ -57,7 +57,7 @@ def notify_error(hass, notification_id, title, message):
         hass.services.async_call(domain='persistent_notification', service='create', service_data={
             'title': title,
             'message': message,
-            'notification_id': "%s.%s" % (DOMAIN, notification_id)})
+            'notification_id': "%s.%s" % (PLATFORM, notification_id)})
     )
 
 

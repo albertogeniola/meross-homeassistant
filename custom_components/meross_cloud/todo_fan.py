@@ -7,7 +7,7 @@ from meross_iot.cloud.devices.humidifier import GenericHumidifier, SprayMode
 from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
 from meross_iot.manager import MerossManager
 
-from .common import (DOMAIN, HA_FAN, MANAGER, ConnectionWatchDog, MerossEntityWrapper, log_exception)
+from .common import (PLATFORM, HA_FAN, MANAGER, ConnectionWatchDog, MerossEntityWrapper, log_exception)
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
@@ -127,7 +127,7 @@ class MerossSmartHumidifier(FanEntity, MerossEntityWrapper):
     @property
     def device_info(self):
         return {
-            'identifiers': {(DOMAIN, self._id)},
+            'identifiers': {(PLATFORM, self._id)},
             'name': self._device.name,
             'manufacturer': 'Meross',
             'model': self._device.type + " " + self._device.hwversion,
@@ -147,19 +147,19 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     def sync_logic():
 
         fan_devices = []
-        manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+        manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
 
         # Add smart humidifiers
         humidifiers = manager.get_devices_by_kind(GenericHumidifier)
         for humidifier in humidifiers:
             h = MerossSmartHumidifier(device=humidifier)
             fan_devices.append(h)
-            hass.data[DOMAIN][HA_FAN][h.unique_id] = h
+            hass.data[PLATFORM][HA_FAN][h.unique_id] = h
 
         return fan_devices
 
     # Register a connection watchdog to notify devices when connection to the cloud MQTT goes down.
-    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+    manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
     watchdog = ConnectionWatchDog(hass=hass, platform=HA_FAN)
     manager.register_event_handler(watchdog.connection_handler)
 

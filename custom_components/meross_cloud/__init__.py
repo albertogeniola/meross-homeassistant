@@ -16,9 +16,9 @@ from meross_iot.model.credentials import MerossCloudCreds
 from meross_iot.model.http.device import HttpDeviceInfo
 from meross_iot.model.http.exception import TokenExpiredException, TooManyTokensException, UnauthorizedException
 
-from .common import (ATTR_CONFIG, CLOUD_HANDLER, DOMAIN, HA_CLIMATE, HA_COVER,
+from .common import (ATTR_CONFIG, CLOUD_HANDLER, PLATFORM, HA_CLIMATE, HA_COVER,
                      HA_FAN, HA_LIGHT, HA_SENSOR, HA_SWITCH, MANAGER,
-                     MEROSS_PLATFORMS, SENSORS, dismiss_notification, notify_error, log_exception, CONF_STORED_CREDS)
+                     MEROSS_COMPONENTS, SENSORS, dismiss_notification, notify_error, log_exception, CONF_STORED_CREDS)
 # Unset the default stream handler for logger of the meross_iot library
 from .version import MEROSS_CLOUD_VERSION
 from datetime import timedelta
@@ -31,7 +31,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 CONFIG_SCHEMA = vol.Schema({
-    DOMAIN: vol.Schema({
+    PLATFORM: vol.Schema({
         vol.Required(CONF_USERNAME): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
     })
@@ -130,14 +130,9 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
 
         manager = MerossManager(http_client=client, auto_reconnect=True)
 
-        hass.data[DOMAIN] = {}
-        hass.data[DOMAIN][MANAGER] = manager
-        hass.data[DOMAIN][HA_CLIMATE] = {}
-        hass.data[DOMAIN][HA_COVER] = {}
-        hass.data[DOMAIN][HA_LIGHT] = {}
-        hass.data[DOMAIN][HA_SENSOR] = {}
-        hass.data[DOMAIN][HA_SWITCH] = {}
-        hass.data[DOMAIN][HA_FAN] = {}
+        hass.data[PLATFORM] = {}
+        hass.data[PLATFORM][MANAGER] = manager
+        hass.data[PLATFORM]["ADDED_ENTITIES_IDS"] = set()
 
         print_startup_message(http_devices=http_devices)
         _LOGGER.info("Starting meross manager")
@@ -147,7 +142,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         _LOGGER.info("Discovering Meross devices...")
         await manager.async_device_discovery()
 
-        for platform in MEROSS_PLATFORMS:
+        for platform in MEROSS_COMPONENTS:
             hass.async_create_task(
                 hass.config_entries.async_forward_entry_setup(config_entry, platform)
             )
@@ -184,23 +179,23 @@ async def async_unload_entry(hass, entry):
     # Unload entities first
     _LOGGER.info("Removing Meross Cloud integration.")
     _LOGGER.info("Cleaning up resources...")
-    for platform in MEROSS_PLATFORMS:
+    for platform in MEROSS_COMPONENTS:
         _LOGGER.info(f"Cleaning up platform {platform}")
         await hass.config_entries.async_forward_entry_unload(entry, platform)
 
     # Invalidate the token
-    manager = hass.data[DOMAIN][MANAGER]
+    manager = hass.data[PLATFORM][MANAGER]
     _LOGGER.info("Stopping manager...")
     # TODO: Invalidate the token?
     manager.close()
 
     _LOGGER.info("Cleaning up memory...")
-    for plat in MEROSS_PLATFORMS:
-        hass.data[DOMAIN][plat].clear()
-        del hass.data[DOMAIN][plat]
-    del hass.data[DOMAIN][MANAGER]
-    hass.data[DOMAIN].clear()
-    del hass.data[DOMAIN]
+    for plat in MEROSS_COMPONENTS:
+        hass.data[PLATFORM][plat].clear()
+        del hass.data[PLATFORM][plat]
+    del hass.data[PLATFORM][MANAGER]
+    hass.data[PLATFORM].clear()
+    del hass.data[PLATFORM]
 
     _LOGGER.info("Meross cloud component removal done.")
     return True
@@ -222,14 +217,14 @@ async def async_setup(hass, config):
     :return:
     """
 
-    conf = config.get(DOMAIN)
-    hass.data[DOMAIN] = {}
-    hass.data[DOMAIN][ATTR_CONFIG] = conf
+    conf = config.get(PLATFORM)
+    hass.data[PLATFORM] = {}
+    hass.data[PLATFORM][ATTR_CONFIG] = conf
 
     if conf is not None:
         hass.async_create_task(
             hass.config_entries.flow.async_init(
-                DOMAIN, context={"source": config_entries.SOURCE_IMPORT},
+                PLATFORM, context={"source": config_entries.SOURCE_IMPORT},
                 data=conf
             )
         )

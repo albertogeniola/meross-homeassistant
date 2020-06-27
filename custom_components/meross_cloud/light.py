@@ -13,7 +13,7 @@ from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (DOMAIN, MANAGER, log_exception, RELAXED_SCAN_INTERVAL,
+from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL,
                      calculate_light_id, HA_LIGHT)
 
 # Conditional Light import with backwards compatibility
@@ -109,7 +109,7 @@ class LightEntityWrapper(LightEntity):
     @property
     def device_info(self):
         return {
-            'identifiers': {(DOMAIN, self._device.internal_id)},
+            'identifiers': {(PLATFORM, self._device.internal_id)},
             'name': self._device.name,
             'manufacturer': 'Meross',
             'model': self._device.type + " " + self._device.hardware_version,
@@ -210,26 +210,23 @@ class LightEntityWrapper(LightEntity):
 # ----------------------------------------------
 async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
     new_entities = []
-    registry = await hass.helpers.entity_registry.async_get_registry()
 
     # Identify all the devices that expose the Light capability
     devs = filter(lambda d: isinstance(d, LightMixin), devices)
     for d in devs:
         for channel_index, channel in enumerate(d.channels):
             w = LightEntityWrapper(device=d, channel=channel_index)
-            existing_entity_id = registry.async_get_entity_id(domain=DOMAIN, platform=HA_LIGHT, unique_id=w.unique_id)
-            if existing_entity_id is None:
-                _LOGGER.debug(f"Device {w} is new, will be added to HA")
+            if w.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
                 new_entities.append(w)
             else:
-                _LOGGER.debug(f"Skipping device {w} as it's already present in HA")
+                _LOGGER.warning(f"Skipping device {w} as it was already added to registry once.")
     async_add_entities(new_entities, True)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     # When loading the platform, immediately add currently available
     # bulbs.
-    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+    manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
     devices = manager.find_devices()
     await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
 

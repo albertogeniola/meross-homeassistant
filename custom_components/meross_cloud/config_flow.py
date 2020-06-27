@@ -10,13 +10,13 @@ from meross_iot.model.credentials import MerossCloudCreds
 from meross_iot.model.http.exception import UnauthorizedException
 from requests.exceptions import ConnectTimeout
 
-from .common import DOMAIN, CONF_STORED_CREDS
+from .common import PLATFORM, CONF_STORED_CREDS
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
 
 
-class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
+class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
     """Handle Meross config flow."""
 
     VERSION = 1
@@ -35,7 +35,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
-        await self.async_set_unique_id(DOMAIN)
+        await self.async_set_unique_id(PLATFORM)
         self._abort_if_unique_id_configured()
 
         if not user_input:

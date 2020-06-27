@@ -15,7 +15,7 @@ from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (DOMAIN, HA_SWITCH, MANAGER, calculate_switch_id, log_exception, RELAXED_SCAN_INTERVAL,
+from .common import (PLATFORM, HA_SWITCH, MANAGER, calculate_switch_id, log_exception, RELAXED_SCAN_INTERVAL,
                      SENSOR_POLL_INTERVAL)
 
 # Conditional import for switch device
@@ -85,7 +85,7 @@ class SwitchEntityWrapper(SwitchEntity):
     @property
     def device_info(self):
         return {
-            'identifiers': {(DOMAIN, self._device.internal_id)},
+            'identifiers': {(PLATFORM, self._device.internal_id)},
             'name': self._device.name,
             'manufacturer': 'Meross',
             'model': self._device.type + " " + self._device.hardware_version,
@@ -146,9 +146,11 @@ class SwitchEntityWrapper(SwitchEntity):
 
     async def async_added_to_hass(self) -> None:
         self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
+        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"] = self.unique_id
 
     async def async_will_remove_from_hass(self) -> None:
         self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
+        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
 
     @property
     def current_power_w(self) -> Optional[float]:
@@ -166,26 +168,22 @@ class SwitchEntityWrapper(SwitchEntity):
 async def _add_entities(hass: HomeAssistant, devices: Iterable[BaseDevice], async_add_entities):
     new_entities = []
 
-    registry = await hass.helpers.entity_registry.async_get_registry()
     # Identify all the devices that expose the Toggle or ToggleX capabilities
     devs = filter(lambda d: isinstance(d, ToggleXMixin) or isinstance(d, ToggleMixin), devices)
     for d in devs:
         for channel_index, channel in enumerate(d.channels):
             w = SwitchEntityWrapper(device=d, channel=channel_index)
-
-            existing_entity_id = registry.async_get_entity_id(domain=DOMAIN, platform=HA_SWITCH, unique_id=w.unique_id)
-            if existing_entity_id is None:
-                _LOGGER.debug(f"Device {w} is new, will be added to HA")
+            if w.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
                 new_entities.append(w)
             else:
-                _LOGGER.debug(f"Skipping device {w} as it's already present in HA")
+                _LOGGER.warning(f"Skipping device {w} as it was already added to registry once.")
     async_add_entities(new_entities, True)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     # When loading the platform, immediately add currently available
     # switches.
-    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+    manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
     devices = manager.find_devices()
     await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
 
