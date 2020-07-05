@@ -182,7 +182,7 @@ class ValveEntityWrapper(ClimateEntity):
             return HVAC_MODE_OFF
         elif self._device.mode == ThermostatV3Mode.AUTO:
             return HVAC_MODE_AUTO
-        elif self._device.mode == ThermostatV3Mode.HEAT or self._device.is_heating:
+        elif self._device.mode == ThermostatV3Mode.HEAT:
             return HVAC_MODE_HEAT
         elif self._device.mode == ThermostatV3Mode.COOL:
             return HVAC_MODE_COOL
