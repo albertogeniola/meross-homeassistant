@@ -1,4 +1,5 @@
 import logging
+from abc import abstractmethod
 from datetime import datetime
 from datetime import timedelta
 from typing import Optional, Iterable, Union
@@ -6,9 +7,10 @@ from typing import Optional, Iterable, Union
 from homeassistant.const import DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_HUMIDITY, \
     UNIT_PERCENTAGE, DEVICE_CLASS_POWER, POWER_WATT
 from homeassistant.helpers.entity import Entity
+from homeassistant.util import Throttle
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.electricity import ElectricityMixin
-from meross_iot.controller.subdevice import Ms100Sensor
+from meross_iot.controller.subdevice import Ms100Sensor, Mts100v3Valve
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
@@ -16,11 +18,11 @@ from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
 from .common import (PLATFORM, MANAGER, log_exception, HA_SENSOR, calculate_sensor_id,
-                     SENSOR_POLL_INTERVAL)
+                     SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property)
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
-SCAN_INTERVAL = timedelta(seconds=SENSOR_POLL_INTERVAL)
+SCAN_INTERVAL = timedelta(seconds=SENSOR_POLL_INTERVAL_SECONDS)
 
 
 class GenericSensorWrapper(Entity):
@@ -38,13 +40,19 @@ class GenericSensorWrapper(Entity):
         self._device_method_or_property = device_method_or_property
         self._measurement_unit = measurement_unit
 
-        # Each Meross Device might expose more than 1 sensor. In this case, we cannot rely only on the
+        # Each Meross Device might expose m_sensor_async_updateore than 1 sensor. In this case, we cannot rely only on the
         # uuid value to uniquely identify a sensor wrapper.
         self._id = calculate_sensor_id(uuid=device.internal_id, type=sensor_class, measurement_unit=measurement_unit, channel=channel)
         self._entity_name = "{} ({}) - {} ({}, {})".format(device.name, device.type, f"{sensor_class} sensor", measurement_unit, channel)
 
+        # by default, set the scan_interval to the default value
+        self.async_update = Throttle(SCAN_INTERVAL)(self._sensor_async_update)
+
     # region Device wrapper common methods
-    async def async_update(self):
+    def set_polling_interval(self, polling_interval: timedelta):
+        self.async_update = Throttle(polling_interval)(self._sensor_async_update)
+
+    async def _sensor_async_update(self):
         if self._device.online_status == OnlineStatus.ONLINE:
             try:
                 _LOGGER.warning(f"Calling async_update on {self.name}")
@@ -86,6 +94,8 @@ class GenericSensorWrapper(Entity):
     async def async_will_remove_from_hass(self) -> None:
         self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
         self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
+        del self.hass.data[PLATFORM][HA_SENSOR][self.unique_id]
+
     # endregion
 
     # region Device wrapper common properties
@@ -130,11 +140,8 @@ class GenericSensorWrapper(Entity):
     @property
     def state(self) -> Union[None, str, int, float]:
         """Return the state of the entity."""
-        attr = getattr(self._device, self._device_method_or_property)
-        if callable(attr):
-            return attr()
-        else:
-            return attr
+        return invoke_method_or_property(self._device, self._device_method_or_property)
+
 
     @property
     def unit_of_measurement(self) -> Optional[str]:
@@ -142,7 +149,7 @@ class GenericSensorWrapper(Entity):
     # endregion
 
 
-class TemperatureSensorWrapper(GenericSensorWrapper):
+class Ms100TemperatureSensorWrapper(GenericSensorWrapper):
     def __init__(self, device: Ms100Sensor, channel: int = 0):
         super().__init__(sensor_class=DEVICE_CLASS_TEMPERATURE,
                          measurement_unit=TEMP_CELSIUS,
@@ -157,7 +164,7 @@ class TemperatureSensorWrapper(GenericSensorWrapper):
         return False
 
 
-class HumiditySensorWrapper(GenericSensorWrapper):
+class Ms100HumiditySensorWrapper(GenericSensorWrapper):
     def __init__(self, device: Ms100Sensor, channel: int = 0):
         super().__init__(sensor_class=DEVICE_CLASS_HUMIDITY,
                          measurement_unit=UNIT_PERCENTAGE,
@@ -170,6 +177,33 @@ class HumiditySensorWrapper(GenericSensorWrapper):
         # So far, it looks like MS100 sensor does not require polling as it automatically triger
         # sensor updates when a variation in temperature or humidity occurs
         return False
+
+
+class Mts100TemperatureSensorWrapper(GenericSensorWrapper):
+    def __init__(self, device: Mts100v3Valve):
+        super().__init__(sensor_class=DEVICE_CLASS_TEMPERATURE,
+                         measurement_unit=TEMP_CELSIUS,
+                         device_method_or_property='last_sampled_temperature',
+                         device=device)
+
+    async def _sensor_async_update(self):
+        if self._device.online_status == OnlineStatus.ONLINE:
+            try:
+                # We only call the explicit method if the sampled value is older than 10 seconds.
+                last_sampled_temp = self._device.last_sampled_temperature
+                last_sampled_time = self._device.last_sampled_time
+                now = datetime.utcnow()
+                if last_sampled_temp is None or last_sampled_time is None or (now - self._device.last_sampled_time).total_seconds() > 30:
+                    # Force device refresh
+                    _LOGGER.warning(f"Refreshing instant metrics for device {self.name}")
+                    await self._device.async_get_temperature()
+                else:
+                    # Use the cached value
+                    _LOGGER.info(f"Skipping data refresh for {self.name} as its value is recent enough")
+
+            except CommandTimeoutError as e:
+                log_exception(logger=_LOGGER, device=self._device)
+                pass
 
 
 class ElectricitySensorDevice(ElectricityMixin, BaseDevice):
@@ -186,7 +220,7 @@ class PowerSensorWrapper(GenericSensorWrapper):
                          channel=channel)
 
     # For ElectricityMixin devices we need to explicitly call the async_Get_instant_metrics
-    async def async_update(self):
+    async def _sensor_async_update(self):
         if self._device.online_status == OnlineStatus.ONLINE:
             try:
                 # We only call the explicit method if the sampled value is older than 10 seconds.
@@ -220,7 +254,7 @@ class CurrentSensorWrapper(GenericSensorWrapper):
                          channel=channel)
 
     # For ElectricityMixin devices we need to explicitly call the async_Get_instant_metrics
-    async def async_update(self):
+    async def _sensor_async_update(self):
         if self._device.online_status == OnlineStatus.ONLINE:
             try:
                 # We only call the explicit method if the sampled value is older than 10 seconds.
@@ -255,7 +289,7 @@ class VoltageSensorWrapper(GenericSensorWrapper):
                          channel=channel)
 
     # For ElectricityMixin devices we need to explicitly call the async_Get_instant_metrics
-    async def async_update(self):
+    async def _sensor_async_update(self):
         if self._device.online_status == OnlineStatus.ONLINE:
             try:
                 # We only call the explicit method if the sampled value is older than 10 seconds.
@@ -281,6 +315,15 @@ class VoltageSensorWrapper(GenericSensorWrapper):
         return 0
 
 
+def _add_and_register_sensor(hass, clazz: type, args: dict, entities: list):
+    d = clazz(**args)
+    if d.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
+        hass.data[PLATFORM][HA_SENSOR][d.unique_id] = d
+        entities.append(d)
+    else:
+        _LOGGER.warning(f"Skipping device {d} as it was already added to registry once.")
+
+
 # ----------------------------------------------
 # PLATFORM METHODS
 # ----------------------------------------------
@@ -290,50 +333,56 @@ async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities)
     # For now, we handle the following sensors:
     # -> Temperature-Humidity (Ms100Sensor)
     # -> Power-sensing smart plugs (Mss310)
-    # TODO: In the future, we might add support for Mts100 valve. We need to think about battery effects, though.
+    # -> MTS100 Valve temperature (MTS100V3)
     humidity_temp_sensors = filter(lambda d: isinstance(d, Ms100Sensor), devices)
+    mts100_temp_sensors = filter(lambda d: isinstance(d, Mts100v3Valve), devices)
     power_sensors = filter(lambda d: isinstance(d, ElectricityMixin), devices)
 
-    # Add Temperature & Humidity sensors
+    # Add MS100 Temperature & Humidity sensors
     for d in humidity_temp_sensors:
-        h = HumiditySensorWrapper(device=d, channel=0)
-        if h.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
-            new_entities.append(h)
-        else:
-            _LOGGER.warning(f"Skipping device {h} as it was already added to registry once.")
+        _add_and_register_sensor(hass, clazz=Ms100HumiditySensorWrapper, args={"device": d, "channel": 0},
+                                 entities=new_entities)
+        _add_and_register_sensor(hass, clazz=Ms100TemperatureSensorWrapper, args={"device": d, "channel": 0},
+                                 entities=new_entities)
 
-        t = TemperatureSensorWrapper(device=d, channel=0)
-        if t.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
-            new_entities.append(t)
-        else:
-            _LOGGER.warning(f"Skipping device {t} as it was already added to registry once.")
+    # Add MTS100Valve Temperature sensors
+    for d in mts100_temp_sensors:
+        _add_and_register_sensor(hass, clazz=Mts100TemperatureSensorWrapper, args={"device": d},
+                                 entities=new_entities)
 
     # Add Power Sensors
     for d in power_sensors:
         for channel_index, channel in enumerate(d.channels):
-            w = PowerSensorWrapper(device=d, channel=channel_index)
-            if w.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
-                new_entities.append(w)
-            else:
-                _LOGGER.warning(f"Skipping device {w} as it was already added to registry once.")
+            _add_and_register_sensor(hass, clazz=PowerSensorWrapper, args={"device": d, "channel": channel_index},
+                                     entities=new_entities)
+            _add_and_register_sensor(hass, clazz=CurrentSensorWrapper, args={"device": d, "channel": channel_index},
+                                     entities=new_entities)
+            _add_and_register_sensor(hass, clazz=VoltageSensorWrapper, args={"device": d, "channel": channel_index},
+                                     entities=new_entities)
 
-            c = CurrentSensorWrapper(device=d, channel=channel_index)
-            if c.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
-                new_entities.append(c)
-            else:
-                _LOGGER.warning(f"Skipping device {c} as it was already added to registry once.")
-
-            v = VoltageSensorWrapper(device=d, channel=channel_index)
-            if v.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
-                new_entities.append(v)
-            else:
-                _LOGGER.warning(f"Skipping device {v} as it was already added to registry once.")
     async_add_entities(new_entities, True)
-    
+
+    # Once added all sensors to HA, we need to recalibrate the optimal scan interval.
+    _setup_optimal_scan_interval(hass.data[PLATFORM][HA_SENSOR].values())
+
+
+def _setup_optimal_scan_interval(devices: Iterable[PowerSensorWrapper]):
+    # Calculate polling sensors
+    polling_devices = list(filter(lambda d: d.should_poll, devices))
+
+    # Using a linear function to determine the polling. Assume 30 seconds for every polling devices
+    polling_interval_seconds = 15 * len(polling_devices)
+    polling_interval_seconds = min(polling_interval_seconds, 600)  # Cap the max to 10 minutes
+    polling_interval = timedelta(seconds=polling_interval_seconds)
+
+    _LOGGER.warning(f"Found {len(polling_devices)} devices that require polling. "
+                    f"Setting polling interval to {polling_interval}")
+
+    for d in polling_devices:
+        d.set_polling_interval(polling_interval)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    # When loading the platform, immediately add currently available
-    # bulbs.
     manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
     devices = manager.find_devices()
     await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
@@ -344,10 +393,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 or push_notification.namespace == Namespace.SYSTEM_ONLINE \
                 or push_notification.namespace == Namespace.HUB_ONLINE:
 
-            # TODO: Discovery needed only when device becomes online?
             await manager.async_device_discovery(push_notification.namespace == Namespace.HUB_ONLINE,
                                                  meross_device_uuid=push_notification.originating_device_uuid)
-            devs = manager.find_devices(device_uuids=(push_notification.originating_device_uuid,)) # TODO: implement a discovery that is able to handle a single UUID device.
+            devs = manager.find_devices(device_uuids=(push_notification.originating_device_uuid,))
             await _add_entities(hass=hass, devices=devs, async_add_entities=async_add_entities)
 
     # Register a listener for new bound devices

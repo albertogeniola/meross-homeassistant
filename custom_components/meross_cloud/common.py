@@ -1,5 +1,5 @@
 import logging
-
+from datetime import datetime
 from meross_iot.controller.device import BaseDevice
 
 from custom_components.meross_cloud.version import MEROSS_CLOUD_VERSION
@@ -26,7 +26,7 @@ CONF_STORED_CREDS = 'stored_credentials'
 
 
 RELAXED_SCAN_INTERVAL = 180.0
-SENSOR_POLL_INTERVAL = 30
+SENSOR_POLL_INTERVAL_SECONDS = 30
 
 
 def calculate_sensor_id(uuid: str, type: str, measurement_unit: str, channel: int = 0,):
@@ -83,3 +83,13 @@ def log_exception(message: str = None, logger: logging = None, device: BaseDevic
                         f"{device_info}\n" \
                         f"Error Message: \"{message}\""
     logger.exception(formatted_message)
+
+
+def invoke_method_or_property(obj, method_or_property):
+    # We only call the explicit method if the sampled value is older than 10 seconds.
+    attr = getattr(obj, method_or_property)
+    if callable(attr):
+        return attr()
+    else:
+        return attr
+

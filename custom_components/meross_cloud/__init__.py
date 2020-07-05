@@ -83,12 +83,12 @@ async def get_or_renew_creds(email: str,
 
         return http_client, http_devices, True
 
+
 """
 async def run_discovery(manager):
     _LOGGER.info("Triggering discovery...")
     await manager.async_device_discovery()
 """
-
 async def async_setup_entry(hass: HomeAssistantType, config_entry):
     """
     This class is called by the HomeAssistant framework when a configuration entry is provided.
@@ -133,6 +133,10 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         hass.data[PLATFORM] = {}
         hass.data[PLATFORM][MANAGER] = manager
         hass.data[PLATFORM]["ADDED_ENTITIES_IDS"] = set()
+
+        # Keep a registry of added sensors
+        # TODO: Do the same for other platforms?
+        hass.data[PLATFORM][HA_SENSOR] = dict()
 
         print_startup_message(http_devices=http_devices)
         _LOGGER.info("Starting meross manager")

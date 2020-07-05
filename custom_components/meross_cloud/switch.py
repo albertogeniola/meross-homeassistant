@@ -16,7 +16,7 @@ from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
 from .common import (PLATFORM, HA_SWITCH, MANAGER, calculate_switch_id, log_exception, RELAXED_SCAN_INTERVAL,
-                     SENSOR_POLL_INTERVAL)
+                     SENSOR_POLL_INTERVAL_SECONDS)
 
 # Conditional import for switch device
 try:
@@ -27,7 +27,7 @@ except ImportError:
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
-SCAN_INTERVAL = timedelta(seconds=SENSOR_POLL_INTERVAL)
+SCAN_INTERVAL = timedelta(seconds=SENSOR_POLL_INTERVAL_SECONDS)
 
 
 class MerossSwitchDevice(ToggleXMixin, BaseDevice):
