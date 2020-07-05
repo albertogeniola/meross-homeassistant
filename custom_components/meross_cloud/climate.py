@@ -193,8 +193,6 @@ class ValveEntityWrapper(ClimateEntity):
                 return HVAC_MODE_COOL
         else:
             raise ValueError("Unsupported thermostat mode reported.")
-            # In all other cases, assume that's cooling down
-            return HVAC_MODE_COOL
 
     @property
     def hvac_action(self) -> Optional[str]:
