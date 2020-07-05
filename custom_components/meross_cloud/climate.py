@@ -136,6 +136,8 @@ class ValveEntityWrapper(ClimateEntity):
             await self._device.async_set_mode(ThermostatV3Mode.CUSTOM)
         elif hvac_mode == HVAC_MODE_AUTO:
             await self._device.async_set_mode(ThermostatV3Mode.AUTO)
+        elif hvac_mode == HVAC_MODE_COOL:
+            await self._device.async_set_mode(ThermostatV3Mode.COOL)
         else:
             _LOGGER.warning("Unsupported mode for this device")
 
@@ -184,7 +186,13 @@ class ValveEntityWrapper(ClimateEntity):
             return HVAC_MODE_HEAT
         elif self._device.mode == ThermostatV3Mode.COOL:
             return HVAC_MODE_COOL
+        elif self._device.mode == ThermostatV3Mode.CUSTOM:
+            if self._device.last_sampled_temperature < self._device.target_temperature:
+                return HVAC_MODE_HEAT
+            else:
+                return HVAC_MODE_COOL
         else:
+            raise ValueError("Unsupported thermostat mode reported.")
             # In all other cases, assume that's cooling down
             return HVAC_MODE_COOL
 
