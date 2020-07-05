@@ -20,7 +20,7 @@ HA_COVER = 'cover'
 HA_CLIMATE = 'climate'
 HA_FAN = 'fan'
 #MEROSS_PLATFORMS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
-MEROSS_COMPONENTS = (HA_SWITCH, HA_LIGHT, HA_COVER, HA_SENSOR)
+MEROSS_COMPONENTS = (HA_SWITCH, HA_LIGHT, HA_COVER, HA_SENSOR, HA_CLIMATE)
 CONNECTION_TIMEOUT_THRESHOLD = 5
 CONF_STORED_CREDS = 'stored_credentials'
 
@@ -39,6 +39,10 @@ def calculate_cover_id(uuid: str, channel: int):
 
 def calculate_switch_id(uuid: str, channel: int):
     return "%s:%s:%d" % (HA_SWITCH, uuid, channel)
+
+
+def calculate_valve_id(uuid: str):
+    return "%s:%s" % (HA_CLIMATE, uuid)
 
 
 def calculate_light_id(uuid: str, channel: int):

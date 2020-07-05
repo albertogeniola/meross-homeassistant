@@ -2,7 +2,7 @@ import logging
 from abc import abstractmethod
 from datetime import datetime
 from datetime import timedelta
-from typing import Optional, Iterable, Union
+from typing import Optional, Iterable, Union, List
 
 from homeassistant.const import DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_HUMIDITY, \
     UNIT_PERCENTAGE, DEVICE_CLASS_POWER, POWER_WATT
@@ -388,7 +388,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
 
     # Register a listener for the Bind push notification so that we can add new entities at runtime
-    async def platform_async_add_entities(push_notification: GenericPushNotification, target_device: BaseDevice):
+    async def platform_async_add_entities(push_notification: GenericPushNotification, target_devices: List[BaseDevice]):
         if push_notification.namespace == Namespace.CONTROL_BIND \
                 or push_notification.namespace == Namespace.SYSTEM_ONLINE \
                 or push_notification.namespace == Namespace.HUB_ONLINE:

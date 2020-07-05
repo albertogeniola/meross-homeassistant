@@ -1,6 +1,6 @@
 import logging
 from datetime import timedelta
-from typing import Any, Iterable
+from typing import Any, Iterable, List
 
 from homeassistant.components.cover import DEVICE_CLASS_GARAGE, SUPPORT_OPEN, SUPPORT_CLOSE
 from meross_iot.controller.device import BaseDevice
@@ -190,7 +190,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
 
     # Register a listener for the Bind push notification so that we can add new entities at runtime
-    async def platform_async_add_entities(push_notification: GenericPushNotification, target_device: BaseDevice):
+    async def platform_async_add_entities(push_notification: GenericPushNotification, target_devices: List[BaseDevice]):
         if isinstance(push_notification, BindPushNotification):
             devs = manager.find_devices(device_uuids=(push_notification.hwinfo.uuid,))
             await _add_entities(hass=hass, devices=devs, async_add_entities=async_add_entities)

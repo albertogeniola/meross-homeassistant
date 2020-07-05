@@ -85,15 +85,6 @@ class ValveEntityWrapper(ClimateDevice, MerossEntityWrapper):
         return not self._first_update_done
 
     @property
-    def current_temperature(self) -> float:
-        if not self._first_update_done:
-            # Schedule update and return
-            self.schedule_update_ha_state(True)
-            return None
-
-        return float(self._device.get_status().get('temperature').get('room'))/10
-
-    @property
     def hvac_action(self) -> str:
         if not self._first_update_done:
             # Schedule update and return

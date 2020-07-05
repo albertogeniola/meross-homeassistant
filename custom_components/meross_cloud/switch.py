@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from datetime import timedelta
-from typing import Any, Optional, Iterable
+from typing import Any, Optional, Iterable, List
 
 from homeassistant.core import HomeAssistant
 from meross_iot.controller.device import BaseDevice
@@ -184,7 +184,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
 
     # Register a listener for the Bind push notification so that we can add new entities at runtime
-    async def platform_async_add_entities(push_notification: GenericPushNotification, target_device: BaseDevice):
+    async def platform_async_add_entities(push_notification: GenericPushNotification, target_devices: List[BaseDevice]):
         if push_notification.namespace == Namespace.CONTROL_BIND \
                 or push_notification.namespace == Namespace.SYSTEM_ONLINE \
                 or push_notification.namespace == Namespace.HUB_ONLINE:
@@ -192,7 +192,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             # TODO: Discovery needed only when device becomes online?
             await manager.async_device_discovery(push_notification.namespace == Namespace.HUB_ONLINE,
                                                  meross_device_uuid=push_notification.originating_device_uuid)
-            devs = manager.find_devices(device_uuids=(push_notification.originating_device_uuid,)) # TODO: implement a discovery that is able to handle a single UUID device.
+            devs = manager.find_devices(device_uuids=(push_notification.originating_device_uuid,))
 
             # Exclude garage openers.
             devs = filter(lambda d: not isinstance(d, GarageOpenerMixin), devs)
