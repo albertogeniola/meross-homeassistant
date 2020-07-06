@@ -166,6 +166,10 @@ async def _add_entities(hass: HomeAssistant, devices: Iterable[BaseDevice], asyn
 
     # Identify all the devices that expose the Toggle or ToggleX capabilities
     devs = filter(lambda d: isinstance(d, ToggleXMixin) or isinstance(d, ToggleMixin), devices)
+
+    # Exclude garage openers.
+    devs = filter(lambda d: not isinstance(d, GarageOpenerMixin), devs)
+
     for d in devs:
         for channel_index, channel in enumerate(d.channels):
             w = SwitchEntityWrapper(device=d, channel=channel_index)
@@ -193,9 +197,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             await manager.async_device_discovery(push_notification.namespace == Namespace.HUB_ONLINE,
                                                  meross_device_uuid=push_notification.originating_device_uuid)
             devs = manager.find_devices(device_uuids=(push_notification.originating_device_uuid,))
-
-            # Exclude garage openers.
-            devs = filter(lambda d: not isinstance(d, GarageOpenerMixin), devs)
             await _add_entities(hass=hass, devices=devs, async_add_entities=async_add_entities)
 
     # Register a listener for new bound devices
