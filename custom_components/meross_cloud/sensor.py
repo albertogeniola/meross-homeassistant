@@ -1,5 +1,4 @@
 import logging
-from abc import abstractmethod
 from datetime import datetime
 from datetime import timedelta
 from typing import Optional, Iterable, Union, List
@@ -14,7 +13,6 @@ from meross_iot.controller.subdevice import Ms100Sensor, Mts100v3Valve
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
-from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
 from .common import (PLATFORM, MANAGER, log_exception, HA_SENSOR, calculate_sensor_id,
@@ -372,6 +370,7 @@ def _setup_optimal_scan_interval(devices: Iterable[PowerSensorWrapper]):
 
     # Using a linear function to determine the polling. Assume 30 seconds for every polling devices
     polling_interval_seconds = 15 * len(polling_devices)
+    polling_interval_seconds = max(polling_interval_seconds, SENSOR_POLL_INTERVAL_SECONDS)  # Cap the minimum to SENSOR_POLL_INTERVAL_SECONDS
     polling_interval_seconds = min(polling_interval_seconds, 600)  # Cap the max to 10 minutes
     polling_interval = timedelta(seconds=polling_interval_seconds)
 

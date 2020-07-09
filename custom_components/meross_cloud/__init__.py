@@ -6,7 +6,7 @@ from typing import List, Tuple
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, EVENT_TIME_CHANGED
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.typing import HomeAssistantType
 from meross_iot.http_api import MerossHttpClient
@@ -21,9 +21,6 @@ from .common import (ATTR_CONFIG, CLOUD_HANDLER, PLATFORM, HA_CLIMATE, HA_COVER,
                      MEROSS_COMPONENTS, SENSORS, dismiss_notification, notify_error, log_exception, CONF_STORED_CREDS)
 # Unset the default stream handler for logger of the meross_iot library
 from .version import MEROSS_CLOUD_VERSION
-from datetime import timedelta
-from homeassistant.helpers.event import async_track_time_interval
-
 
 ROOT_MEROSS_LOGGER.removeHandler(h)
 

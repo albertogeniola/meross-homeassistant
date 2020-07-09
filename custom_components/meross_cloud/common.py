@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+
 from meross_iot.controller.device import BaseDevice
 
 from custom_components.meross_cloud.version import MEROSS_CLOUD_VERSION
@@ -19,8 +19,7 @@ HA_SENSOR = 'sensor'
 HA_COVER = 'cover'
 HA_CLIMATE = 'climate'
 HA_FAN = 'fan'
-#MEROSS_PLATFORMS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
-MEROSS_COMPONENTS = (HA_SWITCH, HA_LIGHT, HA_COVER, HA_SENSOR, HA_CLIMATE)
+MEROSS_COMPONENTS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
 CONNECTION_TIMEOUT_THRESHOLD = 5
 CONF_STORED_CREDS = 'stored_credentials'
 
@@ -47,6 +46,10 @@ def calculate_valve_id(uuid: str):
 
 def calculate_light_id(uuid: str, channel: int):
     return "%s:%s:%d" % (HA_LIGHT, uuid, channel)
+
+
+def calculate_humidifier_id(uuid: str, channel: int):
+    return "%s:%s:%d" % (HA_FAN, uuid, channel)
 
 
 def dismiss_notification(hass, notification_id):

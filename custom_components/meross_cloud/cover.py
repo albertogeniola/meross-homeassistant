@@ -11,7 +11,7 @@ from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, calculate_cover_id, HA_COVER)
+from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, calculate_cover_id)
 
 # Conditional Light import with backwards compatibility
 try:

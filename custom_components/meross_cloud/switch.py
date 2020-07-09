@@ -12,11 +12,9 @@ from meross_iot.controller.mixins.toggle import ToggleXMixin, ToggleMixin
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
-from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (PLATFORM, HA_SWITCH, MANAGER, calculate_switch_id, log_exception, RELAXED_SCAN_INTERVAL,
-                     SENSOR_POLL_INTERVAL_SECONDS)
+from .common import (PLATFORM, MANAGER, calculate_switch_id, log_exception, SENSOR_POLL_INTERVAL_SECONDS)
 
 # Conditional import for switch device
 try:

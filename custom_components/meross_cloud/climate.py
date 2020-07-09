@@ -1,7 +1,6 @@
 import logging
-from datetime import datetime
 from datetime import timedelta
-from typing import Any, Optional, Iterable, List
+from typing import Optional, Iterable, List
 
 from homeassistant.components.climate import SUPPORT_TARGET_TEMPERATURE, SUPPORT_PRESET_MODE, HVAC_MODE_OFF, \
     HVAC_MODE_HEAT
@@ -14,10 +13,9 @@ from meross_iot.controller.subdevice import Mts100v3Valve
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace, ThermostatV3Mode
 from meross_iot.model.exception import CommandTimeoutError
-from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (PLATFORM, HA_CLIMATE, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, calculate_valve_id)
+from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, calculate_valve_id)
 
 # Conditional import for switch device
 try:

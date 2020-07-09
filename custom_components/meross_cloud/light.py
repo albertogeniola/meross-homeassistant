@@ -14,7 +14,7 @@ from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
 from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL,
-                     calculate_light_id, HA_LIGHT)
+                     calculate_light_id)
 
 # Conditional Light import with backwards compatibility
 try:
