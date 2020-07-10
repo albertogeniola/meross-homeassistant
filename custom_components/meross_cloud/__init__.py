@@ -53,7 +53,7 @@ def print_startup_message(http_devices: List[HttpDeviceInfo]):
                     f"List of devices reported by HTTP API:\n" \
                     f"{http_info}" \
                     f"\n==============================="
-    _LOGGER.info(start_message)
+    _LOGGER.warning(start_message)
 
 
 async def get_or_renew_creds(email: str,
@@ -203,7 +203,6 @@ async def async_unload_entry(hass, entry):
 
 
 async def async_remove_entry(hass, entry) -> None:
-    _LOGGER.info("UNLOADING...")
     # TODO
     pass
 

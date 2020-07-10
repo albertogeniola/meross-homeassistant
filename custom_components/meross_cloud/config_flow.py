@@ -86,7 +86,8 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
     async def async_step_import(self, import_config):
         """Import a config entry from configuration.yaml."""
         if self._async_current_entries():
-            _LOGGER.warning("Only one configuration of Meross is allowed.")
+            _LOGGER.warning("Only one configuration of Meross is allowed. If you added Meross via configuration.yaml, "
+                            "you should now remove that and use the integration menu con configure it.")
             return self.async_abort(reason="single_instance_allowed")
 
         return await self.async_step_user(import_config)

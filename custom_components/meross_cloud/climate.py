@@ -63,7 +63,7 @@ class ValveEntityWrapper(ClimateEntity):
         full_update = False
 
         if namespace == Namespace.CONTROL_UNBIND:
-            _LOGGER.info("Received unbind event. Removing the device from HA")
+            _LOGGER.warning(f"Received unbind event. Removing device {self.name} from HA")
             await self.platform.async_remove_entity(self.entity_id)
         elif namespace == Namespace.SYSTEM_ONLINE:
             _LOGGER.warning(f"Device {self.name} reported online event.")
@@ -137,7 +137,7 @@ class ValveEntityWrapper(ClimateEntity):
         elif hvac_mode == HVAC_MODE_COOL:
             await self._device.async_set_mode(ThermostatV3Mode.COOL)
         else:
-            _LOGGER.warning("Unsupported mode for this device")
+            _LOGGER.warning(f"Unsupported mode for this device ({self.name}): {hvac_mode}")
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         await self._device.async_set_mode(ThermostatV3Mode[preset_mode])
@@ -232,7 +232,7 @@ async def _add_entities(hass: HomeAssistant, devices: Iterable[BaseDevice], asyn
         if w.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
             new_entities.append(w)
         else:
-            _LOGGER.warning(f"Skipping device {w} as it was already added to registry once.")
+            _LOGGER.info(f"Skipping device {w} as it was already added to registry once.")
     async_add_entities(new_entities, True)
 
 
@@ -262,5 +262,4 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):
-    _LOGGER.info("SETUP PLATFORM")
     pass

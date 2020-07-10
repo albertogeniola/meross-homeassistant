@@ -53,7 +53,7 @@ class GenericSensorWrapper(Entity):
     async def _sensor_async_update(self):
         if self._device.online_status == OnlineStatus.ONLINE:
             try:
-                _LOGGER.warning(f"Calling async_update on {self.name}")
+                _LOGGER.info(f"Calling async_update on {self.name}")
                 await self._device.async_update()
             except CommandTimeoutError as e:
                 log_exception(logger=_LOGGER, device=self._device)
@@ -64,7 +64,7 @@ class GenericSensorWrapper(Entity):
         full_update = False
 
         if namespace == Namespace.CONTROL_UNBIND:
-            _LOGGER.info("Received unbind event. Removing the device from HA")
+            _LOGGER.warning(f"Received unbind event. Removing device {self.name} from HA")
             await self.platform.async_remove_entity(self.entity_id)
         elif namespace == Namespace.SYSTEM_ONLINE:
             _LOGGER.warning(f"Device {self.name} reported online event.")
@@ -193,7 +193,7 @@ class Mts100TemperatureSensorWrapper(GenericSensorWrapper):
                 now = datetime.utcnow()
                 if last_sampled_temp is None or last_sampled_time is None or (now - self._device.last_sampled_time).total_seconds() > 30:
                     # Force device refresh
-                    _LOGGER.warning(f"Refreshing instant metrics for device {self.name}")
+                    _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
                     await self._device.async_get_temperature()
                 else:
                     # Use the cached value
@@ -226,7 +226,7 @@ class PowerSensorWrapper(GenericSensorWrapper):
                 now = datetime.utcnow()
                 if power_info is None or (now - power_info.sample_timestamp).total_seconds() > 10:
                     # Force device refresh
-                    _LOGGER.warning(f"Refreshing instant metrics for device {self.name}")
+                    _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
                     await self._device.async_get_instant_metrics(channel=self._channel_id)
                 else:
                     # Use the cached value
@@ -260,7 +260,7 @@ class CurrentSensorWrapper(GenericSensorWrapper):
                 now = datetime.utcnow()
                 if power_info is None or (now - power_info.sample_timestamp).total_seconds() > 10:
                     # Force device refresh
-                    _LOGGER.warning(f"Refreshing instant metrics for device {self.name}")
+                    _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
                     await self._device.async_get_instant_metrics(channel=self._channel_id)
                 else:
                     # Use the cached value
@@ -295,7 +295,7 @@ class VoltageSensorWrapper(GenericSensorWrapper):
                 now = datetime.utcnow()
                 if power_info is None or (now - power_info.sample_timestamp).total_seconds() > 10:
                     # Force device refresh
-                    _LOGGER.warning(f"Refreshing instant metrics for device {self.name}")
+                    _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
                     await self._device.async_get_instant_metrics(channel=self._channel_id)
                 else:
                     # Use the cached value
@@ -406,5 +406,4 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):
-    _LOGGER.info("SETUP PLATFORM")
     pass

@@ -64,7 +64,7 @@ class LightEntityWrapper(LightEntity):
         full_update = False
 
         if namespace == Namespace.CONTROL_UNBIND:
-            _LOGGER.info("Received unbind event. Removing the device from HA")
+            _LOGGER.warning(f"Received unbind event. Removing device {self.name} from HA")
             await self.platform.async_remove_entity(self.entity_id)
         elif namespace == Namespace.SYSTEM_ONLINE:
             _LOGGER.warning(f"Device {self.name} reported online event.")
@@ -217,7 +217,7 @@ async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities)
             if w.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
                 new_entities.append(w)
             else:
-                _LOGGER.warning(f"Skipping device {w} as it was already added to registry once.")
+                _LOGGER.info(f"Skipping device {w} as it was already added to registry once.")
     async_add_entities(new_entities, True)
 
 
@@ -247,5 +247,4 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):
-    _LOGGER.info("SETUP PLATFORM")
     pass
