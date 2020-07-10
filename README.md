@@ -5,8 +5,17 @@
 A full featured Homeassistant component to drive Meross devices. 
 This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
 
-## ☠ IMPORTANT NOTE ☠
-Due to the great success gained by this component and in an attempt to qualify for the platinum integration level with the official Homeassistant repo, the I've  decided to re-build the underlying [python library](https://github.com/albertogeniola/MerossIot) that makes this component work. This task is long, painful and does absorbe most of my spare time, preventing me from supporting current issues on this repository. Be patient though: the underlying library is almost 80% completed (V 0.4.0.0). Once ready for the first release, I'll rewrite this custom component to take full advantage of the new low-level library and hopefully, the new meross custom component will be much better than the current one. If you want to support me, don't hesistate to donate: that sure brings some more motivation!
+## Version 1.0 is here!
+After months of work and sleepless weekends, it's finally time to present to the Meross community the new version of the 
+HomeAssistant component that allows Meross device controlling. The new version of this library is based on the 
+complete refactored low-level MerossIot library. It's now fully async, based on Meross push notifications and 
+much more robust and resilient to network disconnections.
+
+### Updating from legacy versions
+In case you are updating the component from legacy versions, you need to remove the previous one and fully remove
+cached devices/entities from your HomeAssistant installation. This is necessary as the library completely changed
+the device/entitiy naming system and is unable to remove previous entities installed by old versions of the component.
+Sorry about that. 
 
 ## Towards Homeassistant official integration
 My personal goal is to make this component fully compliant with Homeassistant, so 
@@ -50,41 +59,10 @@ After a correct installation, your configuration directory should look like the 
 
 ### Component setup    
 Once the component has been installed, you need to configure it in order to make it work.
-There are two ways of doing so:
-- Using the web interface (Lovelace) [**recommended**]
-- Manually editing the configuration.yaml file
-
-#### Option A: Configuration using the web UI [recommended]
-Simply add a new "integration" and look for Meross among the proposed ones.
+To do so, simply add a new "integration" and look for Meross among the proposed ones.
 The following animation shows how to do that.
 
 [![Installation via web UI](https://raw.githubusercontent.com/albertogeniola/meross-homeassistant/master/docs/source/images/components/meross_cloud/install-via-webui.gif)](https://raw.githubusercontent.com/albertogeniola/meross-homeassistant/master/docs/source/images/components/meross_cloud/install-via-webui.gif)
-
-#### Option B: Configuration via editing configuration.yaml
-Follow these steps only if the previous configuration method did not work for you. 
-
-1. Setup your meross cloud credentials. Edit/create the `secrets.yaml` file,
- which is located within the config directory as well. Add the following:
- 
-     ```
-    meross_username: my_meross_email@domain.com
-    meross_password: my_meross_password
-    ```
-    
-    Where  my_meross_email@domain.com is your Meross account email and my_meross_password is the associated password. 
- 
-1. Enable the component by editing the configuration.yaml file (within the config directory as well).
-Edit it by adding the following lines:
-    ```
-    meross_cloud:
-      username: !secret meross_username
-      password: !secret meross_password
-    ```
-    **Note!** In this case you do not need to replace meross_username and meross_password. 
-Those are place holders that homeassistant automatically replaces by looking at the secrets.yaml file. 
-
-1. Reboot hassio
-1. Congrats! You're all set!
 
 ## Features
 ### Massive support
@@ -110,14 +88,11 @@ HomeAssistant best practices, in particular:
 - Lovelace notification: supports UI persistent event notification;
 - PEP8 code styling
 
-## What's next?
-- Discovery implementation
-- Refactor and improvements based on feedbacks
-- Automated test
 
 ## Supporting my work
 By buying me a coffee, not only you make my development more efficient, but also motivate me to further improve 
 my work. On the other hand, buying me a beer will certainly make me happier: **a toast to you, supporter**!
+In case you are a pro and a strong opensource supporter, you might also consider [sponsoring my GitHub work](https://github.com/sponsors/albertogeniola).
 
 [![Buy me a coffe!](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/albertogeniola)
 
