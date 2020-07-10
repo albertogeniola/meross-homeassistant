@@ -1,141 +1,171 @@
 import logging
-from datetime import timedelta
-from typing import Any, Iterable, List
 
-from homeassistant.components.cover import DEVICE_CLASS_GARAGE, SUPPORT_OPEN, SUPPORT_CLOSE
-from meross_iot.controller.device import BaseDevice
-from meross_iot.controller.mixins.garage import GarageOpenerMixin
-from meross_iot.manager import MerossManager
-from meross_iot.model.enums import OnlineStatus, Namespace
-from meross_iot.model.exception import CommandTimeoutError
-from meross_iot.model.push.bind import BindPushNotification
-from meross_iot.model.push.generic import GenericPushNotification
+from homeassistant.components.cover import (
+    DEVICE_CLASS_GARAGE, SUPPORT_CLOSE, SUPPORT_OPEN)
 
-from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, calculate_cover_id)
-
-# Conditional Light import with backwards compatibility
+# Fallback import in case of old HA releases
 try:
     from homeassistant.components.cover import CoverEntity
 except ImportError:
     from homeassistant.components.cover import CoverDevice as CoverEntity
 
+from meross_iot.cloud.client_status import ClientStatus
+from meross_iot.cloud.devices.door_openers import GenericGarageDoorOpener
+from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
+from meross_iot.meross_event import (DeviceDoorStatusEvent)
+
+from .common import (DOMAIN, HA_COVER, MANAGER, ConnectionWatchDog, MerossEntityWrapper, log_exception)
 
 _LOGGER = logging.getLogger(__name__)
+
+ATTR_DOOR_STATE = 'door_state'
 PARALLEL_UPDATES = 1
-SCAN_INTERVAL = timedelta(seconds=RELAXED_SCAN_INTERVAL)
 
 
-class MerossCoverWrapper(GarageOpenerMixin, BaseDevice):
-    """
-    Type hints helper
-    """
-    pass
+class OpenGarageCover(CoverEntity, MerossEntityWrapper):
+    """Representation of a OpenGarage cover."""
 
-
-class CoverEntityWrapper(CoverEntity):
-    """Wrapper class to adapt the Meross bulbs into the Homeassistant platform"""
-    def __init__(self, device: MerossCoverWrapper, channel: int):
-        self._device = device
-
-        # If the current device has more than 1 channel, we need to setup the device name and id accordingly
-        self._id = calculate_cover_id(device.internal_id, channel)
-        channel_data = device.channels[channel]
-        self._entity_name = "{} ({}) - {}".format(device.name, device.type, channel_data.name)
+    def __init__(self, device: GenericGarageDoorOpener):
 
         # Device properties
-        self._channel_id = channel
+        self._device = device
+        self._id = device.uuid
+        self._channel = 0
 
-    # region Device wrapper common methods
-    async def async_update(self):
-        if self._device.online_status == OnlineStatus.ONLINE:
+        if len(self._device.get_channels()) > 1:
+            _LOGGER.error(f"Garage opener {self._id} has more than 1 channel. This is currently not supported.")
+
+        # Device state
+        self._available = True  # Assume the mqtt client is connected
+        self._first_update_done = False
+        self._opening = False
+        self._closing = False
+        self._ignore_update = False
+
+    def update(self):
+        if self._ignore_update:
+            _LOGGER.warning("Skipping UPDATE as ignore_update is set.")
+            return
+
+        if self._device.online:
             try:
-                await self._device.async_update()
-            except CommandTimeoutError as e:
+                self._device.get_status(force_status_refresh=True)
+                # Reset derived states
+                self._opening = False
+                self._closing = False
+                # Mark first update done
+                self._first_update_done = True
+            except CommandTimeoutException as e:
                 log_exception(logger=_LOGGER, device=self._device)
-                pass
+                raise
 
-    async def _async_push_notification_received(self, namespace: Namespace, data: dict):
-        update_state = False
-        full_update = False
+    def device_event_handler(self, evt):
+        # Whenever an open/closed push notitication is received, make sure to reset the
+        # derived state
+        if isinstance(evt, DeviceDoorStatusEvent):
+            if evt.channel == self._channel:
+                if evt.door_state in ('open', 'closed'):
+                    self._opening = False
+                    self._closing = False
 
-        if namespace == Namespace.CONTROL_UNBIND:
-            _LOGGER.warning(f"Received unbind event. Removing device {self.name} from HA")
-            await self.platform.async_remove_entity(self.entity_id)
-        elif namespace == Namespace.SYSTEM_ONLINE:
-            _LOGGER.warning(f"Device {self.name} reported online event.")
-            online = OnlineStatus(int(data.get('online').get('status')))
-            update_state = True
-            full_update = online == OnlineStatus.ONLINE
+        # Update the device state when an event occurs
+        self.schedule_update_ha_state(False)
 
-        elif namespace == Namespace.HUB_ONLINE:
-            _LOGGER.warning(f"Device {self.name} reported (HUB) online event.")
-            online = OnlineStatus(int(data.get('status')))
-            update_state = True
-            full_update = online == OnlineStatus.ONLINE
-        else:
-            update_state = True
-            full_update = False
+    def notify_client_state(self, status: ClientStatus):
+        # When a connection change occurs, update the internal state
+        # If we are connecting back, schedule a full refresh of the device
+        # In any other case, mark the device unavailable
+        # and only update the UI
+        client_online = status == ClientStatus.SUBSCRIBED
+        self._available = client_online
+        self.schedule_update_ha_state(client_online)
 
-        # In all other cases, just tell HA to update the internal state representation
-        if update_state:
-            self.async_schedule_update_ha_state(force_refresh=full_update)
+    @property
+    def assumed_state(self) -> bool:
+        return not self._first_update_done
 
-    async def async_added_to_hass(self) -> None:
-        self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
-        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].add(self.unique_id)
+    @property
+    def name(self) -> str:
+        """Return the name of the cover."""
+        return self._device.name
 
-    async def async_will_remove_from_hass(self) -> None:
-        self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
-        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
-    # endregion
+    @property
+    def available(self) -> bool:
+        # A device is available if the client library is connected to the MQTT broker and if the
+        # device we are contacting is online
+        return self._available and self._device.online
 
-    # region Device wrapper common properties
+    @property
+    def is_closed(self):
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+
+        # The low-level IO library, returns TRUE if the garage door is open, false otherwise.
+        return not self._device.get_status(False).get(self._channel)
+
+    @property
+    def is_open(self):
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+
+        # The low-level IO library, returns TRUE if the garage door is open, false otherwise.
+        return self._device.get_status(False).get(self._channel)
+
+    @property
+    def is_opening(self):
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+
+        # The low-level IO library, returns TRUE if the garage door is open, false otherwise.
+        return self._opening
+
+    @property
+    def is_closing(self):
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+        return self._closing
+
+    def close_cover(self, **kwargs):
+        """Close the cover."""
+        is_closed = not self._device.get_status(False).get(self._channel)
+        is_closed_or_closing = is_closed or self._closing
+        if not is_closed_or_closing:
+            self._device.close_door(channel=self._channel, ensure_closed=True)
+            self._closing = True
+            # We changed the state, thus we need to notify HA about it
+            if self.enabled:
+                self.schedule_update_ha_state(False)
+
+    def open_cover(self, **kwargs):
+        """Open the cover."""
+        is_open = self._device.get_status(False).get(self._channel)
+        is_open_or_opening = is_open or self._opening
+
+        if not is_open_or_opening:
+            self._device.open_door(channel=self._channel, ensure_opened=True)
+            self._opening = True
+            # We changed the state, thus we need to notify HA about it
+            if self.enabled:
+                self.schedule_update_ha_state(False)
+
+    @property
+    def should_poll(self) -> bool:
+        return False
+
     @property
     def unique_id(self) -> str:
         # Since Meross plugs may have more than 1 switch, we need to provide a composed ID
         # made of uuid and channel
         return self._id
 
-    @property
-    def name(self) -> str:
-        return self._entity_name
-
-    @property
-    def device_info(self):
-        return {
-            'identifiers': {(PLATFORM, self._device.internal_id)},
-            'name': self._device.name,
-            'manufacturer': 'Meross',
-            'model': self._device.type + " " + self._device.hardware_version,
-            'sw_version': self._device.firmware_version
-        }
-
-    @property
-    def available(self) -> bool:
-        # A device is available if the client library is connected to the MQTT broker and if the
-        # device we are contacting is online
-        return self._device.online_status == OnlineStatus.ONLINE
-
-    @property
-    def should_poll(self) -> bool:
-        return False
-    # endregion
-
-    # region Platform-specific command methods
-    async def async_close_cover(self, **kwargs):
-        await self._device.async_close(channel=self._channel_id)
-
-    async def async_open_cover(self, **kwargs):
-        await self._device.async_open(channel=self._channel_id)
-
-    def open_cover(self, **kwargs: Any) -> None:
-        self.hass.async_add_executor_job(self.async_open_cover, **kwargs)
-
-    def close_cover(self, **kwargs: Any) -> None:
-        self.hass.async_add_executor_job(self.async_close_cover, **kwargs)
-    # endregion
-
-    # region Platform specific properties
     @property
     def device_class(self):
         """Return the class of this device, from component DEVICE_CLASSES."""
@@ -147,60 +177,43 @@ class CoverEntityWrapper(CoverEntity):
         return SUPPORT_OPEN | SUPPORT_CLOSE
 
     @property
-    def is_closed(self):
-        open_status = self._device.get_is_open(channel=self._channel_id)
-        return not open_status
+    def device_info(self):
+        return {
+            'identifiers': {(DOMAIN, self._device.uuid)},
+            'name': self._device.name,
+            'manufacturer': 'Meross',
+            'model': self._device.type + " " + self._device.hwversion,
+            'sw_version': self._device.fwversion
+        }
 
-    @property
-    def is_closing(self):
-        # Not supported yet
-        return None
-    
-    @property
-    def is_opening(self):
-        # Not supported yet
-        return None
+    async def async_added_to_hass(self) -> None:
+        self._device.register_event_callback(self.device_event_handler)
+        self._ignore_update = False
 
-    # endregion
-
-
-# ----------------------------------------------
-# PLATFORM METHODS
-# ----------------------------------------------
-async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
-    new_entities = []
-
-    # Identify all the devices that expose the Light capability
-    devs = filter(lambda d: isinstance(d, GarageOpenerMixin), devices)
-    for d in devs:
-        for channel_index, channel in enumerate(d.channels):
-            w = CoverEntityWrapper(device=d, channel=channel_index)
-            if w.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
-                new_entities.append(w)
-            else:
-                _LOGGER.info(f"Skipping device {w} as it was already added to registry once.")
-    async_add_entities(new_entities, True)
+    async def async_will_remove_from_hass(self) -> None:
+        self._device.unregister_event_callback(self.device_event_handler)
+        self._ignore_update = True
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    # When loading the platform, immediately add currently available
-    # bulbs.
-    manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
-    devices = manager.find_devices()
-    await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
+    def sync_logic():
+        cover_entities = []
+        manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+        openers = manager.get_devices_by_kind(GenericGarageDoorOpener)
 
-    # Register a listener for the Bind push notification so that we can add new entities at runtime
-    async def platform_async_add_entities(push_notification: GenericPushNotification, target_devices: List[BaseDevice]):
-        if isinstance(push_notification, BindPushNotification):
-            devs = manager.find_devices(device_uuids=(push_notification.hwinfo.uuid,))
-            await _add_entities(hass=hass, devices=devs, async_add_entities=async_add_entities)
+        for opener in openers:  # type: GenericGarageDoorOpener
+            w = OpenGarageCover(device=opener)
+            cover_entities.append(w)
+            hass.data[DOMAIN][HA_COVER][w.unique_id] = w
+        return cover_entities
 
-    # Register a listener for new bound devices
-    manager.register_push_notification_handler_coroutine(platform_async_add_entities)
+    # Register a connection watchdog to notify devices when connection to the cloud MQTT goes down.
+    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+    watchdog = ConnectionWatchDog(hass=hass, platform=HA_COVER)
+    manager.register_event_handler(watchdog.connection_handler)
 
-
-# TODO: Unload entry
-# TODO: Remove entry
+    cover_entities = await hass.async_add_executor_job(sync_logic)
+    async_add_entities(cover_entities, True)
 
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):

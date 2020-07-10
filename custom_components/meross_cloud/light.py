@@ -1,249 +1,255 @@
 import logging
-from datetime import timedelta
-from typing import Any, Optional, Iterable, List
 
 import homeassistant.util.color as color_util
-from homeassistant.components.light import SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP, \
-    ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS
-from meross_iot.controller.device import BaseDevice
-from meross_iot.controller.mixins.light import LightMixin
-from meross_iot.manager import MerossManager
-from meross_iot.model.enums import OnlineStatus, Namespace
-from meross_iot.model.exception import CommandTimeoutError
-from meross_iot.model.push.bind import BindPushNotification
-from meross_iot.model.push.generic import GenericPushNotification
+from homeassistant.components.light import (ATTR_BRIGHTNESS, ATTR_COLOR_TEMP,
+                                            ATTR_HS_COLOR, SUPPORT_BRIGHTNESS,
+                                            SUPPORT_COLOR, SUPPORT_COLOR_TEMP)
 
-from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL,
-                     calculate_light_id)
-
-# Conditional Light import with backwards compatibility
+# Fallback import in case of old HA releases
 try:
     from homeassistant.components.light import LightEntity
 except ImportError:
     from homeassistant.components.light import Light as LightEntity
 
+from meross_iot.cloud.client_status import ClientStatus
+from meross_iot.cloud.devices.light_bulbs import GenericBulb
+from meross_iot.cloud.exceptions.CommandTimeoutException import CommandTimeoutException
+from meross_iot.manager import MerossManager
+
+from .common import (DOMAIN, HA_LIGHT, MANAGER, ConnectionWatchDog, log_exception)
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
-SCAN_INTERVAL = timedelta(seconds=RELAXED_SCAN_INTERVAL)
 
 
-class MerossLightDevice(LightMixin, BaseDevice):
-    """
-    Type hints helper
-    """
-    pass
+def rgb_int_to_tuple(color):
+    blue = color & 255
+    green = (color >> 8) & 255
+    red = (color >> 16) & 255
+    return (red, green, blue)
+
+
+def expand_status(status):
+    "Expand the status information for readability"
+    out = dict(status)
+    out['rgb'] = rgb_int_to_tuple(status['rgb'])
+    return out
 
 
 class LightEntityWrapper(LightEntity):
-    """Wrapper class to adapt the Meross bulbs into the Homeassistant platform"""
+    """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
 
-    def __init__(self, device: MerossLightDevice, channel: int):
-        # TODO: verify channel is 0
+    def __init__(self, device: GenericBulb, channel: int):
         self._device = device
 
-        # If the current device has more than 1 channel, we need to setup the device name and id accordingly
-        self._id = calculate_light_id(device.internal_id, channel)
-        channel_data = device.channels[channel]
-        self._entity_name = "{} ({}) - {}".format(device.name, device.type, channel_data.name)
-
-        # Device properties
+        # Device info
+        self._id = self._device.uuid
         self._channel_id = channel
+        self._available = True  # Assume the mqtt client is connected
+        self._first_update_done = False
+        self._ignore_update = False
 
-    # region Device wrapper common methods
-    async def async_update(self):
-        if self._device.online_status == OnlineStatus.ONLINE:
+        # Assume this device supports all the following features.
+        # If that's not the case, we'll discover it after first UPDATE() occurs
+        self._flags = 0
+        self._flags |= SUPPORT_BRIGHTNESS
+        self._flags |= SUPPORT_COLOR
+        self._flags |= SUPPORT_COLOR_TEMP
+    
+    def update(self):
+        if self._ignore_update:
+            _LOGGER.warning("Skipping UPDATE as ignore_update is set.")
+            return
+
+        if self._device.online:
             try:
-                await self._device.async_update()
-            except CommandTimeoutError as e:
+                self._device.get_status(force_status_refresh=True)
+                self._flags = 0
+                if self._device.supports_luminance():
+                    self._flags |= SUPPORT_BRIGHTNESS
+                if self._device.is_rgb():
+                    self._flags |= SUPPORT_COLOR
+                if self._device.is_light_temperature():
+                    self._flags |= SUPPORT_COLOR_TEMP
+                self._first_update_done = True
+            except CommandTimeoutException as e:
                 log_exception(logger=_LOGGER, device=self._device)
-                pass
+                raise
 
-    async def _async_push_notification_received(self, namespace: Namespace, data: dict):
-        update_state = False
-        full_update = False
+    def device_event_handler(self, evt):
+        # Update the device state as soon as an event occurs
+        self.schedule_update_ha_state(False)
 
-        if namespace == Namespace.CONTROL_UNBIND:
-            _LOGGER.warning(f"Received unbind event. Removing device {self.name} from HA")
-            await self.platform.async_remove_entity(self.entity_id)
-        elif namespace == Namespace.SYSTEM_ONLINE:
-            _LOGGER.warning(f"Device {self.name} reported online event.")
-            online = OnlineStatus(int(data.get('online').get('status')))
-            update_state = True
-            full_update = online == OnlineStatus.ONLINE
-        elif namespace == Namespace.HUB_ONLINE:
-            _LOGGER.warning(f"Device {self.name} reported (HUB) online event.")
-            online = OnlineStatus(int(data.get('status')))
-            update_state = True
-            full_update = online == OnlineStatus.ONLINE
+        """
+        # Handle here events that are common to all the wrappers
+        if isinstance(evt, DeviceOnlineStatusEvent):
+            _LOGGER.info("Device %s reported online status: %s" % (self._device.name, evt.status))
+            if evt.status not in ["online", "offline"]:
+                raise ValueError("Invalid online status")
+            self._is_online = evt.status == "online"
+
+        elif isinstance(evt, BulbSwitchStateChangeEvent):
+            if evt.channel == self._channel_id:
+                self._state['onoff'] = evt.is_on
+        elif isinstance(evt, BulbLightStateChangeEvent):
+            if evt.channel == self._channel_id:
+                self._state['capacity'] = evt.light_state.get('capacity')
+                self._state['rgb'] = evt.light_state.get('rgb')
+                self._state['temperature'] = evt.light_state.get('temperature')
+                self._state['luminance'] = evt.light_state.get('luminance')
+                self._state['gradual'] = evt.light_state.get('gradual')
+                self._state['transform'] = evt.light_state.get('transform')
         else:
-            update_state = True
-            full_update = False
+            _LOGGER.warning("Unhandled/ignored event: %s" % str(evt))
+        """
 
-        # In all other cases, just tell HA to update the internal state representation
-        if update_state:
-            self.async_schedule_update_ha_state(force_refresh=full_update)
-
-    async def async_added_to_hass(self) -> None:
-        self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
-        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].add(self.unique_id)
-
-    async def async_will_remove_from_hass(self) -> None:
-        self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
-        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
-    # endregion
-
-    # region Device wrapper common properties
-    @property
-    def unique_id(self) -> str:
-        # Since Meross plugs may have more than 1 switch, we need to provide a composed ID
-        # made of uuid and channel
-        return self._id
+    def notify_client_state(self, status: ClientStatus):
+        # When a connection change occurs, update the internal state
+        # If we are connecting back, schedule a full refresh of the device
+        # In any other case, mark the device unavailable
+        # and only update the UI
+        client_online = status == ClientStatus.SUBSCRIBED
+        self._available = client_online
+        self.schedule_update_ha_state(True)
 
     @property
-    def name(self) -> str:
-        return self._entity_name
-
-    @property
-    def device_info(self):
-        return {
-            'identifiers': {(PLATFORM, self._device.internal_id)},
-            'name': self._device.name,
-            'manufacturer': 'Meross',
-            'model': self._device.type + " " + self._device.hardware_version,
-            'sw_version': self._device.firmware_version
-        }
-
-    @property
-    def available(self) -> bool:
-        # A device is available if the client library is connected to the MQTT broker and if the
-        # device we are contacting is online
-        return self._device.online_status == OnlineStatus.ONLINE
+    def assumed_state(self) -> bool:
+        return not self._first_update_done
 
     @property
     def should_poll(self) -> bool:
         return False
-    # endregion
 
-    # region Platform-specific command methods
-    async def async_turn_off(self, **kwargs) -> None:
-        await self._device.async_turn_off(channel=self._channel_id)
+    @property
+    def available(self) -> bool:
+        # A device is available if it's online
+        return self._available and self._device.online
 
-    async def async_turn_on(self, **kwargs) -> None:
+    @property
+    def is_on(self) -> bool:
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+
+        return self._device.get_channel_status(channel=self._channel_id).get('onoff')
+
+    @property
+    def brightness(self):
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+
+        # Meross bulbs support luminance between 0 and 100;
+        # while the HA wants values from 0 to 255. Therefore, we need to scale the values.
+        luminance = self._device.get_status().get('luminance', None)
+        if luminance is None:
+            return None
+        return float(luminance) / 100 * 255
+
+    @property
+    def hs_color(self):
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+
+        status = self._device.get_status(channel=self._channel_id)
+        if status.get('capacity') == 5:  # rgb mode
+            rgb = rgb_int_to_tuple(status.get('rgb'))
+            return color_util.color_RGB_to_hs(*rgb)
+        return None
+
+    @property
+    def color_temp(self):
+        if not self._first_update_done:
+            # Schedule update and return
+            self.schedule_update_ha_state(True)
+            return None
+
+        status = self._device.get_status(channel=self._channel_id)
+        if status.get('capacity') == 6:  # White light mode
+            value = status.get('temperature')
+            norm_value = (100 - value) / 100.0
+            return self.min_mireds + (norm_value * (self.max_mireds - self.min_mireds))
+        return None
+
+    @property
+    def name(self) -> str:
+        return self._device.name
+
+    @property
+    def unique_id(self) -> str:
+        return self._id
+
+    @property
+    def supported_features(self):
+        return self._flags
+
+    @property
+    def device_info(self):
+        return {
+            'identifiers': {(DOMAIN, self._id)},
+            'name': self._device.name,
+            'manufacturer': 'Meross',
+            'model': self._device.type + " " + self._device.hwversion,
+            'sw_version': self._device.fwversion
+        }
+
+    def turn_off(self, **kwargs) -> None:
+        self._device.turn_off(channel=self._channel_id)
+
+    def turn_on(self, **kwargs) -> None:
         if not self.is_on:
-            await self._device.async_turn_on(channel=self._channel_id)
+            self._device.turn_on(channel=self._channel_id)
 
         # Color is taken from either of these 2 values, but not both.
         if ATTR_HS_COLOR in kwargs:
             h, s = kwargs[ATTR_HS_COLOR]
             rgb = color_util.color_hsv_to_RGB(h, s, 100)
             _LOGGER.debug("color change: rgb=%r -- h=%r s=%r" % (rgb, h, s))
-            await self._device.async_set_light_color(channel=self._channel_id, rgb=rgb, onoff=True)
+            self._device.set_light_color(self._channel_id, rgb=rgb)
         elif ATTR_COLOR_TEMP in kwargs:
             mired = kwargs[ATTR_COLOR_TEMP]
             norm_value = (mired - self.min_mireds) / (self.max_mireds - self.min_mireds)
             temperature = 100 - (norm_value * 100)
             _LOGGER.debug("temperature change: mired=%r meross=%r" % (mired, temperature))
-            await self._device.async_set_light_color(channel=self._channel_id, temperature=temperature)
+            self._device.set_light_color(self._channel_id, temperature=temperature)
 
         # Brightness must always be set, so take previous luminance if not explicitly set now.
         if ATTR_BRIGHTNESS in kwargs:
             brightness = kwargs[ATTR_BRIGHTNESS] * 100 / 255
-            _LOGGER.debug("brightness change: %r" % brightness)
-            await self._device.async_set_light_color(channel=self._channel_id, luminance=brightness)
+            _LOGGER.debug("    brightness change: %r" % brightness)
+            self._device.set_light_color(self._channel_id, luminance=brightness)
 
-    def turn_on(self, **kwargs: Any) -> None:
-        self.hass.async_add_executor_job(self.async_turn_on, **kwargs)
+    async def async_added_to_hass(self) -> None:
+        self._device.register_event_callback(self.device_event_handler)
+        self._ignore_update = False
 
-    def turn_off(self, **kwargs: Any) -> None:
-        self.hass.async_add_executor_job(self.async_turn_off, **kwargs)
-    # endregion
-
-    # region Platform specific properties
-    @property
-    def supported_features(self):
-        flags = 0
-        if self._device.get_supports_luminance(channel=self._channel_id):
-            flags |= SUPPORT_BRIGHTNESS
-        if self._device.get_supports_rgb(channel=self._channel_id):
-            flags |= SUPPORT_COLOR
-        if self._device.get_supports_temperature(channel=self._channel_id):
-            flags |= SUPPORT_COLOR_TEMP
-        return flags
-
-    @property
-    def is_on(self) -> Optional[bool]:
-        return self._device.get_light_is_on(channel=self._channel_id)
-
-    @property
-    def brightness(self):
-        if not self._device.get_supports_luminance(self._channel_id):
-            return None
-
-        luminance = self._device.get_luminance()
-        if luminance is not None:
-            return float(luminance) / 100 * 255
-
-        return None
-
-    @property
-    def hs_color(self):
-        if self._device.get_supports_rgb(channel=self._channel_id):
-            rgb = self._device.get_rgb_color()
-            return color_util.color_RGB_to_hs(*rgb)
-        return None
-
-    @property
-    def color_temp(self):
-        if self._device.get_supports_temperature(channel=self._channel_id):
-            value = self._device.get_color_temperature()
-            norm_value = (100 - value) / 100.0
-            return self.min_mireds + (norm_value * (self.max_mireds - self.min_mireds))
-        return None
-    # endregion
-
-
-# ----------------------------------------------
-# PLATFORM METHODS
-# ----------------------------------------------
-async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
-    new_entities = []
-
-    # Identify all the devices that expose the Light capability
-    devs = filter(lambda d: isinstance(d, LightMixin), devices)
-    for d in devs:
-        for channel_index, channel in enumerate(d.channels):
-            w = LightEntityWrapper(device=d, channel=channel_index)
-            if w.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
-                new_entities.append(w)
-            else:
-                _LOGGER.info(f"Skipping device {w} as it was already added to registry once.")
-    async_add_entities(new_entities, True)
+    async def async_will_remove_from_hass(self) -> None:
+        self._device.unregister_event_callback(self.device_event_handler)
+        self._ignore_update = True
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    # When loading the platform, immediately add currently available
-    # bulbs.
-    manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
-    devices = manager.find_devices()
-    await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
+    def sync_logic():
+        bulb_devices = []
+        manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+        bulbs = manager.get_devices_by_kind(GenericBulb)
 
-    # Register a listener for the Bind push notification so that we can add new entities at runtime
-    async def platform_async_add_entities(push_notification: GenericPushNotification, target_devices: List[BaseDevice]):
-        if push_notification.namespace == Namespace.CONTROL_BIND \
-                or push_notification.namespace == Namespace.SYSTEM_ONLINE \
-                or push_notification.namespace == Namespace.HUB_ONLINE:
-            await manager.async_device_discovery(push_notification.namespace == Namespace.HUB_ONLINE,
-                                                 meross_device_uuid=push_notification.originating_device_uuid)
-            devs = manager.find_devices(device_uuids=(push_notification.originating_device_uuid,))
-            await _add_entities(hass=hass, devices=devs, async_add_entities=async_add_entities)
+        for bulb in bulbs:
+            w = LightEntityWrapper(device=bulb, channel=0)
+            bulb_devices.append(w)
+            hass.data[DOMAIN][HA_LIGHT][w.unique_id] = w
+        return bulb_devices
 
-    # Register a listener for new bound devices
-    manager.register_push_notification_handler_coroutine(platform_async_add_entities)
-
-
-# TODO: Unload entry
-# TODO: Remove entry
+    # Register a connection watchdog to notify devices when connection to the cloud MQTT goes down.
+    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
+    watchdog = ConnectionWatchDog(hass=hass, platform=HA_LIGHT)
+    manager.register_event_handler(watchdog.connection_handler)
+    bulb_devices = await hass.async_add_executor_job(sync_logic)
+    async_add_entities(bulb_devices, True)
 
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):
