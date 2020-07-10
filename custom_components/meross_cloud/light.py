@@ -230,8 +230,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     # Register a listener for the Bind push notification so that we can add new entities at runtime
     async def platform_async_add_entities(push_notification: GenericPushNotification, target_devices: List[BaseDevice]):
-        if isinstance(push_notification, BindPushNotification):
-            devs = manager.find_devices(device_uuids=(push_notification.hwinfo.uuid,))
+        if push_notification.namespace == Namespace.CONTROL_BIND \
+                or push_notification.namespace == Namespace.SYSTEM_ONLINE \
+                or push_notification.namespace == Namespace.HUB_ONLINE:
+            await manager.async_device_discovery(push_notification.namespace == Namespace.HUB_ONLINE,
+                                                 meross_device_uuid=push_notification.originating_device_uuid)
+            devs = manager.find_devices(device_uuids=(push_notification.originating_device_uuid,))
             await _add_entities(hass=hass, devices=devs, async_add_entities=async_add_entities)
 
     # Register a listener for new bound devices
