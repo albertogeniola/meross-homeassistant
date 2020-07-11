@@ -1,0 +1,10 @@
+{
+  "domain": "meross_cloud",
+  "name": "Meross Cloud IoT",
+  "documentation": "https://www.home-assistant.io/components/meross_cloud",
+  "dependencies": ["persistent_notification"],
+  "codeowners": ["@albertogeniola"],
+  "requirements": ["meross-iot==0.4.0.0"],
+  "config_flow": true,
+  "quality_scale": "platinum"
+}
