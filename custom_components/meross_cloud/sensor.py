@@ -15,8 +15,9 @@ from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.push.generic import GenericPushNotification
 
+from . import RateLimiter
 from .common import (PLATFORM, MANAGER, log_exception, HA_SENSOR, calculate_sensor_id,
-                     SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property)
+                     SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property, LIMITER, RateLimitedFunction)
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
@@ -26,7 +27,13 @@ SCAN_INTERVAL = timedelta(seconds=SENSOR_POLL_INTERVAL_SECONDS)
 class GenericSensorWrapper(Entity):
     """Wrapper class to adapt the Meross MSS100 sensor hardware into the Homeassistant platform"""
 
-    def __init__(self, sensor_class: str, measurement_unit: str, device_method_or_property: str, device: BaseDevice, channel: int = 0):
+    def __init__(self,
+                 sensor_class: str,
+                 measurement_unit: str,
+                 device_method_or_property: str,
+                 device: BaseDevice,
+                 channel: int = 0,
+                 limiter: RateLimiter = None):
         # Make sure the given device supports exposes the device_method_or_property passed as arg
         if not hasattr(device, device_method_or_property):
             _LOGGER.error(f"The device {device.uuid} ({device.name}) does not expose property {device_method_or_property}")
@@ -44,7 +51,11 @@ class GenericSensorWrapper(Entity):
         self._entity_name = "{} ({}) - {} ({}, {})".format(device.name, device.type, f"{sensor_class} sensor", measurement_unit, channel)
 
         # by default, set the scan_interval to the default value
-        self.async_update = Throttle(SCAN_INTERVAL)(self._sensor_async_update)
+        if limiter is None:
+            self.async_update = self._sensor_async_update
+        else:
+            self.async_update = RateLimitedFunction(rate_limiter_instance=limiter,
+                                                    callable_function=self._sensor_async_update)
 
     # region Device wrapper common methods
     def set_polling_interval(self, polling_interval: timedelta):
@@ -148,12 +159,13 @@ class GenericSensorWrapper(Entity):
 
 
 class Ms100TemperatureSensorWrapper(GenericSensorWrapper):
-    def __init__(self, device: Ms100Sensor, channel: int = 0):
+    def __init__(self, device: Ms100Sensor, channel: int = 0, limiter: RateLimiter = None):
         super().__init__(sensor_class=DEVICE_CLASS_TEMPERATURE,
                          measurement_unit=TEMP_CELSIUS,
                          device_method_or_property='last_sampled_temperature',
                          device=device,
-                         channel=channel)
+                         channel=channel,
+                         limiter=limiter)
 
     @property
     def should_poll(self) -> bool:
@@ -163,12 +175,13 @@ class Ms100TemperatureSensorWrapper(GenericSensorWrapper):
 
 
 class Ms100HumiditySensorWrapper(GenericSensorWrapper):
-    def __init__(self, device: Ms100Sensor, channel: int = 0):
+    def __init__(self, device: Ms100Sensor, channel: int = 0, limiter: RateLimiter = None):
         super().__init__(sensor_class=DEVICE_CLASS_HUMIDITY,
                          measurement_unit=UNIT_PERCENTAGE,
                          device_method_or_property='last_sampled_humidity',
                          device=device,
-                         channel=channel)
+                         channel=channel,
+                         limiter=limiter)
 
     @property
     def should_poll(self) -> bool:
@@ -178,11 +191,12 @@ class Ms100HumiditySensorWrapper(GenericSensorWrapper):
 
 
 class Mts100TemperatureSensorWrapper(GenericSensorWrapper):
-    def __init__(self, device: Mts100v3Valve):
+    def __init__(self, device: Mts100v3Valve, limiter: RateLimiter = None):
         super().__init__(sensor_class=DEVICE_CLASS_TEMPERATURE,
                          measurement_unit=TEMP_CELSIUS,
                          device_method_or_property='last_sampled_temperature',
-                         device=device)
+                         device=device,
+                         limiter=limiter)
 
     async def _sensor_async_update(self):
         if self._device.online_status == OnlineStatus.ONLINE:
@@ -210,12 +224,13 @@ class ElectricitySensorDevice(ElectricityMixin, BaseDevice):
 
 
 class PowerSensorWrapper(GenericSensorWrapper):
-    def __init__(self, device: ElectricitySensorDevice, channel: int = 0):
+    def __init__(self, device: ElectricitySensorDevice, channel: int = 0, limiter: RateLimiter = None):
         super().__init__(sensor_class=DEVICE_CLASS_POWER,
                          measurement_unit=POWER_WATT,
                          device_method_or_property='get_last_sample',
                          device=device,
-                         channel=channel)
+                         channel=channel,
+                         limiter=limiter)
 
     # For ElectricityMixin devices we need to explicitly call the async_Get_instant_metrics
     async def _sensor_async_update(self):
@@ -244,12 +259,13 @@ class PowerSensorWrapper(GenericSensorWrapper):
 
 
 class CurrentSensorWrapper(GenericSensorWrapper):
-    def __init__(self, device: ElectricitySensorDevice, channel: int = 0):
+    def __init__(self, device: ElectricitySensorDevice, channel: int = 0, limiter: RateLimiter = None):
         super().__init__(sensor_class=DEVICE_CLASS_POWER,
                          measurement_unit="A",
                          device_method_or_property='get_last_sample',
                          device=device,
-                         channel=channel)
+                         channel=channel,
+                         limiter=limiter)
 
     # For ElectricityMixin devices we need to explicitly call the async_Get_instant_metrics
     async def _sensor_async_update(self):
@@ -279,12 +295,13 @@ class CurrentSensorWrapper(GenericSensorWrapper):
 
 
 class VoltageSensorWrapper(GenericSensorWrapper):
-    def __init__(self, device: ElectricitySensorDevice, channel: int = 0):
+    def __init__(self, device: ElectricitySensorDevice, channel: int = 0, limiter: RateLimiter = None):
         super().__init__(sensor_class=DEVICE_CLASS_POWER,
                          measurement_unit="V",
                          device_method_or_property='get_last_sample',
                          device=device,
-                         channel=channel)
+                         channel=channel,
+                         limiter=limiter)
 
     # For ElectricityMixin devices we need to explicitly call the async_Get_instant_metrics
     async def _sensor_async_update(self):
@@ -327,6 +344,7 @@ def _add_and_register_sensor(hass, clazz: type, args: dict, entities: list):
 # ----------------------------------------------
 async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
     new_entities = []
+    limiter = hass.data[PLATFORM][LIMITER]
 
     # For now, we handle the following sensors:
     # -> Temperature-Humidity (Ms100Sensor)
@@ -338,24 +356,25 @@ async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities)
 
     # Add MS100 Temperature & Humidity sensors
     for d in humidity_temp_sensors:
-        _add_and_register_sensor(hass, clazz=Ms100HumiditySensorWrapper, args={"device": d, "channel": 0},
+        _add_and_register_sensor(hass, clazz=Ms100HumiditySensorWrapper, args={"device": d, "channel": 0,
+                                                                               "limiter": limiter},
                                  entities=new_entities)
-        _add_and_register_sensor(hass, clazz=Ms100TemperatureSensorWrapper, args={"device": d, "channel": 0},
+        _add_and_register_sensor(hass, clazz=Ms100TemperatureSensorWrapper, args={"device": d, "channel": 0, "limiter": limiter},
                                  entities=new_entities)
 
     # Add MTS100Valve Temperature sensors
     for d in mts100_temp_sensors:
-        _add_and_register_sensor(hass, clazz=Mts100TemperatureSensorWrapper, args={"device": d},
+        _add_and_register_sensor(hass, clazz=Mts100TemperatureSensorWrapper, args={"device": d, "limiter": limiter},
                                  entities=new_entities)
 
     # Add Power Sensors
     for d in power_sensors:
         for channel_index, channel in enumerate(d.channels):
-            _add_and_register_sensor(hass, clazz=PowerSensorWrapper, args={"device": d, "channel": channel_index},
+            _add_and_register_sensor(hass, clazz=PowerSensorWrapper, args={"device": d, "channel": channel_index, "limiter": limiter},
                                      entities=new_entities)
-            _add_and_register_sensor(hass, clazz=CurrentSensorWrapper, args={"device": d, "channel": channel_index},
+            _add_and_register_sensor(hass, clazz=CurrentSensorWrapper, args={"device": d, "channel": channel_index, "limiter": limiter},
                                      entities=new_entities)
-            _add_and_register_sensor(hass, clazz=VoltageSensorWrapper, args={"device": d, "channel": channel_index},
+            _add_and_register_sensor(hass, clazz=VoltageSensorWrapper, args={"device": d, "channel": channel_index, "limiter": limiter},
                                      entities=new_entities)
 
     async_add_entities(new_entities, True)
@@ -383,6 +402,7 @@ def _setup_optimal_scan_interval(devices: Iterable[PowerSensorWrapper]):
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
+
     devices = manager.find_devices()
     await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
 

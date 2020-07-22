@@ -1,8 +1,12 @@
+import asyncio
 import logging
+from collections import Callable
+from typing import Any
 
 from meross_iot.controller.device import BaseDevice
 
 from custom_components.meross_cloud.version import MEROSS_CLOUD_VERSION
+import time
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -10,6 +14,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORM = 'meross_cloud'
 ATTR_CONFIG = "config"
 MANAGER = 'manager'
+LIMITER = 'limiter'
 CLOUD_HANDLER = 'cloud_handler'
 MEROSS_MANAGER = "%s.%s" % (PLATFORM, MANAGER)
 SENSORS = 'sensors'
@@ -22,6 +27,8 @@ HA_FAN = 'fan'
 MEROSS_COMPONENTS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
 CONNECTION_TIMEOUT_THRESHOLD = 5
 CONF_STORED_CREDS = 'stored_credentials'
+CONF_RATE_LIMIT_PER_SECOND = 'rate_limit_per_second'
+CONF_RATE_LIMIT_MAX_TOKENS = 'rate_limit_max_tokens'
 
 
 RELAXED_SCAN_INTERVAL = 180.0
@@ -100,3 +107,61 @@ def invoke_method_or_property(obj, method_or_property):
     else:
         return attr
 
+
+class RateLimiter:
+    """Rate limiter utility implementing token-bucket algorithm
+    This class is not thread-safe."""
+
+    def __init__(self, rate: int = 1, max_tokens: int = 10):
+        self._rate = rate
+        self._max_tokens = max_tokens
+        self._tokens = self._max_tokens
+        self.updated_at = time.monotonic()
+        self._start = time.monotonic()
+
+    async def acquire(self, *args, **kwargs):
+        token_obtained = await self._wait_for_token()
+        return token_obtained
+
+    async def _wait_for_token(self, timeout: float = None):
+        wait_started_at = time.monotonic()
+        while self._tokens < 1:
+            self._add_new_tokens()
+            await asyncio.sleep(0.1)
+
+            if timeout is not None and (time.monotonic()-wait_started_at) > timeout:
+                return False
+
+        self.tokens -= 1
+        return True
+
+    def _add_new_tokens(self):
+        now = time.monotonic()
+        time_since_update = now - self.updated_at
+        new_tokens = time_since_update * self._rate
+        if self.tokens + new_tokens >= 1:
+            self.tokens = min(self.tokens + new_tokens, self._max_tokens)
+            self.updated_at = now
+
+
+class RateLimitedFunction(object):
+    def __init__(self, rate_limiter_instance: RateLimiter, callable_function: Callable, *callable_function_args, **callable_function_kwargs):
+        self._limiter = rate_limiter_instance
+        self._function = callable_function
+        self._args = callable_function_args
+        self._kwargs = callable_function_kwargs
+
+    def __call__(self) -> Any:
+        # Make sure we return a coroutine if the method is async.
+        is_coro = asyncio.iscoroutinefunction(self._function)
+
+        if self._limiter.acquire():
+            if is_coro:
+                awaitable = self._function(*self._args, **self._kwargs)
+                res = asyncio.run(awaitable)
+                return res
+            else:
+                return self._function(*self._args, **self._kwargs)
+        else:
+            _LOGGER.warning("Throttling...")
+            return None

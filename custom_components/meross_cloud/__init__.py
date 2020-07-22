@@ -18,7 +18,8 @@ from meross_iot.model.http.exception import TokenExpiredException, TooManyTokens
 
 from .common import (ATTR_CONFIG, CLOUD_HANDLER, PLATFORM, HA_CLIMATE, HA_COVER,
                      HA_FAN, HA_LIGHT, HA_SENSOR, HA_SWITCH, MANAGER,
-                     MEROSS_COMPONENTS, SENSORS, dismiss_notification, notify_error, log_exception, CONF_STORED_CREDS)
+                     MEROSS_COMPONENTS, SENSORS, dismiss_notification, notify_error, log_exception, CONF_STORED_CREDS,
+                     RateLimiter, LIMITER, CONF_RATE_LIMIT_PER_SECOND, CONF_RATE_LIMIT_MAX_TOKENS)
 # Unset the default stream handler for logger of the meross_iot library
 from .version import MEROSS_CLOUD_VERSION
 
@@ -81,11 +82,6 @@ async def get_or_renew_creds(email: str,
         return http_client, http_devices, True
 
 
-"""
-async def run_discovery(manager):
-    _LOGGER.info("Triggering discovery...")
-    await manager.async_device_discovery()
-"""
 async def async_setup_entry(hass: HomeAssistantType, config_entry):
     """
     This class is called by the HomeAssistant framework when a configuration entry is provided.
@@ -97,6 +93,9 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     email = config_entry.data.get(CONF_USERNAME)
     password = config_entry.data.get(CONF_PASSWORD)
     str_creds = config_entry.data.get(CONF_STORED_CREDS)
+    rate_limit_per_second = config_entry.data.get(CONF_RATE_LIMIT_PER_SECOND, 4)
+    rate_limit_max_tokens = config_entry.data.get(CONF_RATE_LIMIT_MAX_TOKENS, 20)
+
     creds = None
     if str_creds is not None:
         issued_on = datetime.fromisoformat(str_creds.get('issued_on'))
@@ -126,10 +125,13 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
             })
 
         manager = MerossManager(http_client=client, auto_reconnect=True)
+        # Setup the rate limiter
+        limiter = RateLimiter(rate=rate_limit_per_second, max_tokens=rate_limit_max_tokens)
 
         hass.data[PLATFORM] = {}
         hass.data[PLATFORM][MANAGER] = manager
         hass.data[PLATFORM]["ADDED_ENTITIES_IDS"] = set()
+        hass.data[PLATFORM][LIMITER] = limiter
 
         # Keep a registry of added sensors
         # TODO: Do the same for other platforms?
