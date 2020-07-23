@@ -32,7 +32,7 @@ CONF_RATE_LIMIT_MAX_TOKENS = 'rate_limit_max_tokens'
 
 
 RELAXED_SCAN_INTERVAL = 180.0
-SENSOR_POLL_INTERVAL_SECONDS = 30
+SENSOR_POLL_INTERVAL_SECONDS = 15
 
 
 def calculate_sensor_id(uuid: str, type: str, measurement_unit: str, channel: int = 0,):
@@ -132,36 +132,30 @@ class RateLimiter:
             if timeout is not None and (time.monotonic()-wait_started_at) > timeout:
                 return False
 
-        self.tokens -= 1
+        self._tokens -= 1
         return True
 
     def _add_new_tokens(self):
         now = time.monotonic()
         time_since_update = now - self.updated_at
         new_tokens = time_since_update * self._rate
-        if self.tokens + new_tokens >= 1:
-            self.tokens = min(self.tokens + new_tokens, self._max_tokens)
+        if self._tokens + new_tokens >= 1:
+            self._tokens = min(self._tokens + new_tokens, self._max_tokens)
             self.updated_at = now
 
 
 class RateLimitedFunction(object):
-    def __init__(self, rate_limiter_instance: RateLimiter, callable_function: Callable, *callable_function_args, **callable_function_kwargs):
+    def __init__(self, rate_limiter_instance: RateLimiter, callable_function: Callable, *async_function_args, **async_function_kwargs):
         self._limiter = rate_limiter_instance
         self._function = callable_function
-        self._args = callable_function_args
-        self._kwargs = callable_function_kwargs
+        self._args = async_function_args
+        self._kwargs = async_function_kwargs
 
-    def __call__(self) -> Any:
-        # Make sure we return a coroutine if the method is async.
-        is_coro = asyncio.iscoroutinefunction(self._function)
-
-        if self._limiter.acquire():
-            if is_coro:
-                awaitable = self._function(*self._args, **self._kwargs)
-                res = asyncio.run(awaitable)
-                return res
-            else:
-                return self._function(*self._args, **self._kwargs)
+    async def __call__(self) -> Any:
+        r = await self._limiter.acquire()
+        if r:
+            result = await self._function(*self._args, **self._kwargs)
+            return result
         else:
             _LOGGER.warning("Throttling...")
             return None

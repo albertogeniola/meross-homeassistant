@@ -205,7 +205,7 @@ class Mts100TemperatureSensorWrapper(GenericSensorWrapper):
                 last_sampled_temp = self._device.last_sampled_temperature
                 last_sampled_time = self._device.last_sampled_time
                 now = datetime.utcnow()
-                if last_sampled_temp is None or last_sampled_time is None or (now - self._device.last_sampled_time).total_seconds() > 30:
+                if last_sampled_temp is None or last_sampled_time is None or (now - self._device.last_sampled_time).total_seconds() > SENSOR_POLL_INTERVAL_SECONDS:
                     # Force device refresh
                     _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
                     await self._device.async_get_temperature()
@@ -380,7 +380,7 @@ async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities)
     async_add_entities(new_entities, True)
 
     # Once added all sensors to HA, we need to recalibrate the optimal scan interval.
-    _setup_optimal_scan_interval(hass.data[PLATFORM][HA_SENSOR].values())
+    #_setup_optimal_scan_interval(hass.data[PLATFORM][HA_SENSOR].values())
 
 
 def _setup_optimal_scan_interval(devices: Iterable[PowerSensorWrapper]):
