@@ -157,5 +157,5 @@ class RateLimitedFunction(object):
             result = await self._function(*self._args, **self._kwargs)
             return result
         else:
-            _LOGGER.warning("Throttling...")
+            _LOGGER.warning("RATE LIMITER - Throttling...")
             return None

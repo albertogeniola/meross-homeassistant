@@ -93,8 +93,8 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     email = config_entry.data.get(CONF_USERNAME)
     password = config_entry.data.get(CONF_PASSWORD)
     str_creds = config_entry.data.get(CONF_STORED_CREDS)
-    rate_limit_per_second = config_entry.data.get(CONF_RATE_LIMIT_PER_SECOND, 4)
-    rate_limit_max_tokens = config_entry.data.get(CONF_RATE_LIMIT_MAX_TOKENS, 20)
+    rate_limit_per_second = config_entry.data.get(CONF_RATE_LIMIT_PER_SECOND, 2)
+    rate_limit_max_tokens = config_entry.data.get(CONF_RATE_LIMIT_MAX_TOKENS, 10)
 
     creds = None
     if str_creds is not None:
