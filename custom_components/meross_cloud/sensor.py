@@ -4,7 +4,7 @@ from datetime import timedelta
 from typing import Optional, Iterable, Union, List
 
 from homeassistant.const import DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_HUMIDITY, \
-    UNIT_PERCENTAGE, DEVICE_CLASS_POWER, POWER_WATT
+    DEVICE_CLASS_POWER, POWER_WATT
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import Throttle
 from meross_iot.controller.device import BaseDevice
@@ -17,7 +17,8 @@ from meross_iot.model.push.generic import GenericPushNotification
 
 from . import RateLimiter
 from .common import (PLATFORM, MANAGER, log_exception, HA_SENSOR, calculate_sensor_id,
-                     SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property, LIMITER, RateLimitedFunction)
+                     SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property, LIMITER, RateLimitedFunction,
+                     UNIT_PERCENTAGE)
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
