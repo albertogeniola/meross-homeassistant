@@ -1,0 +1,21 @@
+{
+    "config": {
+        "abort": {
+            "single_instance_allowed": "El complemento Meross ya está instalado y no se puede volver a instalar."
+        },
+        "error": {
+            "connection_error": "No se puede conectar con Meross.",
+            "invalid_credentials": "Credenciales no válidas."
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "password": "Contraseña",
+                    "username": "Correo electrónico"
+                },
+                "title": "Ingrese las credenciales de su cuenta Meross"
+            }
+        },
+        "title": "Meross"
+    }
+}
