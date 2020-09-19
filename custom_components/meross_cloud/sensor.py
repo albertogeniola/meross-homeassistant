@@ -4,7 +4,12 @@ from datetime import timedelta
 from typing import Optional, Iterable, Union, List
 
 from homeassistant.const import DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_HUMIDITY, \
-    UNIT_PERCENTAGE, DEVICE_CLASS_POWER, POWER_WATT
+    DEVICE_CLASS_POWER, POWER_WATT
+try:
+    from homeassistant.const import PERCENTAGE
+except ImportError:
+    from homeassistant.const import UNIT_PERCENTAGE as PERCENTAGE
+
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import Throttle
 from meross_iot.controller.device import BaseDevice
@@ -177,7 +182,7 @@ class Ms100TemperatureSensorWrapper(GenericSensorWrapper):
 class Ms100HumiditySensorWrapper(GenericSensorWrapper):
     def __init__(self, device: Ms100Sensor, channel: int = 0, limiter: RateLimiter = None):
         super().__init__(sensor_class=DEVICE_CLASS_HUMIDITY,
-                         measurement_unit=UNIT_PERCENTAGE,
+                         measurement_unit=PERCENTAGE,
                          device_method_or_property='last_sampled_humidity',
                          device=device,
                          channel=channel,
