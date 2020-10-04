@@ -31,8 +31,10 @@ CONF_RATE_LIMIT_PER_SECOND = 'rate_limit_per_second'
 CONF_RATE_LIMIT_MAX_TOKENS = 'rate_limit_max_tokens'
 
 
+# Constants
 RELAXED_SCAN_INTERVAL = 180.0
 SENSOR_POLL_INTERVAL_SECONDS = 15
+UNIT_PERCENTAGE = "%"
 
 
 def calculate_sensor_id(uuid: str, type: str, measurement_unit: str, channel: int = 0,):
