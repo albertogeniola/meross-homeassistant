@@ -194,8 +194,9 @@ async def async_unload_entry(hass, entry):
 
     _LOGGER.info("Cleaning up memory...")
     for plat in MEROSS_COMPONENTS:
-        hass.data[PLATFORM][plat].clear()
-        del hass.data[PLATFORM][plat]
+        if plat in hass.data[PLATFORM]:
+            hass.data[PLATFORM][plat].clear()
+            del hass.data[PLATFORM][plat]
     del hass.data[PLATFORM][MANAGER]
     hass.data[PLATFORM].clear()
     del hass.data[PLATFORM]
