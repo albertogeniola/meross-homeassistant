@@ -2,7 +2,7 @@
 ![Build](https://img.shields.io/azure-devops/build/albertogeniola/c4128d1b-c23c-418d-95c5-2de061954ee5/3/master?style=for-the-badge)
 
 # Meross HomeAssistant component
-A full featured Homeassistant component to drive Meross devices. 
+A full-featured Homeassistant component to drive Meross devices. 
 This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
 
 ## Version 1.0 is here!
@@ -14,13 +14,13 @@ much more robust and resilient to network disconnections.
 ### Updating from legacy versions
 In case you are updating the component from legacy versions, you need to remove the previous one and fully remove
 cached devices/entities from your HomeAssistant installation. This is necessary as the library completely changed
-the device/entitiy naming system and is unable to remove previous entities installed by old versions of the component.
+the device/entity naming system and is unable to remove previous entities installed by old versions of the component.
 Sorry about that. 
 
 ## Towards Homeassistant official integration
 My personal goal is to make this component fully compliant with Homeassistant, so 
 that it may be added as the official library to handle Meross devices. 
-However, before pushing a PullRequest to the official Homeassistant repository, I would like to share it to some users.
+However, before pushing a PullRequest to the official Homeassistant repository, I would like to share with to some users.
 In this way we can test it massively, check it for any bug and make it **robust enough** to be seamlessly integrated 
 with Homeassistant.
 
@@ -38,7 +38,7 @@ Clock on Install: when done, proceed with component setup.
 
 ### Option B: Classic installation (custom_component)
 1. Download the latest zip release archive from [here](https://github.com/albertogeniola/meross-homeassistant/releases/latest) (or clone the git master branch)
-1. Unzip/copy the meross_cloud direcotry within the `custom_components` directory of your homeassistant installation.
+1. Unzip/copy the meross_cloud directory within the `custom_components` directory of your homeassistant installation.
 The `custom_components` directory resides within your homeassistant configuration directory.
 Usually, the configuration directory is within your home (`~/.homeassistant/`).
 In other words, the configuration directory of homeassistant is where the config.yaml file is located.
@@ -80,7 +80,7 @@ In particular Bulbs, Switches, Garage Door Openers and Smart Valves/Thermostat a
 </details>
  
 ### Efficiency and adoption of Homeassistant best practices
-Since I'm aiming at making this component part of the official HA repo, I've put a lot of effort following 
+Since I'm aiming at making this component part of the official HA repo, I've put a lot of effort into following 
 HomeAssistant best practices, in particular:
 - Asynchronous functions when possible;
 - No polling: the library is event-based. It saves bandwidth and makes the UI much more reactive.
