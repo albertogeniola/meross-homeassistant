@@ -112,7 +112,7 @@ class SwitchEntityWrapper(SwitchEntity):
     def turn_off(self, **kwargs: Any) -> None:
         self.hass.async_add_executor_job(self.async_turn_off, **kwargs)
 
-    async def _async_push_notification_received(self, namespace: Namespace, data: dict):
+    async def _async_push_notification_received(self, namespace: Namespace, data: dict, device_internal_id: str):
         update_state = False
         full_update = False
 

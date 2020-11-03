@@ -58,7 +58,7 @@ class ValveEntityWrapper(ClimateEntity):
         self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
         self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].add(self.unique_id)
 
-    async def _async_push_notification_received(self, namespace: Namespace, data: dict):
+    async def _async_push_notification_received(self, namespace: Namespace, data: dict, device_internal_id: str):
         update_state = False
         full_update = False
 
