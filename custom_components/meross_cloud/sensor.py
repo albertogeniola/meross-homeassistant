@@ -13,7 +13,7 @@ except ImportError:
 from homeassistant.helpers.entity import Entity
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.electricity import ElectricityMixin
-from meross_iot.controller.subdevice import Ms100Sensor, Mts100v3Valve
+from meross_iot.controller.known.subdevice import Ms100Sensor, Mts100v3Valve
 from meross_iot.manager import MerossManager, RateLimitChecker
 from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
