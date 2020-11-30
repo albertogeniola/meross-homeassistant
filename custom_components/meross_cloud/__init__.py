@@ -121,7 +121,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
                 }
             })
 
-        manager = MerossManager(http_client=client, auto_reconnect=True)
+        manager = MerossManager(http_client=client, auto_reconnect=True, over_limit_threshold_percentage=1000)
 
         hass.data[PLATFORM] = {}
         hass.data[PLATFORM][MANAGER] = manager
