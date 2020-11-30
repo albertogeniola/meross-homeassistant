@@ -134,7 +134,7 @@ class ValveEntityWrapper(ClimateEntity):
             await self._device.async_turn_on()
 
         if hvac_mode == HVAC_MODE_HEAT:
-            await self._device.async_set_mode(ThermostatV3Mode.CUSTOM)
+            await self._device.async_set_mode(ThermostatV3Mode.HEAT)
         elif hvac_mode == HVAC_MODE_AUTO:
             await self._device.async_set_mode(ThermostatV3Mode.AUTO)
         elif hvac_mode == HVAC_MODE_COOL:
@@ -187,6 +187,8 @@ class ValveEntityWrapper(ClimateEntity):
             return HVAC_MODE_HEAT
         elif self._device.mode == ThermostatV3Mode.COOL:
             return HVAC_MODE_COOL
+        elif self._device.mode == ThermostatV3Mode.ECONOMY:
+            return HVAC_MODE_AUTO
         elif self._device.mode == ThermostatV3Mode.CUSTOM:
             if self._device.last_sampled_temperature < self._device.target_temperature:
                 return HVAC_MODE_HEAT
