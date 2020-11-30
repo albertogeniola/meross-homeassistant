@@ -1,4 +1,6 @@
 import logging
+from typing import Dict
+
 from meross_iot.controller.device import BaseDevice
 from custom_components.meross_cloud.version import MEROSS_CLOUD_VERSION
 
@@ -102,3 +104,13 @@ def invoke_method_or_property(obj, method_or_property):
         return attr()
     else:
         return attr
+
+
+def extract_subdevice_notification_data(data: dict, filter_accessor: str, subdevice_id: str) -> Dict:
+    # Operate only on relative accessor
+    context = data.get(filter_accessor)
+
+    for notification in context:
+        if notification.get('id') != subdevice_id:
+            continue
+        return notification

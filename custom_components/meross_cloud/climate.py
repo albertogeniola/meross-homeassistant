@@ -15,7 +15,8 @@ from meross_iot.model.enums import OnlineStatus, Namespace, ThermostatV3Mode
 from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, calculate_valve_id)
+from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, calculate_valve_id,
+                     extract_subdevice_notification_data)
 
 # Conditional import for switch device
 try:
@@ -70,10 +71,12 @@ class ValveEntityWrapper(ClimateEntity):
             online = OnlineStatus(int(data.get('online').get('status')))
             update_state = True
             full_update = online == OnlineStatus.ONLINE
-
         elif namespace == Namespace.HUB_ONLINE:
             _LOGGER.warning(f"Device {self.name} reported (HUB) online event.")
-            online = OnlineStatus(int(data.get('status')))
+            online_event_data = extract_subdevice_notification_data(data=data, 
+                                                                    filter_accessor='online', 
+                                                                    subdevice_id=self._device.subdevice_id)
+            online = OnlineStatus(int(online_event_data.get('status')))
             update_state = True
             full_update = online == OnlineStatus.ONLINE
         else:

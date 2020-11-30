@@ -21,7 +21,8 @@ from meross_iot.model.push.generic import GenericPushNotification
 
 from . import MEROSS_CLOUD_VERSION
 from .common import (PLATFORM, MANAGER, log_exception, HA_SENSOR, calculate_sensor_id,
-                     SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property, LIMITER)
+                     SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property, LIMITER,
+                     extract_subdevice_notification_data)
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
@@ -127,10 +128,12 @@ class GenericSensorWrapper(Entity):
             online = OnlineStatus(int(data.get('online').get('status')))
             update_state = True
             full_update = online == OnlineStatus.ONLINE
-
         elif namespace == Namespace.HUB_ONLINE:
             _LOGGER.warning(f"Device {self.name} reported (HUB) online event.")
-            online = OnlineStatus(int(data.get('status')))
+            online_event_data = extract_subdevice_notification_data(data=data,
+                                                                    filter_accessor='online',
+                                                                    subdevice_id=self._device.subdevice_id)
+            online = OnlineStatus(int(online_event_data.get('status')))
             update_state = True
             full_update = online == OnlineStatus.ONLINE
         else:
