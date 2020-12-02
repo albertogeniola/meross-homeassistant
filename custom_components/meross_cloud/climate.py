@@ -128,26 +128,26 @@ class ValveEntityWrapper(ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode: str) -> None:
         # Turn on the device if not already on
         if hvac_mode == HVAC_MODE_OFF:
-            await self._device.async_turn_off()
+            await self._device.async_turn_off(skip_rate_limits=True)
             return
         elif not self._device.is_on():
-            await self._device.async_turn_on()
+            await self._device.async_turn_on(skip_rate_limits=True)
 
         if hvac_mode == HVAC_MODE_HEAT:
-            await self._device.async_set_mode(ThermostatV3Mode.HEAT)
+            await self._device.async_set_mode(ThermostatV3Mode.HEAT, skip_rate_limits=True)
         elif hvac_mode == HVAC_MODE_AUTO:
-            await self._device.async_set_mode(ThermostatV3Mode.AUTO)
+            await self._device.async_set_mode(ThermostatV3Mode.AUTO, skip_rate_limits=True)
         elif hvac_mode == HVAC_MODE_COOL:
-            await self._device.async_set_mode(ThermostatV3Mode.COOL)
+            await self._device.async_set_mode(ThermostatV3Mode.COOL, skip_rate_limits=True)
         else:
             _LOGGER.warning(f"Unsupported mode for this device ({self.name}): {hvac_mode}")
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        await self._device.async_set_mode(ThermostatV3Mode[preset_mode])
+        await self._device.async_set_mode(ThermostatV3Mode[preset_mode], skip_rate_limits=True)
 
     async def async_set_temperature(self, **kwargs):
         target = kwargs.get('temperature')
-        await self._device.async_set_target_temperature(target)
+        await self._device.async_set_target_temperature(target, skip_rate_limits=True)
 
     # endregion
 

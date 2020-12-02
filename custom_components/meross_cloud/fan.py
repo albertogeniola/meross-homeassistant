@@ -124,18 +124,18 @@ class HumidifierEntityWrapper(FanEntity):
 
     # region Platform-specific command methods
     async def async_turn_off(self, **kwargs) -> None:
-        await self._device.async_set_mode(mode=SprayMode.OFF, channel=self._channel_id)
+        await self._device.async_set_mode(mode=SprayMode.OFF, channel=self._channel_id, skip_rate_limits=True)
 
     async def async_turn_on(self, speed: Optional[str] = None, **kwargs: Any) -> None:
         if speed is None:
             mode = SprayMode.CONTINUOUS
         else:
             mode = SprayMode[speed]
-        await self._device.async_set_mode(mode=mode, channel=self._channel_id)
+        await self._device.async_set_mode(mode=mode, channel=self._channel_id, skip_rate_limits=True)
 
     async def async_set_speed(self, speed: str) -> None:
         mode = SprayMode[speed]
-        await self._device.async_set_mode(mode=mode, channel=self._channel_id)
+        await self._device.async_set_mode(mode=mode, channel=self._channel_id, skip_rate_limits=True)
 
     def set_direction(self, direction: str) -> None:
         # Not supported

@@ -121,7 +121,10 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
                 }
             })
 
-        manager = MerossManager(http_client=client, auto_reconnect=True, over_limit_threshold_percentage=1000)
+        manager = MerossManager(http_client=client,
+                                auto_reconnect=True,
+                                over_limit_threshold_percentage=1000,
+                                burst_requests_per_second_limit=1)
 
         hass.data[PLATFORM] = {}
         hass.data[PLATFORM][MANAGER] = manager
@@ -144,12 +147,6 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
                 hass.config_entries.async_forward_entry_setup(config_entry, platform)
             )
 
-        """
-        async def trigger_discovery(time):
-            await run_discovery(manager=manager)
-
-        async_track_time_interval(hass=hass, action=trigger_discovery, interval=timedelta(seconds=30))
-        """
         return True
 
     except TooManyTokensException:

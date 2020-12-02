@@ -101,8 +101,6 @@ class GenericSensorWrapper(Entity):
         self._device_method_or_property = device_method_or_property
         self._measurement_unit = measurement_unit
 
-        # Each Meross Device might expose m_sensor_async_updateore than 1 sensor. In this case, we cannot rely only on the
-        # uuid value to uniquely identify a sensor wrapper.
         self._id = calculate_sensor_id(uuid=device.internal_id, type=sensor_class, measurement_unit=measurement_unit, channel=channel)
         self._entity_name = "{} ({}) - {} ({}, {})".format(device.name, device.type, f"{sensor_class} sensor", measurement_unit, channel)
 

@@ -101,10 +101,10 @@ class SwitchEntityWrapper(SwitchEntity):
         return self._device.is_on(channel=self._channel_id)
 
     async def async_turn_off(self, **kwargs) -> None:
-        await self._device.async_turn_off(channel=self._channel_id)
+        await self._device.async_turn_off(channel=self._channel_id, skip_rate_limits=True)
 
     async def async_turn_on(self, **kwargs) -> None:
-        await self._device.async_turn_on(channel=self._channel_id)
+        await self._device.async_turn_on(channel=self._channel_id, skip_rate_limits=True)
 
     def turn_on(self, **kwargs: Any) -> None:
         self.hass.async_add_executor_job(self.async_turn_on, **kwargs)

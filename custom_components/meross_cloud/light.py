@@ -127,36 +127,36 @@ class LightEntityWrapper(LightEntity):
 
     # region Platform-specific command methods
     async def async_turn_off(self, **kwargs) -> None:
-        await self._device.async_turn_off(channel=self._channel_id)
+        await self._device.async_turn_off(channel=self._channel_id, skip_rate_limits=True)
 
     async def async_turn_on(self, **kwargs) -> None:
         if not self.is_on:
-            await self._device.async_turn_on(channel=self._channel_id)
+            await self._device.async_turn_on(channel=self._channel_id, skip_rate_limits=True)
 
         # Color is taken from either of these 2 values, but not both.
         if ATTR_HS_COLOR in kwargs:
             h, s = kwargs[ATTR_HS_COLOR]
             rgb = color_util.color_hsv_to_RGB(h, s, 100)
             _LOGGER.debug("color change: rgb=%r -- h=%r s=%r" % (rgb, h, s))
-            await self._device.async_set_light_color(channel=self._channel_id, rgb=rgb, onoff=True)
+            await self._device.async_set_light_color(channel=self._channel_id, rgb=rgb, onoff=True, skip_rate_limits=True)
         elif ATTR_COLOR_TEMP in kwargs:
             mired = kwargs[ATTR_COLOR_TEMP]
             norm_value = (mired - self.min_mireds) / (self.max_mireds - self.min_mireds)
             temperature = 100 - (norm_value * 100)
             _LOGGER.debug("temperature change: mired=%r meross=%r" % (mired, temperature))
-            await self._device.async_set_light_color(channel=self._channel_id, temperature=temperature)
+            await self._device.async_set_light_color(channel=self._channel_id, temperature=temperature, skip_rate_limits=True)
 
         # Brightness must always be set, so take previous luminance if not explicitly set now.
         if ATTR_BRIGHTNESS in kwargs:
             brightness = kwargs[ATTR_BRIGHTNESS] * 100 / 255
             _LOGGER.debug("brightness change: %r" % brightness)
-            await self._device.async_set_light_color(channel=self._channel_id, luminance=brightness)
+            await self._device.async_set_light_color(channel=self._channel_id, luminance=brightness, skip_rate_limits=True)
 
     def turn_on(self, **kwargs: Any) -> None:
-        self.hass.async_add_executor_job(self.async_turn_on, **kwargs)
+        self.hass.async_add_executor_job(self.async_turn_on, **kwargs, skip_rate_limits=True)
 
     def turn_off(self, **kwargs: Any) -> None:
-        self.hass.async_add_executor_job(self.async_turn_off, **kwargs)
+        self.hass.async_add_executor_job(self.async_turn_off, **kwargs, skip_rate_limits=True)
     # endregion
 
     # region Platform specific properties

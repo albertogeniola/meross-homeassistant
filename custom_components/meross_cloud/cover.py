@@ -123,10 +123,10 @@ class CoverEntityWrapper(CoverEntity):
 
     # region Platform-specific command methods
     async def async_close_cover(self, **kwargs):
-        await self._device.async_close(channel=self._channel_id)
+        await self._device.async_close(channel=self._channel_id, skip_rate_limits=True)
 
     async def async_open_cover(self, **kwargs):
-        await self._device.async_open(channel=self._channel_id)
+        await self._device.async_open(channel=self._channel_id, skip_rate_limits=True)
 
     def open_cover(self, **kwargs: Any) -> None:
         self.hass.async_add_executor_job(self.async_open_cover, **kwargs)
