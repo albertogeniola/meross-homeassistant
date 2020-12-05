@@ -34,7 +34,7 @@ On the other hand, if you don't have HACS installed or if you don't plan to inst
 
 ### Option A: Installing via HACS
 If you have HACS, well, it's a piece of cake! Just search for "Meross" (Full name is Meross Cloud IoT) in the default repository of HACS and it'll show up!
-Clock on Install: when done, proceed with component setup.
+Click on Install: when done, proceed with component setup.
 
 ### Option B: Classic installation (custom_component)
 1. Download the latest zip release archive from [here](https://github.com/albertogeniola/meross-homeassistant/releases/latest) (or clone the git master branch)
