@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# If the DB does not exist, create it from scratch
+if [[ -f /data/db.db ]]; then
+  echo "DB already exists"
+else
+  echo "DB does not exist. Creating..."
+  sqlite3 /data/db.db < /opt/meross_api/schema.sql
+fi
+
+echo "/data containns the following:"
+ls -la /data
+
 # Generate mosquitto certificates
 pushd /etc/mosquitto/certs
 openssl genrsa -des3 -out ca.key -passout pass:notasecret 2048

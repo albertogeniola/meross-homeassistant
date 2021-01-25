@@ -1,0 +1,15 @@
+{
+  "name": "Meross Offline Broker",
+  "version": "1",
+  "slug": "meross_offline_broker",
+  "description": "Meross offline broker addon",
+  "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
+  "startup": "application",
+  "boot": "auto",
+  "options": {},
+  "schema": {},
+  "ports": {
+    "2001/tcp": 2001,
+    "2002/tcp": 2002
+  }
+}
