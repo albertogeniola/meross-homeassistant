@@ -1,23 +1,58 @@
 #!/bin/bash
+DB_PATH=/data/database.db
+DB_SCHEMA_PATH=/opt/meross_api/schema.sql
+MQTT_CERTS_FOLDER_PATH=/data/mqtt/certs
+MQTT_CA_KEY_PATH="$MQTT_CERTS_FOLDER_PATH/ca.key"
+MQTT_CA_CRT_PATH="$MQTT_CERTS_FOLDER_PATH/ca.crt"
+MQTT_SERVER_KEY_PATH="$MQTT_CERTS_FOLDER_PATH/server.key"
+MQTT_SERVER_CRT_PATH="$MQTT_CERTS_FOLDER_PATH/server.crt"
+MQTT_CA_KEY_SECRET=notasecret
+MQTT_CA_CONFIG_PATH=/etc/mosquitto/certs/ca.conf
+MQTT_SERVER_CONFIG_PATH=/etc/mosquitto/certs/server.conf
+MQTT_MOSQUITTO_CONF_PATH=/etc/mosquitto/mosquitto.conf
+
 
 # If the DB does not exist, create it from scratch
-if [[ -f /data/db.db ]]; then
-  echo "DB already exists"
+# TODO: remove the following
+rm $DB_PATH
+
+echo "Checking for local DB in $DB_PATH"
+if [[ -f $DB_PATH ]]; then
+  echo "DB already exists."
 else
   echo "DB does not exist. Creating..."
-  sqlite3 /data/db.db < /opt/meross_api/schema.sql
+  sqlite3 $DB_PATH < $DB_SCHEMA_PATH
+  if [[ $? -ne 0 ]]; then
+    echo "Error when creating the database file. Aborting."
+    exit 1
+  else
+    echo "DB created correctly"
+  fi
 fi
 
-echo "/data containns the following:"
-ls -la /data
-
 # Generate mosquitto certificates
-pushd /etc/mosquitto/certs
-openssl genrsa -des3 -out ca.key -passout pass:notasecret 2048
-openssl req -new -x509 -days 3600 -key ca.key -out ca.crt -passin pass:notasecret -config ca.conf
-openssl genrsa -out server.key 2048
-openssl req -new -out server.csr -key server.key -config server.conf
-openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 3600 -passin pass:notasecret
+echo "Checking for RSA keys..."
+if [[ ! -d $MQTT_CERTS_FOLDER_PATH ]]; then
+  mkdir -p $MQTT_CERTS_FOLDER_PATH
+fi
+if [[ ! -f $MQTT_CA_KEY_PATH ]] || [[ ! -f $MQTT_CA_CRT_PATH ]] || [[ ! -f $MQTT_SERVER_KEY_PATH ]] || [[ ! -f $MQTT_SERVER_CRT_PATH ]]; then
+  echo "One or more certificate files are not present on the system. Generating certificates from scratch..."
+  rm -R $MQTT_CERTS_FOLDER_PATH
+  mkdir -p $MQTT_CERTS_FOLDER_PATHmkdir -p $MQTT_CERTS_FOLDER_PATH
+else
+  echo "All certificate files seems present."
+fi
+
+openssl genrsa -des3 -out $MQTT_CA_KEY_PATH -passout pass:$MQTT_CA_KEY_SECRET 2048
+openssl req -new -x509 -days 3600 -key $MQTT_CA_KEY_PATH -out $MQTT_CA_CRT_PATH -passin pass:$MQTT_CA_KEY_SECRET -config $MQTT_CA_CONFIG_PATH
+openssl genrsa -out $MQTT_SERVER_KEY_PATH 2048
+openssl req -new -out /tmp/server.csr -key $MQTT_SERVER_KEY_PATH -config $MQTT_SERVER_CONFIG_PATH
+openssl x509 -req -in /tmp/server.csr -CA $MQTT_CA_CRT_PATH -CAkey $MQTT_CA_KEY_PATH -CAcreateserial -out $MQTT_SERVER_CRT_PATH -days 3600 -passin pass:$MQTT_CA_KEY_SECRET
+
+# Start flask
+pushd /opt/meross_api
+export FLASK_APP=http_api.py
+python3 -m flask run --host 0.0.0.0 --port 2002 &
 popd
 
-mosquitto -c /etc/mosquitto/mosquitto.conf
+mosquitto -c $MQTT_MOSQUITTO_CONF_PATH

@@ -62,6 +62,48 @@ def close_connection(exception):
 def handle_exception(e):
     return make_api_response(data=None, api_status=e.error_code)
 
+@app.route('/_devs_/auth', methods=['POST'])
+def device_login():
+    username = request.values.get('username')
+    password = request.values.get('password')
+    topic = request.values.get('topic')
+    acc = request.values.get('acc')        
+    
+    # Device authentication basically is basically a "binding" to a given user id
+    # Username => device mac addresss
+    # Password => userid_md5(mac+key)
+    mac = username
+    userid, md5hash = password.split("_")
+
+    # Lookup key by the given username...
+    try:
+        userid=int(userid)
+    except ValueError as e:
+        _LOGGER.error(f"UserId \"{userid}\" is invalid.")
+        return "ko", 400
+
+    userrow = DbHelper.get_db().get_user_by_id(userid=userid)
+    if userrow is None:
+        _LOGGER.error(f"UserId \"{userid}\" does not exist.")
+        return "ko", 401
+
+    email = userrow[0]
+    userid = userrow[1]
+    key = userrow[3]
+    
+    expected_md5hash = md5()
+    expected_md5hash.update(f"{mac}{key}".encode())
+    expected_digest = expected_md5hash.hexdigest()
+
+    _LOGGER.debug(f"Login attempt from \"{mac}\", provided hash \"{md5hash}\", expected \"{expected_digest}\".")
+
+    if expected_digest == md5hash:
+        DbHelper.get_db().associate_user_device(userid=userid, mac=mac)
+        _LOGGER.info(f"Device login attempt succeeded. Device with mac \"{mac}\" has been associated to userid \"{userid}\"")
+        return "ok", 200
+    else:
+        _LOGGER.warning(f"Device login attempt failed (device with mac \"{mac}\", userid \"{userid}\")")
+        return "ko", 403
 
 @app.route('/v1/Auth/Login', methods=['POST'])
 def login():
@@ -105,4 +147,4 @@ def make_api_response(data: Optional[dict], api_status: ErrorCodes = ErrorCodes.
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0", port=2002)
+    app.run(debug=True, host="127.0.0.1", port=2002)

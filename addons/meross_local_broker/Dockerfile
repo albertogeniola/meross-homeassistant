@@ -15,6 +15,8 @@ RUN apk add --no-cache \
         openssl \
         pwgen \
         socat \
+        python3 \
+        py3-pip \
     && apk add --no-cache --virtual .build-dependencies \
         build-base \
         curl-dev \
@@ -22,6 +24,7 @@ RUN apk add --no-cache \
         mosquitto-dev \
         openssl-dev \
     \
+    && pip3 install flask \
     && git clone --depth 1 \
         https://github.com/pvizeli/mosquitto-auth-plug \
     && cd mosquitto-auth-plug \
@@ -32,7 +35,7 @@ RUN apk add --no-cache \
     sed -i "s/BACKEND_REDIS ?= no/BACKEND_REDIS = no/" config.mk && \
     sed -i "s/BACKEND_POSTGRES ?= no/BACKEND_POSTGRES = no/" config.mk && \
     sed -i "s/BACKEND_LDAP ?= no/BACKEND_LDAP = no/" config.mk && \
-    sed -i "s/BACKEND_HTTP ?= no/BACKEND_HTTP = no/" config.mk && \
+    sed -i "s/BACKEND_HTTP ?= no/BACKEND_HTTP = yes/" config.mk && \
     sed -i "s/BACKEND_JWT ?= no/BACKEND_JWT = no/" config.mk && \
     sed -i "s/BACKEND_MONGO ?= no/BACKEND_MONGO = no/" config.mk && \
     sed -i "s/BACKEND_FILES ?= no/BACKEND_FILES = no/" config.mk && \
