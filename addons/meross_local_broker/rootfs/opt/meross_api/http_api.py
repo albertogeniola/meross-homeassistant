@@ -12,6 +12,7 @@ from flask import g
 from codes import ErrorCodes
 from db_helper import DbHelper
 from model.exception import HttpApiError
+import re
 
 
 _LOG_URL = "/v1/log/user"
@@ -19,19 +20,35 @@ _DEV_LIST = "/v1/Device/devList"
 _HUB_DUBDEV_LIST = "/v1/Hub/getSubDevices"
 _LOGOUT_URL = "/v1/Profile/logout"
 
+_DEV_PASSWORD_RE = re.compile("^[0-9]+\_[a-zA-Z0-9]+$")
+
 _LOGGER = logging.getLogger(__name__)
 app = Flask(__name__)
 
 
-def _user_login(email, password) -> Tuple[str, str, str, str]:
+def _user_login(email: str, password: str) -> Tuple[str, str, str, str]:
     # Check user-password creds
-    data = DbHelper.get_db().get_user_by_email_password(email=email, password=password)
+    # email, userid, salt, password, mqtt_key
+    data = DbHelper.get_db().get_user_by_email(email=email)
     if data is None:
-        raise HttpApiError(ErrorCodes.CODE_WRONG_CREDENTIALS)
-
+        raise HttpApiError(ErrorCodes.CODE_UNEXISTING_ACCOUNT)
+    
     email = data[0]
     userid = data[1]
-    key = data[3]
+    salt = data[2]
+    dbpwd = data[3]
+    mqtt_key = data[4]
+
+    # Get the salt, compute the hashed password and compare it with the one stored in the db
+    clearsaltedpwd = f"{salt}{password}"
+    hashed_pass = sha256()
+    hashed_pass.update(clearsaltedpwd.encode('utf8'))
+    computed_hashed_password = hashed_pass.hexdigest()
+
+    #_LOGGER.debug(f"Computed HASH: {computed_hashed_password}, expected HASH: {dbpwd} ")
+
+    if computed_hashed_password != dbpwd:
+        raise HttpApiError(ErrorCodes.CODE_WRONG_CREDENTIALS)
 
     # If ok, generate an HTTP_TOKEN
     hash = sha256()
@@ -40,7 +57,7 @@ def _user_login(email, password) -> Tuple[str, str, str, str]:
 
     # Store the new token
     DbHelper.get_db().store_new_user_token(userid, token)
-    return token, key, userid, email
+    return token, mqtt_key, userid, email
 
 
 def verify_message_signature(signature: str, timestamp_millis: str, nonce: str, b64params: str):
@@ -62,18 +79,26 @@ def close_connection(exception):
 def handle_exception(e):
     return make_api_response(data=None, api_status=e.error_code)
 
+
 @app.route('/_devs_/auth', methods=['POST'])
 def device_login():
     username = request.values.get('username')
     password = request.values.get('password')
     topic = request.values.get('topic')
     acc = request.values.get('acc')        
-    
+
     # Device authentication basically is basically a "binding" to a given user id
     # Username => device mac addresss
     # Password => userid_md5(mac+key)
     mac = username
-    userid, md5hash = password.split("_")
+    match = _DEV_PASSWORD_RE.match(password)
+    if match is None:
+        _LOGGER.error("Provided device password does not comply with expected format.")
+        _LOGGER.debug("Provided password: %s", password)
+        return "ko", 400
+    
+    userid = match.group(1)
+    md5hash = match.group(2)
 
     # Lookup key by the given username...
     try:
@@ -132,10 +157,11 @@ def login():
     token, key, userid, email = _user_login(email, password)
     _LOGGER.info("User: %s successfully logged in" % email)
     data = {
-        "token": token,
-        "key": key,
-        "userid": userid,
-        "email": email}
+        "token": str(token),
+        "key": str(key),
+        "userid": str(userid),
+        "email": str(email)
+    }
     return make_api_response(data=data)
 
 

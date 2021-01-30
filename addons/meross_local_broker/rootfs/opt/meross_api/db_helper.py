@@ -28,11 +28,8 @@ class DbHelper:
         self._db.execute("INSERT INTO devices(mac, owner_userid) VALUES(?,?) ON CONFLICT(owner_userid) DO UPDATE SET owner_userid=excluded.owner_userid", (mac, userid))
         self._db.commit()
 
-    def get_user_by_email_password(self, email: str, password: str):
-        hashed_pass = sha256()
-        hashed_pass.update(password.encode('utf8'))
-        hashed_pass.hexdigest()
-        results = self._query_db("SELECT email, userid, password, mqtt_key FROM users WHERE email=? and password=?", (email, hashed_pass.hexdigest()), one=True)
+    def get_user_by_email(self, email: str):
+        results = self._query_db("SELECT email, userid, salt, password, mqtt_key FROM users WHERE email=?", (email,), one=True)
         return results
 
     def get_user_by_id(self, userid: int):

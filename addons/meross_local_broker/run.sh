@@ -1,4 +1,5 @@
 #!/bin/bash
+CONFIG_PATH=/data/options.json
 DB_PATH=/data/database.db
 DB_SCHEMA_PATH=/opt/meross_api/schema.sql
 MQTT_CERTS_FOLDER_PATH=/data/mqtt/certs
@@ -11,11 +12,16 @@ MQTT_CA_CONFIG_PATH=/etc/mosquitto/certs/ca.conf
 MQTT_SERVER_CONFIG_PATH=/etc/mosquitto/certs/server.conf
 MQTT_MOSQUITTO_CONF_PATH=/etc/mosquitto/mosquitto.conf
 
+# If the user has asked to reinit the db, remove it
+REINIT_DB=$(jq "if .resetdb then .resetdb else 0 end" $CONFIG_PATH)
+if [[ $REINIT_DB -eq 1 ]]; then
+  if [[ -f $DB_PATH ]]; then
+    echo "User configuration requires DB reinitialization. Removing previous DB data."
+    rm $DB_PATH
+  fi
+fi
 
 # If the DB does not exist, create it from scratch
-# TODO: remove the following
-rm $DB_PATH
-
 echo "Checking for local DB in $DB_PATH"
 if [[ -f $DB_PATH ]]; then
   echo "DB already exists."
@@ -29,6 +35,15 @@ else
     echo "DB created correctly"
   fi
 fi
+
+# Initializing DB
+ADMIN_EMAIL=$(jq --raw-output ".email" $CONFIG_PATH)
+ADMIN_PASSWORD=$(jq --raw-output ".password" $CONFIG_PATH)
+RANDOM_SALT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
+RANDOM_MQTT_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
+HASHED_PASS=$(printf "$RANDOM_SALT$ADMIN_PASSWORD" | sha256sum | head -c 64)
+sqlite3 $DB_PATH "INSERT INTO users(email,userid,salt,password,mqtt_key) VALUES(\"$ADMIN_EMAIL\",0,\"$RANDOM_SALT\", \"$HASHED_PASS\", \"$RANDOM_MQTT_KEY\") ON CONFLICT(email) DO UPDATE SET password=\"$HASHED_PASS\", salt=\"$RANDOM_SALT\";"
+
 
 # Generate mosquitto certificates
 echo "Checking for RSA keys..."
