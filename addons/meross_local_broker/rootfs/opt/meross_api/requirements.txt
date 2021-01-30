@@ -1,2 +1,2 @@
 Flask==1.1.2
-sqlite3
+zeroconf==0.28.8

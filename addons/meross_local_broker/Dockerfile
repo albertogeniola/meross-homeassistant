@@ -25,6 +25,7 @@ RUN apk add --no-cache \
         openssl-dev \
     \
     && pip3 install flask \
+    && pip3 install zeroconf \
     && git clone --depth 1 \
         https://github.com/pvizeli/mosquitto-auth-plug \
     && cd mosquitto-auth-plug \
@@ -51,9 +52,7 @@ RUN apk add --no-cache \
 
 WORKDIR /
 COPY rootfs /
+RUN chmod +x /usr/local/bin/meross.sh
 
-COPY run.sh /app/run.sh
-RUN chmod +x /app/run.sh
-ENTRYPOINT ["/app/run.sh"]
 
 LABEL io.hass.version="VERSION" io.hass.type="addon" io.hass.arch="armhf|aarch64|i386|amd64"

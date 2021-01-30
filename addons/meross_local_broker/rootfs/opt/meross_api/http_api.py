@@ -173,4 +173,5 @@ def make_api_response(data: Optional[dict], api_status: ErrorCodes = ErrorCodes.
 
 
 if __name__ == '__main__':
+    # Start flask
     app.run(debug=True, host="127.0.0.1", port=2002)
