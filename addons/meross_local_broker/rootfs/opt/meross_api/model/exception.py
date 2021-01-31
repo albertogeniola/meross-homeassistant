@@ -11,6 +11,10 @@ class HttpApiError(AuthenticatedPostException):
         return self._error_code
 
 
+class BadRequestError(Exception):
+    def __init__(self, msg: str = None):
+        self.msg = msg
+
 class BadLoginException(Exception):
     pass
 

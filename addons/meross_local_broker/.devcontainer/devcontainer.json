@@ -18,6 +18,9 @@
 	"mounts": [
 		// Cache docker images between devcontainer rebuilds (and share between devcontainers)
 		"source=vsc-hassio-docker,target=/var/lib/docker,type=volume"
+	],
+	"extensions": [
+		"alexcvzz.vscode-sqlite"
 	]
 
 	// Post-create command to initialize the workspace.  For example, for a node.js add-on you may want:

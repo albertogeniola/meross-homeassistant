@@ -11,7 +11,7 @@ import logging
 from flask import g
 from codes import ErrorCodes
 from db_helper import DbHelper
-from model.exception import HttpApiError
+from model.exception import HttpApiError, BadRequestError
 import re
 
 
@@ -20,7 +20,7 @@ _DEV_LIST = "/v1/Device/devList"
 _HUB_DUBDEV_LIST = "/v1/Hub/getSubDevices"
 _LOGOUT_URL = "/v1/Profile/logout"
 
-_DEV_PASSWORD_RE = re.compile("^[0-9]+\_[a-zA-Z0-9]+$")
+_DEV_PASSWORD_RE = re.compile("^([0-9]+)\_([a-zA-Z0-9]+)$")
 
 _LOGGER = logging.getLogger(__name__)
 app = Flask(__name__)
@@ -74,10 +74,15 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
+@app.errorhandler(BadRequestError)
+def handle_exception(e):
+    _LOGGER.error("BadRequest error: %s", e.msg)
+    return make_api_response(data=None, info=e.msg, api_status=ErrorCodes.CODE_GENERIC_ERROR, status_code=400)
 
 @app.errorhandler(HttpApiError)
 def handle_exception(e):
-    return make_api_response(data=None, api_status=e.error_code)
+    _LOGGER.error("HttpApiError: %s", e.error_code.name)
+    return make_api_response(data=None, info=e.error_code.name, api_status=e.error_code)
 
 
 @app.route('/_devs_/auth', methods=['POST'])
@@ -132,22 +137,23 @@ def device_login():
 
 @app.route('/v1/Auth/Login', methods=['POST'])
 def login():
-    params = request.values.get('params')
-    signature = request.values.get('sign')
-    timestamp = request.values.get('timestamp')
-    nonce = request.values.get('nonce')
+    j = request.get_json()
+    params = j.get('params')
+    signature = j.get('sign')
+    timestamp = j.get('timestamp')
+    nonce = j.get('nonce')
 
     if params is None:
-        raise HttpApiError("Empty params payload")
+        raise BadRequestError("Empty params payload")
     if signature is None:
-        raise HttpApiError("Missing signature")
+        raise BadRequestError("Missing signature")
     if timestamp is None:
-        raise HttpApiError("Missing timestamp")
+        raise BadRequestError("Missing timestamp")
     if nonce is None:
-        raise HttpApiError("Missing nonce")
+        raise BadRequestError("Missing nonce")
 
     if not verify_message_signature(signature, timestamp, nonce, params):
-        raise Exception("Key verification failed")
+        raise BadRequestError("Key verification failed")
 
     jsondata = base64.standard_b64decode(params)
     payload = json.loads(jsondata)
@@ -165,13 +171,14 @@ def login():
     return make_api_response(data=data)
 
 
-def make_api_response(data: Optional[dict], api_status: ErrorCodes = ErrorCodes.CODE_NO_ERROR, status_code: int = 200):
+def make_api_response(data: Optional[dict], api_status: ErrorCodes = ErrorCodes.CODE_NO_ERROR, info: str = None, status_code: int = 200):
     return jsonify({
         "apiStatus": api_status.value,
+        "info": info,
         "data": data
     }), status_code
 
 
 if __name__ == '__main__':
     # Start flask
-    app.run(debug=True, host="127.0.0.1", port=2002)
+    app.run(debug=True, host="0.0.0.0", port=2002)
