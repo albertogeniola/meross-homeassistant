@@ -18,5 +18,11 @@
   "ports": {
     "2001/tcp": 2001,
     "2002/tcp": 2002
-  }
+  },
+  "ports_description": {
+    "2001/tcp": "Meross LAN-LOCAL MQTT endpoint",
+    "2002/tcp": "Meross LAN-LOCAL HTTP API endpoint"
+  },
+  "privileged": [],
+  "host_network": false
 }

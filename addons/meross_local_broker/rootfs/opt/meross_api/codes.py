@@ -38,3 +38,5 @@ class ErrorCodes(Enum):
 
     CODE_TOO_MANY_TOKENS = 1301
     """Too many tokens have been issued"""
+
+    CODE_GENERIC_ERROR = 5000
