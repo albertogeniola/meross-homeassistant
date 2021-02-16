@@ -24,8 +24,8 @@ class DbHelper:
         self._db.execute("INSERT INTO http_tokens(token, userid) VALUES(?,?)", (token, userid))
         self._db.commit()
 
-    def associate_user_device(userid: int, mac: str):
-        self._db.execute("INSERT INTO devices(mac, owner_userid) VALUES(?,?) ON CONFLICT(owner_userid) DO UPDATE SET owner_userid=excluded.owner_userid", (mac, userid))
+    def associate_user_device(self, userid: int, mac: str):
+        self._db.execute("INSERT INTO devices(mac, owner_userid) VALUES(?,?) ON CONFLICT(mac) DO UPDATE SET owner_userid=excluded.owner_userid", (mac, userid))
         self._db.commit()
 
     def get_user_by_email(self, email: str):

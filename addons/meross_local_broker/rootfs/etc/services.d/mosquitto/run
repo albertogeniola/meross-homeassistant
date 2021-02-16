@@ -1,0 +1,6 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Start mosquitto service
+# ==============================================================================
+bashio::log.info "Starting the Mosquitto daemon"
+exec /usr/local/bin/mosquitto.sh

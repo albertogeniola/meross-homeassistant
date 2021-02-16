@@ -18,9 +18,6 @@ RUN apk add --no-cache \
         socat \
         python3 \
         py3-pip \
-        avahi \
-        avahi-tools \
-        dbus \
     && apk add --no-cache --virtual .build-dependencies \
         build-base \
         curl-dev \
@@ -56,8 +53,7 @@ RUN apk add --no-cache \
 
 WORKDIR /
 COPY rootfs /
-RUN chmod +x /usr/local/bin/discovery.sh
 RUN chmod +x /usr/local/bin/meross.sh
-RUN chmod +x /usr/local/bin/mosquitto.sh
+RUN chmod +x /usr/local/bin/mosquitowner_useridto.sh
 
 LABEL io.hass.version="VERSION" io.hass.type="addon" io.hass.arch="armhf|aarch64|i386|amd64"
