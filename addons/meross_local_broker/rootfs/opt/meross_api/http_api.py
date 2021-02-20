@@ -74,15 +74,29 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
+
 @app.errorhandler(BadRequestError)
 def handle_exception(e):
     _LOGGER.error("BadRequest error: %s", e.msg)
     return make_api_response(data=None, info=e.msg, api_status=ErrorCodes.CODE_GENERIC_ERROR, status_code=400)
 
+
 @app.errorhandler(HttpApiError)
 def handle_exception(e):
     _LOGGER.error("HttpApiError: %s", e.error_code.name)
     return make_api_response(data=None, info=e.error_code.name, api_status=e.error_code)
+
+
+@app.route('/_devs_/acl', methods=['POST'])
+def device_acl():
+    # For now, just return 200: allow connection from anyone
+    return "ok", 200
+
+
+@app.route('/_devs_/superuser', methods=['POST'])
+def superuser_acl():
+    # For now, just return 403
+    return "ko", 403
 
 
 @app.route('/_devs_/auth', methods=['POST'])
@@ -134,6 +148,7 @@ def device_login():
     else:
         _LOGGER.warning(f"Device login attempt failed (device with mac \"{mac}\", userid \"{userid}\")")
         return "ko", 403
+
 
 @app.route('/v1/Auth/Login', methods=['POST'])
 def login():

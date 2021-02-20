@@ -54,6 +54,6 @@ RUN apk add --no-cache \
 WORKDIR /
 COPY rootfs /
 RUN chmod +x /usr/local/bin/meross.sh
-RUN chmod +x /usr/local/bin/mosquitowner_useridto.sh
+RUN chmod +x /usr/local/bin/mosquitto.sh
 
 LABEL io.hass.version="VERSION" io.hass.type="addon" io.hass.arch="armhf|aarch64|i386|amd64"
