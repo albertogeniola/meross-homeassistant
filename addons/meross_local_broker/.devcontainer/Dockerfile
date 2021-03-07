@@ -14,7 +14,8 @@ RUN sed -i -e 's/http:\/\/archive\.ubuntu\.com\/ubuntu\//mirror:\/\/mirrors\.ubu
 
 # Install docker, jq, socat
 # https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+        apt-get install -y --no-install-recommends \
         apt-transport-https \
         ca-certificates \
         curl \

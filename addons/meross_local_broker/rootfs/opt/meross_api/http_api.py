@@ -1,18 +1,17 @@
-import base64
-import sqlite3
-from typing import Tuple, Optional
-import json
-import uuid
-from hashlib import sha256
-from constants import _SECRET
-from flask import Flask, request, jsonify
-from hashlib import md5
 import logging
+import re
+from hashlib import md5
+
+from flask import Flask, request
 from flask import g
+
+from blueprints.auth import auth_blueprint
+from blueprints.profile import profile_blueprint
 from codes import ErrorCodes
 from db_helper import DbHelper
+from messaging import make_api_response
 from model.exception import HttpApiError, BadRequestError
-import re
+from flask.logging import default_handler
 
 
 _LOG_URL = "/v1/log/user"
@@ -20,52 +19,23 @@ _DEV_LIST = "/v1/Device/devList"
 _HUB_DUBDEV_LIST = "/v1/Hub/getSubDevices"
 _LOGOUT_URL = "/v1/Profile/logout"
 
+
 _DEV_PASSWORD_RE = re.compile("^([0-9]+)\_([a-zA-Z0-9]+)$")
 
 _LOGGER = logging.getLogger(__name__)
+
 app = Flask(__name__)
+app.register_blueprint(auth_blueprint, url_prefix="/v1/Auth")
+app.register_blueprint(profile_blueprint, url_prefix="/v1/Profile")
+#app.register_blueprint(device_bludprint)
+#app.register_blueprint(hub_blueprint)
 
 
-def _user_login(email: str, password: str) -> Tuple[str, str, str, str]:
-    # Check user-password creds
-    # email, userid, salt, password, mqtt_key
-    data = DbHelper.get_db().get_user_by_email(email=email)
-    if data is None:
-        raise HttpApiError(ErrorCodes.CODE_UNEXISTING_ACCOUNT)
-    
-    email = data[0]
-    userid = data[1]
-    salt = data[2]
-    dbpwd = data[3]
-    mqtt_key = data[4]
+root = logging.getLogger()
+root.addHandler(default_handler)
 
-    # Get the salt, compute the hashed password and compare it with the one stored in the db
-    clearsaltedpwd = f"{salt}{password}"
-    hashed_pass = sha256()
-    hashed_pass.update(clearsaltedpwd.encode('utf8'))
-    computed_hashed_password = hashed_pass.hexdigest()
-
-    #_LOGGER.debug(f"Computed HASH: {computed_hashed_password}, expected HASH: {dbpwd} ")
-
-    if computed_hashed_password != dbpwd:
-        raise HttpApiError(ErrorCodes.CODE_WRONG_CREDENTIALS)
-
-    # If ok, generate an HTTP_TOKEN
-    hash = sha256()
-    hash.update(uuid.uuid4().bytes)
-    token = hash.hexdigest()
-
-    # Store the new token
-    DbHelper.get_db().store_new_user_token(userid, token)
-    return token, mqtt_key, userid, email
-
-
-def verify_message_signature(signature: str, timestamp_millis: str, nonce: str, b64params: str):
-    message_hash = md5()
-    datatosign = '%s%s%s%s' % (_SECRET, timestamp_millis, nonce, b64params)
-    message_hash.update(datatosign.encode("utf8"))
-    md5hash = message_hash.hexdigest()
-    return md5hash == signature
+# TODO: make this configurable
+root.setLevel(logging.DEBUG)
 
 
 @app.teardown_appcontext
@@ -75,14 +45,20 @@ def close_connection(exception):
         db.close()
 
 
-@app.errorhandler(BadRequestError)
+@app.errorhandler(Exception)
 def handle_exception(e):
-    _LOGGER.error("BadRequest error: %s", e.msg)
+    _LOGGER.exception("Uncaught exception: %s", str(e))
+    return make_api_response(data=None, info=str(e), api_status=ErrorCodes.CODE_GENERIC_ERROR, status_code=500)
+
+
+@app.errorhandler(BadRequestError)
+def handle_bad_exception(e):
+    _LOGGER.exception("BadRequest error: %s", e.msg)
     return make_api_response(data=None, info=e.msg, api_status=ErrorCodes.CODE_GENERIC_ERROR, status_code=400)
 
 
 @app.errorhandler(HttpApiError)
-def handle_exception(e):
+def handle_http_exception(e):
     _LOGGER.error("HttpApiError: %s", e.error_code.name)
     return make_api_response(data=None, info=e.error_code.name, api_status=e.error_code)
 
@@ -150,50 +126,6 @@ def device_login():
         return "ko", 403
 
 
-@app.route('/v1/Auth/Login', methods=['POST'])
-def login():
-    j = request.get_json()
-    params = j.get('params')
-    signature = j.get('sign')
-    timestamp = j.get('timestamp')
-    nonce = j.get('nonce')
-
-    if params is None:
-        raise BadRequestError("Empty params payload")
-    if signature is None:
-        raise BadRequestError("Missing signature")
-    if timestamp is None:
-        raise BadRequestError("Missing timestamp")
-    if nonce is None:
-        raise BadRequestError("Missing nonce")
-
-    if not verify_message_signature(signature, timestamp, nonce, params):
-        raise BadRequestError("Key verification failed")
-
-    jsondata = base64.standard_b64decode(params)
-    payload = json.loads(jsondata)
-    email = payload.get("email")
-    password = payload.get("password")
-
-    token, key, userid, email = _user_login(email, password)
-    _LOGGER.info("User: %s successfully logged in" % email)
-    data = {
-        "token": str(token),
-        "key": str(key),
-        "userid": str(userid),
-        "email": str(email)
-    }
-    return make_api_response(data=data)
-
-
-def make_api_response(data: Optional[dict], api_status: ErrorCodes = ErrorCodes.CODE_NO_ERROR, info: str = None, status_code: int = 200):
-    return jsonify({
-        "apiStatus": api_status.value,
-        "info": info,
-        "data": data
-    }), status_code
-
-
 if __name__ == '__main__':
     # Start flask
-    app.run(debug=True, host="0.0.0.0", port=2002)
+    app.run(host="0.0.0.0", port=2002)

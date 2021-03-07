@@ -6,6 +6,7 @@ ENV LANG C.UTF-8
 
 # Install mosquitto + auth plugin
 WORKDIR /usr/src
+COPY rootfs/opt/meross_api/requirements.txt requirements.txt
 RUN apk add --no-cache \
         bash \
         sqlite \
@@ -25,8 +26,7 @@ RUN apk add --no-cache \
         mosquitto-dev \
         openssl-dev \
     \
-    && pip3 install flask \
-    && pip3 install zeroconf \
+    && pip3 install -r requirements.txt \
     && git clone --depth 1 \
         https://github.com/pvizeli/mosquitto-auth-plug \
     && cd mosquitto-auth-plug \

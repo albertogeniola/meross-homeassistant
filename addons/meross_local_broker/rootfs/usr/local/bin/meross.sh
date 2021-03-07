@@ -46,5 +46,7 @@ sqlite3 $DB_PATH "INSERT INTO users(email,userid,salt,password,mqtt_key) VALUES(
 # Start flask
 pushd /opt/meross_api
 export FLASK_APP=http_api.py
+export FLASK_ENV=development
+export FLASK_DEBUG=0
 python3 http_api.py
 popd

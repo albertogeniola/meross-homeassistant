@@ -1,7 +1,7 @@
-import os
 import sqlite3
+
 from flask import g
-from hashlib import sha256
+
 from constants import _DB_PATH
 
 
@@ -32,8 +32,15 @@ class DbHelper:
         results = self._query_db("SELECT email, userid, salt, password, mqtt_key FROM users WHERE email=?", (email,), one=True)
         return results
 
+    def remove_user_token(self, token: str) -> None:
+        self._db.cursor().execute("DELETE FROM http_tokens WHERE token=?", (token,))
+
     def get_user_by_id(self, userid: int):
         results = self._query_db("SELECT email, userid, password, mqtt_key FROM users WHERE userid=?", (userid,), one=True)
+        return results
+
+    def get_userid_by_token(self, token: str):
+        results = self._query_db("SELECT userid FROM http_tokens WHERE token=?", (token,), one=True)
         return results
 
     def close(self):
