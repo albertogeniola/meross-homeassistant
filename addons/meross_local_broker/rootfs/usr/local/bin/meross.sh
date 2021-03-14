@@ -4,8 +4,18 @@ pushd /opt/meross_api >/dev/null
 
 # Start flask
 export FLASK_APP=http_api.py
-export FLASK_ENV=development
-export FLASK_DEBUG=0
+debug=$(bashio::config 'debug_mode')
+
+if [[ $debug == true ]]; then
+  bashio::log.info "Setting flask debug flags"
+  export FLASK_ENV=development
+  export FLASK_DEBUG=1
+else
+  bashio::log.info "Setting flask production flags"
+  export FLASK_ENV=production
+  export FLASK_DEBUG=0
+fi
+
 bashio::log.info "Starting flask..."
 flask run --host=0.0.0.0 --port=2002
 bashio::log.warning "Flask terminated."
