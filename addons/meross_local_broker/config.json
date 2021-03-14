@@ -24,5 +24,8 @@
     "2002/tcp": "Meross LAN-LOCAL HTTP API endpoint"
   },
   "privileged": [],
-  "host_network": true
+  "host_network": true,
+  "ingress": true,
+  "ingress_port": 8099,
+  "map": ["ssl:rw", "backup:rw"]
 }

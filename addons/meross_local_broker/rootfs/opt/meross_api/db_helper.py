@@ -1,57 +1,42 @@
-import sqlite3
+from typing import Optional
 
-from flask import g
-
-from constants import _DB_PATH
+from database import db_session
+from model.db_models import UserToken, Device, User
 
 
 class DbHelper:
-    def __init__(self, path: str):
-        self._db_path = path
-        self._db = None
+    def __init__(self):
+        self._s = db_session
 
-    def _init(self):
-        self._db = sqlite3.connect(_DB_PATH)
-        pass
+    def store_new_user_token(self, userid, token) -> UserToken:
+        token = UserToken(user_id=userid, token=token)
+        self._s.add(token)
+        self._s.commit()
+        return token
 
-    def _query_db(self, query, args=(), one=False):
-        cur = self._db.execute(query, args)
-        rv = cur.fetchall()
-        cur.close()
-        return (rv[0] if rv else None) if one else rv
+    def associate_user_device(self, userid: int, mac: str) -> None:
+        d = Device(mac=mac)
+        d.user_id = userid
+        self._s.add(d)
+        self._s.commit()
 
-    def store_new_user_token(self, userid, token):
-        self._db.execute("INSERT INTO http_tokens(token, userid) VALUES(?,?)", (token, userid))
-        self._db.commit()
-
-    def associate_user_device(self, userid: int, mac: str):
-        self._db.execute("INSERT INTO devices(mac, owner_userid) VALUES(?,?) ON CONFLICT(mac) DO UPDATE SET owner_userid=excluded.owner_userid", (mac, userid))
-        self._db.commit()
-
-    def get_user_by_email(self, email: str):
-        results = self._query_db("SELECT email, userid, salt, password, mqtt_key FROM users WHERE email=?", (email,), one=True)
-        return results
+    def get_user_by_email(self, email: str) -> Optional[User]:
+        return self._s.query(User).filter(User.email == email).first()
 
     def remove_user_token(self, token: str) -> None:
-        self._db.cursor().execute("DELETE FROM http_tokens WHERE token=?", (token,))
+        token = self._s.query(UserToken).get(token)
+        if token is not None:
+            self._s.delete(token)
+            self._s.commit()
 
-    def get_user_by_id(self, userid: int):
-        results = self._query_db("SELECT email, userid, password, mqtt_key FROM users WHERE userid=?", (userid,), one=True)
-        return results
+    def get_user_by_id(self, userid: int) -> Optional[User]:
+        return self._s.query(User).filter(User.user_id == userid).first()
 
-    def get_userid_by_token(self, token: str):
-        results = self._query_db("SELECT userid FROM http_tokens WHERE token=?", (token,), one=True)
-        return results
+    def get_userid_by_token(self, token: str) -> Optional[User]:
+        ut = self._s.query(UserToken).filter(UserToken.token == token).first()
+        if ut is None:
+            return None
+        return ut.user
 
-    def close(self):
-        self._db.close()
-        delattr(g, '_database')
 
-    @classmethod
-    def get_db(cls, path: str = _DB_PATH) -> 'DbHelper':
-        db = getattr(g, '_database', None)
-        if db is None:
-            db = DbHelper(path)
-            db._init()
-            g._database = db
-        return db
+dbhelper = DbHelper()

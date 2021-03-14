@@ -5,10 +5,11 @@ from hashlib import md5
 from flask import Flask, request
 from flask import g
 
+from database import db_session, init_db
 from blueprints.auth import auth_blueprint
 from blueprints.profile import profile_blueprint
 from codes import ErrorCodes
-from db_helper import DbHelper
+from db_helper import dbhelper
 from messaging import make_api_response
 from model.exception import HttpApiError, BadRequestError
 from flask.logging import default_handler
@@ -37,12 +38,12 @@ root.addHandler(default_handler)
 # TODO: make this configurable
 root.setLevel(logging.DEBUG)
 
+init_db()
+
 
 @app.teardown_appcontext
-def close_connection(exception):
-    db = getattr(g, '_database', None)
-    if db is not None:
-        db.close()
+def shutdown_session(exception=None):
+    db_session.remove()
 
 
 @app.errorhandler(Exception)
@@ -102,7 +103,7 @@ def device_login():
         _LOGGER.error(f"UserId \"{userid}\" is invalid.")
         return "ko", 400
 
-    userrow = DbHelper.get_db().get_user_by_id(userid=userid)
+    userrow = dbhelper.get_user_by_id(userid=userid)
     if userrow is None:
         _LOGGER.error(f"UserId \"{userid}\" does not exist.")
         return "ko", 401
@@ -118,14 +119,10 @@ def device_login():
     _LOGGER.debug(f"Login attempt from \"{mac}\", provided hash \"{md5hash}\", expected \"{expected_digest}\".")
 
     if expected_digest == md5hash:
-        DbHelper.get_db().associate_user_device(userid=userid, mac=mac)
+        dbhelper.associate_user_device(userid=userid, mac=mac)
         _LOGGER.info(f"Device login attempt succeeded. Device with mac \"{mac}\" has been associated to userid \"{userid}\"")
         return "ok", 200
     else:
         _LOGGER.warning(f"Device login attempt failed (device with mac \"{mac}\", userid \"{userid}\")")
         return "ko", 403
 
-
-if __name__ == '__main__':
-    # Start flask
-    app.run(host="0.0.0.0", port=2002)

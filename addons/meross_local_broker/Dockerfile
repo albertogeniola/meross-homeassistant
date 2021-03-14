@@ -19,6 +19,7 @@ RUN apk add --no-cache \
         socat \
         python3 \
         py3-pip \
+        nginx \
     && apk add --no-cache --virtual .build-dependencies \
         build-base \
         curl-dev \
@@ -49,7 +50,9 @@ RUN apk add --no-cache \
     && cp -f auth-plug.so /usr/share/mosquitto \
     \
     && apk del .build-dependencies \
-    && rm -fr /usr/src/mosquitto-auth-plug
+    && rm -fr /usr/src/mosquitto-auth-plug \
+    && mkdir -p /run/nginx
+    
 
 WORKDIR /
 COPY rootfs /
