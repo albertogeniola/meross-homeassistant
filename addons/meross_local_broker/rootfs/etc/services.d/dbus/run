@@ -1,0 +1,7 @@
+#!/usr/bin/with-contenv bash
+# ==============================================================================
+# Starts the D-Bus daemon
+# ==============================================================================
+# shellcheck disable=SC1091
+
+exec dbus-daemon --system --nofork || echo 'Failed to start D-Bus daemon'

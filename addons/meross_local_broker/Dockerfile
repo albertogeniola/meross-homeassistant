@@ -7,7 +7,18 @@ ENV LANG C.UTF-8
 # Install mosquitto + auth plugin
 WORKDIR /usr/src
 COPY rootfs/opt/meross_api/requirements.txt requirements.txt
-RUN apk add --no-cache \
+RUN apk add --no-cache --virtual .build-dependencies \
+        avahi-dev \
+        build-base \
+        curl-dev \
+        git \
+        mosquitto-dev \
+        openssl-dev \
+    && apk add --no-cache \
+        avahi \
+        avahi-compat-libdns_sd \
+        avahi-tools \
+        dbus \
         bash \
         sqlite \
         sqlite-dev \
@@ -20,13 +31,6 @@ RUN apk add --no-cache \
         python3 \
         py3-pip \
         nginx \
-    && apk add --no-cache --virtual .build-dependencies \
-        build-base \
-        curl-dev \
-        git \
-        mosquitto-dev \
-        openssl-dev \
-    \
     && pip3 install -r requirements.txt \
     && git clone --depth 1 \
         https://github.com/pvizeli/mosquitto-auth-plug \

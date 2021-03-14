@@ -15,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 @meross_http_api(login_required=True)
 def logout(api_payload: Dict):
     # Retrieve the current logged user
-    user = g.user_id
+    user = g.user
     _LOGGER.info("Logging out user %s", user)
 
     # Invalidate the current token

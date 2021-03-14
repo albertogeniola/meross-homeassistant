@@ -15,7 +15,11 @@ class DbHelper:
         return token
 
     def associate_user_device(self, userid: int, mac: str) -> None:
-        d = Device(mac=mac)
+        # Check if a device with that MAC already exists. If so, update its user_id.
+        # If not, create a new one
+        d = self._s.query(Device).filter(Device.mac == mac).first()
+        if d is None:
+            d = Device(mac=mac)
         d.user_id = userid
         self._s.add(d)
         self._s.commit()
@@ -32,7 +36,7 @@ class DbHelper:
     def get_user_by_id(self, userid: int) -> Optional[User]:
         return self._s.query(User).filter(User.user_id == userid).first()
 
-    def get_userid_by_token(self, token: str) -> Optional[User]:
+    def get_user_by_token(self, token: str) -> Optional[User]:
         ut = self._s.query(UserToken).filter(UserToken.token == token).first()
         if ut is None:
             return None

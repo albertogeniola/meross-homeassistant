@@ -1,13 +1,15 @@
 import base64
 import json
+import logging
 import re
 from functools import wraps
 
-from flask import request, g, app
-import logging
+from flask import request, g
+
 from authentication import verify_token
+from codes import ErrorCodes
 from messaging import verify_message_signature
-from model.exception import BadRequestError, UnauthorizedException
+from model.exception import BadRequestError, HttpApiError
 
 TOKEN_EXTRACTOR = re.compile("^Basic ([a-zA-Z0-9]+)")
 l = logging.getLogger(__name__)
@@ -22,22 +24,22 @@ def meross_http_api(original_function=None, login_required=True):
             if login_required:
                 auth_str = request.headers.get("Authorization")
                 if auth_str is None:
-                    raise UnauthorizedException("Missing auth token")
+                    raise HttpApiError(error_code=ErrorCodes.CODE_TOKEN_ERROR)
 
                 res = TOKEN_EXTRACTOR.match(auth_str)
                 if not res:
-                    raise UnauthorizedException("Missing auth token")
+                    raise HttpApiError(error_code=ErrorCodes.CODE_TOKEN_ERROR)
 
                 token = res.group(1)
                 l.debug("User provided token: %s", token)
-                user_id = verify_token(token)
-                if user_id is None:
-                    raise UnauthorizedException("Invalid/Expired auth token")
+                user = verify_token(token)
+                if user is None:
+                    raise HttpApiError(error_code=ErrorCodes.CODE_TOKEN_ERROR)
 
-                l.info("User %s recognized by token %s", user_id, token)
+                l.info("User %s recognized by token %s", user, token)
 
                 g.user_token = token
-                g.user_id = user_id
+                g.user = user
 
             # MEROSS HTTP API requires a valid json payload that contains the following
             # - params: json-encoded parameters

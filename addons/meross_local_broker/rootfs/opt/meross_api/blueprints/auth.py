@@ -4,8 +4,8 @@ from typing import Dict
 from flask import Blueprint
 
 from authentication import _user_login
-from messaging import make_api_response
 from decorator import meross_http_api
+from messaging import make_api_response
 from model.exception import HttpApiError
 
 auth_blueprint = Blueprint('auth', __name__)
@@ -23,12 +23,12 @@ def login(api_payload: Dict, *args, **kwargs):
     if password is None:
         raise HttpApiError("Missing password parameter")
 
-    token, key, userid, email = _user_login(email, password)
+    user, token = _user_login(email, password)
     _LOGGER.info("User: %s successfully logged in" % email)
     data = {
-        "token": str(token),
-        "key": str(key),
-        "userid": str(userid),
-        "email": str(email)
+        "token": str(token.token),
+        "key": str(user.mqtt_key),
+        "userid": str(user.user_id),
+        "email": str(user.email)
     }
     return make_api_response(data=data)

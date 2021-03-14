@@ -1,7 +1,7 @@
 {
   "name": "Meross Offline Broker",
   "version": "1",
-  "slug": "meross_offline_broker",
+  "slug": "meross-offline-broker",
   "description": "Meross offline broker addon",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
   "startup": "application",
@@ -23,9 +23,8 @@
     "2001/tcp": "Meross LAN-LOCAL MQTT endpoint",
     "2002/tcp": "Meross LAN-LOCAL HTTP API endpoint"
   },
-  "privileged": [],
   "host_network": true,
   "ingress": true,
   "ingress_port": 8099,
-  "map": ["ssl:rw", "backup:rw"]
+  "map": ["ssl"]
 }

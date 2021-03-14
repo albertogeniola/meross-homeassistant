@@ -4,14 +4,15 @@ from typing import Tuple, Optional
 
 from codes import ErrorCodes
 from db_helper import dbhelper
+from model.db_models import User, UserToken
 from model.exception import HttpApiError
 
 
-def verify_token(token) -> Optional[str]:
+def verify_token(token) -> Optional[User]:
     """
     Returns the user's id for a given token.
     """
-    return dbhelper.get_userid_by_token(token)
+    return dbhelper.get_user_by_token(token)
 
 
 def _user_logout(token: str) -> None:
@@ -28,22 +29,16 @@ def _hash_password(salt: str, password: str) -> str:
     return computed_hashed_password
 
 
-def _user_login(email: str, password: str) -> Tuple[str, str, str, str]:
+def _user_login(email: str, password: str) -> Tuple[User, UserToken]:
     # Check user-password creds
     # email, userid, salt, password, mqtt_key
-    data = dbhelper.get_user_by_email(email=email)
-    if data is None:
+    user = dbhelper.get_user_by_email(email=email)
+    if user is None:
         raise HttpApiError(ErrorCodes.CODE_UNEXISTING_ACCOUNT)
 
-    email = data[0]
-    userid = data[1]
-    salt = data[2]
-    dbpwd = data[3]
-    mqtt_key = data[4]
+    computed_hashed_password = _hash_password(salt=user.salt, password=password)
 
-    computed_hashed_password = _hash_password(salt=salt, password=password)
-
-    if computed_hashed_password != dbpwd:
+    if computed_hashed_password != user.password:
         raise HttpApiError(ErrorCodes.CODE_WRONG_CREDENTIALS)
 
     # If ok, generate an HTTP_TOKEN
@@ -52,7 +47,7 @@ def _user_login(email: str, password: str) -> Tuple[str, str, str, str]:
     token = hash.hexdigest()
 
     # Store the new token
-    dbhelper.store_new_user_token(userid, token)
-    return token, mqtt_key, userid, email
+    token = dbhelper.store_new_user_token(user.user_id, token)
+    return user, token
 
 

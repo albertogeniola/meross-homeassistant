@@ -1,0 +1,14 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Start the Avahi daemon
+# ==============================================================================
+# shellcheck disable=SC1091
+
+# Wait until D-Bus is available
+until [[ -e /var/run/dbus/system_bus_socket ]];
+do
+  sleep 1
+done
+
+# Start the Avahi daemon
+exec avahi-daemon --debug

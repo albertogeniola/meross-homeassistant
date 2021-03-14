@@ -1,8 +1,9 @@
 from sqlalchemy import Column, String, BigInteger, Integer
-from sqlalchemy.orm import relationship
 from sqlalchemy import ForeignKey, Enum
-from model.enums import OnlineStatus
+from sqlalchemy.orm import relationship
+
 from database import Base
+from model.enums import OnlineStatus
 
 
 class User(Base):
