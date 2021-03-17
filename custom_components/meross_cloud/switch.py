@@ -8,6 +8,7 @@ from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.consumption import ConsumptionXMixin
 from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.controller.mixins.garage import GarageOpenerMixin
+from meross_iot.controller.mixins.light import LightMixin
 from meross_iot.controller.mixins.toggle import ToggleXMixin, ToggleMixin
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
@@ -165,8 +166,8 @@ async def _add_entities(hass: HomeAssistant, devices: Iterable[BaseDevice], asyn
     # Identify all the devices that expose the Toggle or ToggleX capabilities
     devs = filter(lambda d: isinstance(d, ToggleXMixin) or isinstance(d, ToggleMixin), devices)
 
-    # Exclude garage openers.
-    devs = filter(lambda d: not isinstance(d, GarageOpenerMixin), devs)
+    # Exclude garage openers and lights.
+    devs = filter(lambda d: not (isinstance(d, GarageOpenerMixin) or isinstance(d, LightMixin)), devs)
 
     for d in devs:
         for channel_index, channel in enumerate(d.channels):
