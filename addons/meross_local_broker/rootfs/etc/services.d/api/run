@@ -1,0 +1,6 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Start meross API service
+# ==============================================================================
+bashio::log.info "Starting the Meross daemon"
+exec /usr/local/bin/api.sh

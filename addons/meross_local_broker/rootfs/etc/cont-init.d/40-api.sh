@@ -5,7 +5,6 @@
 
 CONFIG_PATH=/data/options.json
 DB_PATH=/data/database.db
-DB_SCHEMA_PATH=/opt/meross_api/schema.sql
 
 # If the user has asked to reinit the db, remove it
 REINIT_DB=$(jq "if .resetdb then .resetdb else 0 end" $CONFIG_PATH)
@@ -18,7 +17,7 @@ fi
 
 
 # Initializing DB
-pushd /opt/meross_api >/dev/null
+pushd /opt/custom_broker >/dev/null
 
 ADMIN_EMAIL=$(jq --raw-output ".email" $CONFIG_PATH)
 ADMIN_PASSWORD=$(jq --raw-output ".password" $CONFIG_PATH)

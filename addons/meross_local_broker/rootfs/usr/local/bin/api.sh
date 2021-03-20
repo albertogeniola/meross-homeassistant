@@ -1,6 +1,6 @@
 #!/usr/bin/with-contenv bashio
 
-pushd /opt/meross_api >/dev/null
+pushd /opt/custom_broker >/dev/null
 
 # Start flask
 export FLASK_APP=http_api.py

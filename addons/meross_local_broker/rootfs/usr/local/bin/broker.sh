@@ -1,0 +1,37 @@
+#!/usr/bin/with-contenv bashio
+
+CONFIG_PATH=/data/options.json
+
+pushd /opt/custom_broker >/dev/null
+
+# Start flask
+debug=$(bashio::config 'debug_mode')
+
+if [[ $debug == true ]]; then
+  bashio::log.info "Starting broker agent with debug flag"
+  debug="--debug"
+else
+  debug=""
+fi
+
+# Generate a random password for agent user
+AGENT_USERNAME="_agent"
+AGENT_PASSWORD=$(openssl rand -base64 32)
+AGENT_PBKDF2=$(np -p $AGENT_PASSWORD)
+echo "$AGENT_USERNAME:$AGENT_PBKDF2">/etc/mosquitto/auth.pw
+
+# Allow MQTT connection to the admin user
+ADMIN_USERNAME=$(jq --raw-output ".email" $CONFIG_PATH)
+ADMIN_PASSWORD=$(jq --raw-output ".password" $CONFIG_PATH)
+ADMIN_PBKDF2=$(np -p "$ADMIN_PASSWORD")
+echo "$ADMIN_USERNAME:$ADMIN_PBKDF2">>/etc/mosquitto/auth.pw
+
+
+# Grant to the _agent user permissions to:
+# - read from /appliance/+/publish
+# - write to /app/+/subscribe
+echo -e "user $AGENT_USERNAME\ntopic read /appliance/+/publish\ntopic write /app/+/subscribe">/etc/mosquitto/auth.acl
+echo -e "user $ADMIN_USERNAME\ntopic readwrite #">>/etc/mosquitto/auth.acl
+python3 broker_agent.py --port 2001 --host localhost --username "$AGENT_USERNAME" --password "$AGENT_PASSWORD" --cert-ca "/data/mqtt/certs/ca.crt" $debug
+
+popd >/dev/null
