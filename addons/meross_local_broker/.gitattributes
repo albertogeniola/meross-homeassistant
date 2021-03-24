@@ -1,3 +1,4 @@
 # Shell scripts
 *.sh eol=lf
-/etc/services.d text eol=lf
+/etc/services.d/*/run text eol=lf
+/etc/services.d/*/finish text eol=lf

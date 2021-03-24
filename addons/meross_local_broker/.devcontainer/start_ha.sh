@@ -56,8 +56,8 @@ function stop_docker() {
 
 
 function install() {
-    docker pull homeassistant/amd64-hassio-supervisor:dev
-    docker pull homeassistant/amd64-hassio-cli:dev
+    docker pull homeassistant/amd64-hassio-supervisor:latest
+    docker pull homeassistant/amd64-hassio-cli:latest
 }
 
 function cleanup_hass_data() {
@@ -83,7 +83,7 @@ function run_supervisor() {
         -e SUPERVISOR_NAME=hassio_supervisor \
         -e SUPERVISOR_DEV=1 \
         -e HOMEASSISTANT_REPOSITORY="homeassistant/qemux86-64-homeassistant" \
-        homeassistant/amd64-hassio-supervisor:dev
+        homeassistant/amd64-hassio-supervisor:latest
 }
 
 case "$1" in
