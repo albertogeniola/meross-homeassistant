@@ -44,10 +44,11 @@ class Broker:
         self.password = password
         self.cert_ca = cert_ca
         self.c = mqtt.Client(client_id="broker", clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
-        self._connected_and_subscribed = Event()
 
         context = ssl.create_default_context(cafile=self.cert_ca)
         context.check_hostname = False
+        # context.set_ciphers(None)
+        context.verify_mode = ssl.CERT_REQUIRED
         self.c.tls_set_context(context)
 
         self.c.on_connect = self._on_connect
@@ -55,15 +56,11 @@ class Broker:
         self.c.on_message = self._on_message
 
     def setup(self, timeout=None):
+        self.c.username_pw_set(username=self.username, password=self.password)
         self.c.connect(host=self.hostname, port=self.port)
 
         # l.debug("Starting mqtt thread loop")
         # self.c.loop_start()
-
-        l.debug("Waiting for connect+subscribe")
-        res = self._connected_and_subscribed.wait(timeout=timeout)
-        if timeout is not None and not res:
-            raise TimeoutError("Connection and subscription to the broker timeout")
 
         l.info("Connection to remote broker successful")
 
@@ -73,11 +70,10 @@ class Broker:
 
     def _on_subscribe(self, client, userdata, mid, granted_qos):
         l.debug("Subscribed to relevant topics")
-        self._connected_and_subscribed.set()
-        self._connected_and_subscribed.clear()
 
     def _on_message(self, client, userdata, msg):
         l.debug("Received message: %s", str(msg))
+        print("XXXXXXXXXXXXXXXXXXXXXXXXX %s", str(msg))
 
     def _on_unsubscribe(self, *args, **kwargs):
         l.debug("Unsubscribed")
@@ -97,7 +93,6 @@ class Broker:
         self.c.disconnect()
         l.debug("Stopping the MQTT looper.")
         self.c.loop_stop(True)
-        self._connected_and_subscribed.clear()
         l.info("MQTT Client has fully disconnected.")
 
 
