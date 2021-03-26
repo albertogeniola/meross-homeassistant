@@ -44,6 +44,7 @@ class Broker:
         self.password = password
         self.cert_ca = cert_ca
         self.c = mqtt.Client(client_id="broker", clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
+        self.c.username_pw_set(username=self.username, password=self.password)
 
         context = ssl.create_default_context(cafile=self.cert_ca)
         context.check_hostname = False
@@ -55,14 +56,11 @@ class Broker:
         self.c.on_disconnect = self._on_disconnect
         self.c.on_message = self._on_message
 
-    def setup(self, timeout=None):
-        self.c.username_pw_set(username=self.username, password=self.password)
+    def setup(self):
+        l.debug("Connecting as %s : %s", self.username, self.password)
         self.c.connect(host=self.hostname, port=self.port)
-
         # l.debug("Starting mqtt thread loop")
         # self.c.loop_start()
-
-        l.info("Connection to remote broker successful")
 
     def _on_connect(self, client, userdata, rc, other):
         l.debug("Connected to broker, rc=%s", str(rc))

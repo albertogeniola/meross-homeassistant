@@ -2,10 +2,6 @@
 
 CONFIG_PATH=/data/options.json
 
-# Wait until mqtt is ready is available
-bashio::log.info "Waiting MQTT server..."
-bashio::net.wait_for 2001
-
 pushd /opt/custom_broker >/dev/null
 
 # Start flask
@@ -36,6 +32,11 @@ echo "$ADMIN_USERNAME:$ADMIN_PBKDF2">>/etc/mosquitto/auth.pw
 # - write to /app/+/subscribe
 echo -e "user $AGENT_USERNAME\ntopic read /appliance/+/publish\ntopic write /app/+/subscribe">/etc/mosquitto/auth.acl
 echo -e "user $ADMIN_USERNAME\ntopic readwrite #">>/etc/mosquitto/auth.acl
+
+# Wait until mqtt is ready is available
+bashio::log.info "Waiting MQTT server..."
+bashio::net.wait_for 2001
+
 python3 broker_agent.py --port 2001 --host localhost --username "$AGENT_USERNAME" --password "$AGENT_PASSWORD" --cert-ca "/data/mqtt/certs/ca.crt" $debug
 
 popd >/dev/null
