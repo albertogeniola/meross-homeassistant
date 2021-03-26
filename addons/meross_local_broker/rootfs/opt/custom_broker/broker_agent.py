@@ -1,15 +1,13 @@
 import argparse
-import asyncio
 import logging
 import sys
 import ssl
-from contextlib import AsyncExitStack, asynccontextmanager
-
-from asyncio_mqtt import Client, MqttError
-
+import paho.mqtt.client as mqtt
+from threading import Event
+import time
 
 CLIENT_ID = 'broker_agent'
-APPLIANCE_MESSAGES = '/appliance/+/publish'
+APPLIANCE_MESSAGE_TOPICS = '/appliance/+/publish'
 
 l = logging.getLogger()
 l.setLevel(logging.INFO)
@@ -33,89 +31,99 @@ def parse_args():
     return parser.parse_args()
 
 
-async def mqtt_message_handler(hostname, port, username, password, cert_ca_path):
-    async with AsyncExitStack() as stack:
-        # Keep track of the asyncio tasks that we create, so that
-        # we can cancel them on exit
-        tasks = set()
-        stack.push_async_callback(cancel_tasks, tasks)
+class Broker:
+    def __init__(self,
+                 hostname: str,
+                 port: int,
+                 username: str,
+                 password: str,
+                 cert_ca: str):
+        self.hostname = hostname
+        self.port = port
+        self.username = username
+        self.password = password
+        self.cert_ca = cert_ca
+        self.c = mqtt.Client(client_id="broker", clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
+        self._connected_and_subscribed = Event()
 
-        # Connect to the MQTT broker
-        context = ssl.create_default_context(cafile=cert_ca_path)
+        context = ssl.create_default_context(cafile=self.cert_ca)
         context.check_hostname = False
-        #context.set_ciphers(None)
-        context.verify_mode = ssl.CERT_REQUIRED
-        client = Client(hostname=hostname,
-                          port=port,
-                          username=username,
-                          password=password,
-                          clean_session=True,
-                          tls_context=context)
-        await stack.enter_async_context(client)
+        self.c.tls_set_context(context)
 
-        topic_filters = (
-            APPLIANCE_MESSAGES,
-            #"#" # More topics
-        )
+        self.c.on_connect = self._on_connect
+        self.c.on_disconnect = self._on_disconnect
+        self.c.on_message = self._on_message
 
-        for topic_filter in topic_filters:
-            # Log all messages that matches the filter
-            manager = client.filtered_messages(topic_filter)
-            messages = await stack.enter_async_context(manager)
-            task = asyncio.create_task(handle_relevant_messages(messages))
-            tasks.add(task)
+    def setup(self, timeout=None):
+        self.c.connect(host=self.hostname, port=self.port)
 
-        # Messages that doesn't match a filter will get logged here
-        messages = await stack.enter_async_context(client.unfiltered_messages())
-        task = asyncio.create_task(handle_unknown_messages(messages))
-        tasks.add(task)
+        # l.debug("Starting mqtt thread loop")
+        # self.c.loop_start()
 
-        # Subscribe to topic(s)
-        await client.subscribe(APPLIANCE_MESSAGES)
-        await asyncio.gather(*tasks)
+        l.debug("Waiting for connect+subscribe")
+        res = self._connected_and_subscribed.wait(timeout=timeout)
+        if timeout is not None and not res:
+            raise TimeoutError("Connection and subscription to the broker timeout")
 
+        l.info("Connection to remote broker successful")
 
-async def handle_relevant_messages(messages):
-    async for message in messages:
-        print("Known: {s}" % message.payload.decode())
+    def _on_connect(self, client, userdata, rc, other):
+        l.debug("Connected to broker, rc=%s", str(rc))
+        self.c.subscribe(APPLIANCE_MESSAGE_TOPICS)
 
+    def _on_subscribe(self, client, userdata, mid, granted_qos):
+        l.debug("Subscribed to relevant topics")
+        self._connected_and_subscribed.set()
+        self._connected_and_subscribed.clear()
 
-async def handle_unknown_messages(messages):
-    async for message in messages:
-        print("Unknown: {s}" % message.payload.decode())
+    def _on_message(self, client, userdata, msg):
+        l.debug("Received message: %s", str(msg))
 
+    def _on_unsubscribe(self, *args, **kwargs):
+        l.debug("Unsubscribed")
 
-async def cancel_tasks(tasks):
-    for task in tasks:
-        if task.done():
-            continue
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
+    def _on_disconnect(self, client, userdata, rc):
+        l.debug("Disconnection detected. Reason: %s" % str(rc))
+
+        # If the client disconnected explicitly
+        if rc == mqtt.MQTT_ERR_SUCCESS:
             pass
+        else:
+            # Otherwise, if the disconnection was not intentional, we probably had a connection drop.
+            l.warning("Client has been disconnected. Connection will be re-attempted.")
+
+    def setdown(self):
+        l.info("Disconnecting from mqtt broker")
+        self.c.disconnect()
+        l.debug("Stopping the MQTT looper.")
+        self.c.loop_stop(True)
+        self._connected_and_subscribed.clear()
+        l.info("MQTT Client has fully disconnected.")
 
 
-async def main():
+def main():
     args = parse_args()
     if args.debug:
         handler.setLevel(logging.DEBUG)
         l.setLevel(logging.DEBUG)
 
+    b = Broker(hostname=args.host, port=args.port, username=args.username, password=args.password, cert_ca=args.cert_ca)
+
     reconnect_interval = 10  # [seconds]
     while True:
         try:
-            l.warning("Connecting to broker")
-            await mqtt_message_handler(hostname=args.host,
-                               port=args.port,
-                               username=args.username,
-                               password=args.password,
-                               cert_ca_path=args.cert_ca)
-        except MqttError as error:
-            l.exception(f'Error "{error}". Reconnecting in {reconnect_interval} seconds.')
-        finally:
-            await asyncio.sleep(reconnect_interval)
+            b.setup()
+            b.c.loop_forever()
+
+        except KeyboardInterrupt as ex:
+            l.warning("Keyboard interrupt received, exiting.")
+            b.setdown()
+            break
+        except Exception as ex:
+            l.exception("An unhandled error occurred")
+            b.setdown()
+            time.sleep(reconnect_interval)
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()

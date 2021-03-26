@@ -2,6 +2,10 @@
 
 CONFIG_PATH=/data/options.json
 
+# Wait until mqtt is ready is available
+bashio::log.info "Waiting MQTT server..."
+bashio::net.wait_for 2001
+
 pushd /opt/custom_broker >/dev/null
 
 # Start flask
