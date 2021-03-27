@@ -4,3 +4,4 @@
 *.pw eol=lf
 /etc/services.d/*/run text eol=lf
 /etc/services.d/*/finish text eol=lf
+/etc/nginx/ingress.conf text eol=lf
