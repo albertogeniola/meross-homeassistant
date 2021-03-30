@@ -1,12 +1,24 @@
+from typing import Dict
+
 from sqlalchemy import Column, String, BigInteger, Integer
 from sqlalchemy import ForeignKey, Enum
 from sqlalchemy.orm import relationship
-
 from database import Base
 from model.enums import OnlineStatus
+from sqlalchemy.inspection import inspect
 
 
-class User(Base):
+class Serializer(object):
+
+    def serialize(self):
+        return {c: getattr(self, c) for c in inspect(self).attrs.keys()}
+
+    @staticmethod
+    def serialize_list(l):
+        return [m.serialize() for m in l]
+
+
+class User(Base, Serializer):
     __tablename__ = 'users'
     __table_args__ = {'sqlite_autoincrement': True}
 
@@ -26,8 +38,14 @@ class User(Base):
     def __repr__(self):
         return '<User %r (%r)>' % (self.user_id, self.email)
 
+    def serialize(self):
+        d = Serializer.serialize(self)
+        del d['password']
+        del d['owned_devices']
+        return d
 
-class UserToken(Base):
+
+class UserToken(Base, Serializer):
     __tablename__ = 'user_tokens'
 
     token = Column(String(32), primary_key=True)
@@ -41,8 +59,13 @@ class UserToken(Base):
     def __repr__(self):
         return '<UserToken %r (%r)>' % (self.token, self.user_id)
 
+    def serialize(self):
+        d = Serializer.serialize(self)
+        del d['user']
+        return d
 
-class Device(Base):
+
+class Device(Base, Serializer):
     __tablename__ = 'devices'
 
     mac = Column(String(16), primary_key=True)
@@ -68,3 +91,8 @@ class Device(Base):
 
     def __init__(self, mac: str, *args, **kwargs):
         self.mac = mac
+
+    def serialize(self):
+        d = Serializer.serialize(self)
+        del d['owner_user']
+        return d

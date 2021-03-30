@@ -33,8 +33,8 @@ RUN apk add --no-cache --virtual .build-dependencies \
         py3-pip \
         nginx \
     && pip3 install -r requirements.txt \
-    && git clone --depth 1 \
-        https://github.com/pvizeli/mosquitto-auth-plug \
+    && git clone --depth 1 --branch 0.1.5 \
+        https://github.com/albertogeniola/mosquitto-auth-plug \
     && cd mosquitto-auth-plug \
     && cp config.mk.in config.mk && \
     sed -i "s/BACKEND_CDB ?= no/BACKEND_CDB = no/" config.mk && \

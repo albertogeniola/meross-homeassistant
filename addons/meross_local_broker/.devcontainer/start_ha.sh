@@ -57,7 +57,7 @@ function stop_docker() {
 
 function install() {
     docker pull homeassistant/amd64-hassio-supervisor:latest
-    docker pull homeassistant/amd64-hassio-cli:latest
+    docker pull homeassistant/amd64-hassio-cli:dev
 }
 
 function cleanup_hass_data() {

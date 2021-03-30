@@ -1,8 +1,6 @@
 #!/usr/bin/with-contenv bashio
 # ==============================================================================
-# Start nginx service
+# Configure NGINX for use with Meross Local Broker
 # ==============================================================================
-bashio::log.info "Starting the nginx daemon"
-
-# Create required folders
-exec nginx -c /etc/nginx/ingress.conf
+ingress_entry=$(bashio::addon.ingress_entry)
+sed -i "s#%%ingress_entry%%#${ingress_entry}#g" /etc/nginx/ingress.conf

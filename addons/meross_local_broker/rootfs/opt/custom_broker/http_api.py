@@ -2,10 +2,12 @@ import logging
 
 from flask import Flask
 from flask.logging import default_handler
+from flask_cors import CORS
 
 from blueprints.auth import auth_blueprint
 from blueprints.devs import devs_blueprint
 from blueprints.profile import profile_blueprint
+from blueprints.admin import admin_blueprint
 from codes import ErrorCodes
 from database import db_session, init_db
 from messaging import make_api_response
@@ -20,9 +22,13 @@ _LOGOUT_URL = "/v1/Profile/logout"
 _LOGGER = logging.getLogger(__name__)
 
 app = Flask(__name__)
+CORS(app)  # TODO: Fix this. Maybe we can restrict the origin access. In case we use an nginx, this might be superfluous
+
+
 app.register_blueprint(auth_blueprint, url_prefix="/v1/Auth")
 app.register_blueprint(profile_blueprint, url_prefix="/v1/Profile")
 app.register_blueprint(devs_blueprint, url_prefix="/_devs_")
+app.register_blueprint(admin_blueprint, url_prefix="/_admin_")
 #app.register_blueprint(device_bludprint)
 #app.register_blueprint(hub_blueprint)
 

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from database import db_session
 from model.db_models import UserToken, Device, User
@@ -14,13 +14,14 @@ class DbHelper:
         self._s.commit()
         return token
 
-    def associate_user_device(self, userid: int, mac: str) -> None:
+    def associate_user_device(self, userid: int, mac: str, uuid: str) -> None:
         # Check if a device with that MAC already exists. If so, update its user_id.
         # If not, create a new one
         d = self._s.query(Device).filter(Device.mac == mac).first()
         if d is None:
             d = Device(mac=mac)
         d.user_id = userid
+        d.uuid = uuid
         self._s.add(d)
         self._s.commit()
 
@@ -41,6 +42,15 @@ class DbHelper:
         if ut is None:
             return None
         return ut.user
+
+    def find_user_owner_by_device_uuid(self, device_uuid: str) -> Optional[User]:
+        dev = self._s.query(Device).filter(Device.uuid == device_uuid).first()
+        if dev is None:
+            return None
+        return dev.owner_user
+
+    def get_all_devices(self) -> List[Device]:
+        return self._s.query(Device).all()
 
 
 dbhelper = DbHelper()

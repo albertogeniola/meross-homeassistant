@@ -3,8 +3,12 @@ import logging
 import sys
 import ssl
 import paho.mqtt.client as mqtt
-from threading import Event
 import time
+import re
+
+from database import init_db
+from db_helper import dbhelper
+
 
 CLIENT_ID = 'broker_agent'
 APPLIANCE_MESSAGE_TOPICS = '/appliance/+/publish'
@@ -17,6 +21,8 @@ handler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - BROKER: %(message)s')
 handler.setFormatter(formatter)
 l.addHandler(handler)
+
+APPLIANCE_PUBLISH_TOPIC_RE = re.compile("/appliance/([a-zA-Z0-9]+)/publish")
 
 
 def parse_args():
@@ -70,8 +76,8 @@ class Broker:
         l.debug("Subscribed to relevant topics")
 
     def _on_message(self, client, userdata, msg):
-        l.debug("Received message: %s", str(msg))
-        print("XXXXXXXXXXXXXXXXXXXXXXXXX %s", str(msg))
+        l.debug(f"Received message from topic {msg.topic}: {str(msg.payload)}")
+        self._handle_message(topic=msg.topic, payload=msg.payload)
 
     def _on_unsubscribe(self, *args, **kwargs):
         l.debug("Unsubscribed")
@@ -93,12 +99,35 @@ class Broker:
         self.c.loop_stop(True)
         l.info("MQTT Client has fully disconnected.")
 
+    def _handle_message(self, topic, payload):
+        try:
+            # Extract the device_uuid from he topic
+            match = APPLIANCE_PUBLISH_TOPIC_RE.fullmatch(topic)
+            if match is None:
+                l.warning("Skipped message against topic %s.", topic)
+                return
+
+            # Find the USER-ID assigned to the given device
+            device_uuid = match.group(1)
+            user = dbhelper.find_user_owner_by_device_uuid(device_uuid)
+            if user is None:
+                l.warning("No user associated to device UUID %s, message will be skipped.", device_uuid)
+                return
+            l.debug("Forwarding message for device %s to user %s", device_uuid, user)
+            self.c.publish(topic=f"/app/{user.user_id}/subscribe", payload=payload)
+
+        except Exception as ex:
+            l.exception("An error occurred while handling message %s received on topic %s", str(payload), str(topic))
+
 
 def main():
     args = parse_args()
     if args.debug:
         handler.setLevel(logging.DEBUG)
         l.setLevel(logging.DEBUG)
+
+    # Init or setup DB
+    init_db()
 
     b = Broker(hostname=args.host, port=args.port, username=args.username, password=args.password, cert_ca=args.cert_ca)
 

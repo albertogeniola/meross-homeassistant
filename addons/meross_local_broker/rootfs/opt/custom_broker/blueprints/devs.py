@@ -1,19 +1,27 @@
 import logging
 import re
 from _md5 import md5
-
 from flask import Blueprint, request
-
 from db_helper import dbhelper
 
 devs_blueprint = Blueprint('_devs', __name__)
 _LOGGER = logging.getLogger(__name__)
-_DEV_PASSWORD_RE = re.compile("^([0-9]+)\_([a-zA-Z0-9]+)$")
+_DEV_PASSWORD_RE = re.compile("^([0-9]+)_([a-zA-Z0-9]+)$")
+_CLIENTID_RE = re.compile('^fmware:([a-zA-Z0-9]+)_[a-zA-Z0-9]+$')
 
 
 @devs_blueprint.route('/acl', methods=['POST'])
 def device_acl():
-    # For now, just return 200: allow connection from anyone
+    username = request.values.get('username')
+    topic = request.values.get('topic')
+    acc = request.values.get('acc')
+    clientid = request.values.get('clientid')
+
+    _LOGGER.debug("ACL_CHECK=> username: %s, topic: %s, acc: %s, clientid: %s", str(username),
+                  str(topic), str(acc), str(clientid))
+
+    # TODO: implement ACL checks.
+    # For now, just return 200: allow connection from anyone to every topic
     return "ok", 200
 
 
@@ -29,10 +37,14 @@ def device_login():
     password = request.values.get('password')
     topic = request.values.get('topic')
     acc = request.values.get('acc')
+    clientid = request.values.get('clientid')
+
+    _LOGGER.debug("LOGIN_CHECK=> username: %s, password: %s, topic: %s, acc: %s, clientid: %s", str(username), str(password), str(topic), str(acc), str(clientid))
 
     # Device authentication basically is basically a "binding" to a given user id
     # Username => device mac addresss
     # Password => userid_md5(mac+key)
+    # Clientid: fmware:deviceuuid_<?>
     mac = username
     match = _DEV_PASSWORD_RE.match(password)
     if match is None:
@@ -43,7 +55,13 @@ def device_login():
     userid = match.group(1)
     md5hash = match.group(2)
 
-    # Lookup key by the given username...
+    # Parse the uuid
+    match = _CLIENTID_RE.fullmatch(clientid)
+    if match is None:
+        _LOGGER.error("Clientid %s is not valid", clientid)
+    dev_uuid = match.group(1)
+
+    # Lookup key by the given username.
     try:
         userid = int(userid)
     except ValueError as e:
@@ -62,9 +80,9 @@ def device_login():
     _LOGGER.debug(f"Login attempt from \"{mac}\", provided hash \"{md5hash}\", expected \"{expected_digest}\".")
 
     if expected_digest == md5hash:
-        dbhelper.associate_user_device(userid=userid, mac=mac)
+        dbhelper.associate_user_device(userid=userid, mac=mac, uuid=dev_uuid)
         _LOGGER.info(
-            f"Device login attempt succeeded. Device with mac \"{mac}\" has been associated to userid \"{userid}\"")
+            f"Device login attempt succeeded. Device with mac \"{mac}\" (uuid {dev_uuid}) has been associated to userid \"{userid}\"")
         return "ok", 200
     else:
         _LOGGER.warning(f"Device login attempt failed (device with mac \"{mac}\", userid \"{userid}\")")
