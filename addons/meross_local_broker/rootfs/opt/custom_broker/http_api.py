@@ -65,3 +65,5 @@ def handle_http_exception(e):
     return make_api_response(data=None, info=e.error_code.name, api_status=e.error_code)
 
 
+if __name__=='__main__':
+    app.run(port=2002, host="127.0.0.1")
