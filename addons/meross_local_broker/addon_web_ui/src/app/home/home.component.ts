@@ -9,7 +9,6 @@ import { AdminService } from '@app/services/admin';
 import { MatSlideToggleChange } from '@angular/material/slide-toggle';
 import { Observable, Subscription } from 'rxjs';
 
-
 const ELEMENT_DATA: Device[] = [
   {
     mac: 'macadd',
@@ -27,11 +26,11 @@ const ELEMENT_DATA: Device[] = [
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
-  styleUrls: ['./home.component.scss']
+  styleUrls: ['./home.component.scss'],
 })
 export class HomeComponent implements AfterViewInit, OnInit {
-  private displayedColumns: string[] = ['deviceName', 'mac', 'uuid'];
-  private dataSource = new MatTableDataSource<Device>(ELEMENT_DATA);
+  displayedColumns: string[] = ['deviceName', 'mac', 'uuid'];
+  dataSource = new MatTableDataSource<Device>(ELEMENT_DATA);
   private _autoUpdateSubscription: Subscription = null;
 
   //private autoDeviceUpdate = false;
@@ -42,19 +41,19 @@ export class HomeComponent implements AfterViewInit, OnInit {
   constructor(private deviceStore: DeviceStore) {}
   ngOnInit(): void {
     // Update the device list once
-    this.deviceStore.devices.subscribe(devices => this.dataSource.data = devices);
+    this.deviceStore.devices.subscribe((devices) => (this.dataSource.data = devices));
   }
 
-onAutodeviceUpdate(e:MatSlideToggleChange) {
-  if (e.checked===true) {
-    if (this._autoUpdateSubscription !== null)
-      this._autoUpdateSubscription.unsubscribe();
-    this._autoUpdateSubscription = this.deviceStore.deviceUpdates.subscribe(devices => this.dataSource.data=devices);
-  } else {
-    if (this._autoUpdateSubscription !== null)
-      this._autoUpdateSubscription.unsubscribe();
+  onAutodeviceUpdate(e: MatSlideToggleChange) {
+    if (e.checked === true) {
+      if (this._autoUpdateSubscription !== null) this._autoUpdateSubscription.unsubscribe();
+      this._autoUpdateSubscription = this.deviceStore.deviceUpdates.subscribe(
+        (devices) => (this.dataSource.data = devices)
+      );
+    } else {
+      if (this._autoUpdateSubscription !== null) this._autoUpdateSubscription.unsubscribe();
+    }
   }
-}
 
   ngAfterViewInit() {
     this.dataSource.paginator = this.paginator;
