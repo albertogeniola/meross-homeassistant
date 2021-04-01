@@ -1,0 +1,68 @@
+<div class="container">
+  <div class="container-head">
+    <mat-card class="service-status-card">
+      <mat-card-header>
+        <div mat-card-avatar>
+          <mat-icon aria-hidden="false">dns</mat-icon>
+        </div>
+        <mat-card-title>MQTT Broker</mat-card-title>
+        <!--<mat-card-subtitle class="running-status">Running</mat-card-subtitle>-->
+      </mat-card-header>
+    </mat-card>
+    <mat-card class="service-status-card">
+      <mat-card-header>
+        <div mat-card-avatar>
+          <mat-icon aria-hidden="false">dns</mat-icon>
+        </div>
+        <mat-card-title>HTTP API</mat-card-title>
+        <!--<mat-card-subtitle class="running-status">Running</mat-card-subtitle>-->
+      </mat-card-header>
+    </mat-card>
+
+    <mat-card class="service-status-card">
+      <mat-card-header>
+        <div mat-card-avatar>
+          <mat-icon aria-hidden="false">dns</mat-icon>
+        </div>
+        <mat-card-title>Zeroconf Daemon</mat-card-title>
+        <!--<mat-card-subtitle class="running-status">Running</mat-card-subtitle>-->
+      </mat-card-header>
+    </mat-card>
+  </div>
+
+  <div class="max-400">
+    <mat-toolbar color="primary">
+      <span>Paired devices</span>
+      <span class="spacer"></span>
+      <mat-slide-toggle class="small" (change)="onAutodeviceUpdate($event)">Auto update</mat-slide-toggle>
+      
+    </mat-toolbar>
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" matSort>
+      <!-- Device Name Column -->
+      <ng-container matColumnDef="deviceName">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Device Name</th>
+        <td mat-cell *matCellDef="let element">{{ element.deviceName }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="mac">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Mac Address</th>
+        <td mat-cell *matCellDef="let element">{{ element.mac }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="uuid">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>UUID</th>
+        <td mat-cell *matCellDef="let element">{{ element.uuid }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+
+      <!-- Row shown when there is no matching data. -->
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell" colspan="4">No data matching</td>
+      </tr>
+
+      <mat-paginator [pageSizeOptions]="[15, 30, 100]"></mat-paginator>
+    </table>
+  </div>
+</div>

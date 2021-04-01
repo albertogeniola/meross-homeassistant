@@ -1,0 +1,46 @@
+.container {
+  margin: 1em;
+}
+
+.container-head {
+  padding: 1em;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-around;
+}
+
+.spacer {
+  flex-grow: 2;
+}
+
+.small {
+  font-size: small;
+}
+
+.service-status-card {
+  max-width: 300px;
+}
+
+.running-status {
+  color: green;
+}
+
+.max-400 {
+  max-width: 600px;
+  text-align: start;
+}
+
+.max-400 table {
+  width: 100%;
+}
+
+.logo {
+  width: 150px;
+  margin: 0 auto;
+}
+
+q {
+  font-style: italic;
+  quotes: "« " " »";
+}
