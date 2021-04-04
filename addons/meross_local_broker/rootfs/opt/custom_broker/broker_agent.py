@@ -8,7 +8,7 @@ import re
 
 from database import init_db
 from db_helper import dbhelper
-
+from model.enums import OnlineStatus
 
 CLIENT_ID = 'broker_agent'
 APPLIANCE_MESSAGE_TOPICS = '/appliance/+/publish'
@@ -107,6 +107,9 @@ class Broker:
                 l.warning("Skipped message against topic %s.", topic)
                 return
 
+            # If the message comes from a known device, update its online status
+
+
             # Find the USER-ID assigned to the given device
             device_uuid = match.group(1)
             user = dbhelper.find_user_owner_by_device_uuid(device_uuid)
@@ -118,6 +121,18 @@ class Broker:
 
         except Exception as ex:
             l.exception("An error occurred while handling message %s received on topic %s", str(payload), str(topic))
+
+
+class OnlineStatusManager:
+    def __init__(self):
+        self._online_dev_status={}
+
+    def notify_device_online(self, uuid: str):
+        old_status = self._online_dev_status.get(uuid)
+        if old_status is None:
+            dbhelper.update_device_status(device_uuid=uuid, status=OnlineStatus.ONLINE)
+            self._online_dev_status[uuid] = OnlineStatus.ONLINE
+        
 
 
 def main():

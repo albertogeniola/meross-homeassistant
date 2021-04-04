@@ -3,7 +3,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MatSort } from '@angular/material/sort';
 import { MatPaginator } from '@angular/material/paginator';
 import { finalize } from 'rxjs/operators';
-import { Device } from '@app/model/device';
+import { Device, DeviceOnlineStatus } from '@app/model/device';
 import { DeviceStore } from '@app/providers/device';
 import { AdminService } from '@app/services/admin';
 import { MatSlideToggleChange } from '@angular/material/slide-toggle';
@@ -20,6 +20,7 @@ const ELEMENT_DATA: Device[] = [
     domain: 'string',
     reservedDomain: 'string',
     userId: 'string',
+    status: DeviceOnlineStatus.UNKNOWN
   },
 ];
 
@@ -29,7 +30,7 @@ const ELEMENT_DATA: Device[] = [
   styleUrls: ['./home.component.scss'],
 })
 export class HomeComponent implements AfterViewInit, OnInit {
-  displayedColumns: string[] = ['deviceName', 'mac', 'uuid'];
+  displayedColumns: string[] = ['deviceId', 'network', 'status'];
   dataSource = new MatTableDataSource<Device>(ELEMENT_DATA);
   private _autoUpdateSubscription: Subscription = null;
 
