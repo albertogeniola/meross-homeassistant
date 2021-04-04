@@ -12,10 +12,13 @@ _CLIENTID_RE = re.compile('^fmware:([a-zA-Z0-9]+)_[a-zA-Z0-9]+$')
 
 @devs_blueprint.route('/acl', methods=['POST'])
 def device_acl():
-    username = request.values.get('username')
-    topic = request.values.get('topic')
-    acc = request.values.get('acc')
-    clientid = request.values.get('clientid')
+    content = request.json
+    _LOGGER.debug("LOGIN_CHECK=%s", str(content))
+
+    username = request.json.get('username')
+    topic = request.json.get('topic')
+    acc = request.json.get('acc')
+    clientid = request.json.get('clientid')
 
     _LOGGER.debug("ACL_CHECK=> username: %s, topic: %s, acc: %s, clientid: %s", str(username),
                   str(topic), str(acc), str(clientid))
@@ -33,11 +36,14 @@ def superuser_acl():
 
 @devs_blueprint.route('/auth', methods=['POST'])
 def device_login():
-    username = request.values.get('username')
-    password = request.values.get('password')
-    topic = request.values.get('topic')
-    acc = request.values.get('acc')
-    clientid = request.values.get('clientid')
+    content = request.json
+    _LOGGER.debug("LOGIN_CHECK=%s", str(content))
+
+    username = request.json.get('username')
+    password = request.json.get('password')
+    topic = request.json.get('topic')
+    acc = request.json.get('acc')
+    clientid = request.json.get('clientid')
 
     _LOGGER.debug("LOGIN_CHECK=> username: %s, password: %s, topic: %s, acc: %s, clientid: %s", str(username), str(password), str(topic), str(acc), str(clientid))
 

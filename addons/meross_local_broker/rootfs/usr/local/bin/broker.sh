@@ -17,13 +17,13 @@ fi
 # Generate a random password for agent user
 AGENT_USERNAME="_agent"
 AGENT_PASSWORD=$(openssl rand -base64 32)
-AGENT_PBKDF2=$(np -p $AGENT_PASSWORD)
+AGENT_PBKDF2=$(/usr/share/mosquitto/pw -p $AGENT_PASSWORD)
 echo "$AGENT_USERNAME:$AGENT_PBKDF2">/etc/mosquitto/auth.pw
 
 # Allow MQTT connection to the admin user
 ADMIN_USERNAME=$(jq --raw-output ".email" $CONFIG_PATH)
 ADMIN_PASSWORD=$(jq --raw-output ".password" $CONFIG_PATH)
-ADMIN_PBKDF2=$(np -p "$ADMIN_PASSWORD")
+ADMIN_PBKDF2=$(/usr/share/mosquitto/pw -p "$ADMIN_PASSWORD")
 echo "$ADMIN_USERNAME:$ADMIN_PBKDF2">>/etc/mosquitto/auth.pw
 
 

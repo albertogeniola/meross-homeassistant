@@ -1,7 +1,11 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base/amd64:9.1.6
-#ARG BUILD_FROM=homeassistant/amd64-base:latest
-
+ARG BUILD_FROM=homeassistant/amd64-base-debian
 FROM ${BUILD_FROM}
+
+# Build arguments
+ARG BUILD_ARCH=amd64
+ARG BUILD_DATE
+ARG BUILD_REF
+ARG BUILD_VERSION
 
 # Versions
 ENV HIVEMQ='b2043e7fcbd5897a3799869d42c6202122221fbc' \
@@ -20,34 +24,31 @@ COPY rootfs/opt/custom_broker/requirements.txt requirements.txt
 
 # Setup base
 # hadolint ignore=DL3003
-RUN apk update \
-  && apk add --no-cache --virtual .build-dependencies \
+RUN apt-get update \
+  && apt-get --no-install-recommends install -y \
     git \
     cmake \
-    build-base \
-    openssl-dev \
-    libressl-dev \
-    util-linux-dev \
-    avahi-dev \
+    build-essential \
+    libssl-dev \
+    libavahi-client-dev \
     python3-dev \
-  \
-  && apk add --no-cache \
-    avahi \
-    avahi-compat-libdns_sd \
-    avahi-tools \
+    avahi-daemon \
+    libavahi-compat-libdnssd-dev \
+    avahi-utils \
     dbus \
     bash \
     sqlite \
-    sqlite-dev \
     curl \
-    musl \
     openssl \
-    pwgen \
-    socat \
     python3 \
-    py3-pip \
+    python3-setuptools \
+    python3-pip \
     nginx \
-    go \
+    software-properties-common \
+  && mkdir -p /tmp/go \
+  && curl https://dl.google.com/go/go1.16.3.linux-${BUILD_ARCH}.tar.gz --output go.tar.gz \
+  && tar -C /usr/local -xzf go.tar.gz \
+  && export PATH=$PATH:/usr/local/go/bin \
   \
   && pip3 install -r requirements.txt \
   \
@@ -96,27 +97,20 @@ RUN apk update \
   && mkdir -p /usr/share/mosquitto \
   && cp /tmp/mosquitto-go-auth/pw /usr/share/mosquitto/pw \
   && cp /tmp/mosquitto-go-auth/go-auth.so /usr/share/mosquitto/go-auth.so \
+  && chmod +x /usr/share/mosquitto/pw \
   \
-  && addgroup -S mosquitto \
-  && adduser -S -D -H -h /var/empty -s /sbin/nologin \
-    -G mosquitto -g mosquitto mosquitto \
+  && addgroup --system mosquitto \
+  && adduser --system --no-create-home --disabled-login --group mosquitto \
   \
-  && apk del --no-cache --purge .build-dependencies \
+  && apt-get clean \
   && rm -fr \
     /etc/nginx \
     /opt/mosquitto.conf \
     /opt/acl \
     /tmp/*
 
-
 WORKDIR /
 COPY rootfs /
 RUN chmod +x /usr/local/bin/*.sh
-
-# Build arguments
-ARG BUILD_ARCH
-ARG BUILD_DATE
-ARG BUILD_REF
-ARG BUILD_VERSION
 
 LABEL io.hass.version="VERSION" io.hass.type="addon" io.hass.arch="armhf|aarch64|i386|amd64"
