@@ -10,20 +10,17 @@
 // bundle, and you should not use it for any sensitive information like passwords or keys.
 import { env } from './.env';
 
-export const environment = {
-  production: false,
-  version: env.npm_package_version + '-dev',
-  serverUrl: '/api',
-  defaultLanguage: 'en-US',
-  supportedLanguages: ['en-US'],
-  backend: 'http://localhost:2002',
-};
+interface Environment {
+  production: boolean;
+  version: string,
+  defaultLanguage: string,
+  supportedLanguages: Array<string>,
+  backend: string,
+}
 
-/*
- * For easier debugging in development mode, you can import the following file
- * to ignore zone related error stack frames such as `zone.run`, `zoneDelegate.invokeTask`.
- *
- * This import should be commented out in production mode because it will have a negative impact
- * on performance if an error is thrown.
- */
-// import 'zone.js/dist/zone-error';  // Included with Angular CLI.
+
+
+declare var __env: Environment;
+__env.version = env.npm_package_version;
+
+export const environment = __env;

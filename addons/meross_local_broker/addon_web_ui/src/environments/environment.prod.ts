@@ -6,11 +6,14 @@
 // bundle, and you should not use it for any sensitive information like passwords or keys.
 import { env } from './.env';
 
-export const environment = {
-  production: true,
-  version: env.npm_package_version,
-  serverUrl: 'https://api.chucknorris.io',
-  defaultLanguage: 'en-US',
-  supportedLanguages: ['en-US'],
-  backend: 'http://localhost:2002',
-};
+interface Environment {
+  production: boolean;
+  version: string,
+  defaultLanguage: string,
+  supportedLanguages: Array<string>,
+  backend: string,
+}
+
+declare var __env: Environment;
+__env.version = env.npm_package_version;
+export const environment = __env;
