@@ -11,7 +11,8 @@ ARG BUILD_VERSION
 ENV HIVEMQ='b2043e7fcbd5897a3799869d42c6202122221fbc' \
     LIBWEBSOCKETS='3.1.0' \
     MOSQUITTO='2.0.10' \
-    MOSQUITTO_GO_AUTH='1.5.0'
+    MOSQUITTO_GO_AUTH='1.5.0' \
+    MOSQUTTO_DISCONNECT='0.0.1'
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -45,6 +46,7 @@ RUN apt-get update \
     python3-pip \
     nginx \
     software-properties-common \
+    xsltproc \
   && mkdir -p /tmp/go \
   && curl https://dl.google.com/go/go1.16.3.linux-${BUILD_ARCH}.tar.gz --output go.tar.gz \
   && tar -C /usr/local -xzf go.tar.gz \
@@ -73,28 +75,32 @@ RUN apt-get update \
   \
   && git clone --branch "v${MOSQUITTO}" --depth=1 \
       https://github.com/eclipse/mosquitto.git /tmp/mosquitto \
-  \
+  && git clone --branch "v${MOSQUTTO_DISCONNECT}" --depth=1 \
+      https://github.com/albertogeniola/mosquitto-disconnections-plugin.git /tmp/mosquitto-disconnections-plugin \
+  && mkdir -p /tmp/mosquitto/plugins/disconnections \
+  && cp -R /tmp/mosquitto-disconnections-plugin/src/* /tmp/mosquitto/plugins/disconnections \
+  && echo "add_subdirectory(disconnections)" >> /tmp/mosquitto/plugins/CMakeLists.txt \
   && cd /tmp/mosquitto \
-  && make \
-    WITH_ADNS=no \
-    WITH_DOCS=no \
-    WITH_MEMORY_TRACKING=no \
-    WITH_TLS_PSK=no \
-    WITH_WEBSOCKETS=yes \
-    WITH_CJSON=no \
-    WITH_CLIENTS=no \
-    WITH_BROKER=yes \
-    WITH_PLUGINS=yes \
-    prefix=/usr \
-    binary \
-  && make WITH_DOCS=no WITH_CJSON=no install binary \
+  && cmake . \
+    -D WITH_ADNS=OFF \
+    -D WITH_DOCS=OFF \
+    -D WITH_MEMORY_TRACKING=OFF \
+    -D WITH_TLS_PSK=OFF \
+    -D WITH_WEBSOCKETS=ON \
+    -D WITH_CJSON=OFF \
+    -D WITH_CLIENTS=OFF \
+    -D WITH_BROKER=ON \
+    -D WITH_PLUGINS=ON \
+    -D DOCUMENTATION=OFF \
+  && make install \
+  && mkdir -p /usr/share/mosquitto \
+  && cp /usr/local/lib/mosquitto_disconnections.so /usr/share/mosquitto/mosquitto_disconnections.so \
   \
   && cd /tmp \
   && git clone --depth 1 --branch "${MOSQUITTO_GO_AUTH}" \
         https://github.com/iegomez/mosquitto-go-auth.git \
   && cd mosquitto-go-auth \
   && make \
-  && mkdir -p /usr/share/mosquitto \
   && cp /tmp/mosquitto-go-auth/pw /usr/share/mosquitto/pw \
   && cp /tmp/mosquitto-go-auth/go-auth.so /usr/share/mosquitto/go-auth.so \
   && chmod +x /usr/share/mosquitto/pw \

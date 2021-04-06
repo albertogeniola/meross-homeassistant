@@ -37,7 +37,10 @@ def superuser_acl():
 @devs_blueprint.route('/auth', methods=['POST'])
 def device_login():
     content = request.json
-    _LOGGER.debug("LOGIN_CHECK=%s", str(content))
+
+    if content is None:
+        _LOGGER.error("Expected JSON body has not been received.")
+        return "ko", 403
 
     username = request.json.get('username')
     password = request.json.get('password')
@@ -45,7 +48,7 @@ def device_login():
     acc = request.json.get('acc')
     clientid = request.json.get('clientid')
 
-    _LOGGER.debug("LOGIN_CHECK=> username: %s, password: %s, topic: %s, acc: %s, clientid: %s", str(username), str(password), str(topic), str(acc), str(clientid))
+    _LOGGER.debug("LOGIN_CHECK=> username: %s, password: %s, clientid: %s", str(username), str(password), str(clientid))
 
     # Device authentication basically is basically a "binding" to a given user id
     # Username => device mac addresss
@@ -61,10 +64,12 @@ def device_login():
     userid = match.group(1)
     md5hash = match.group(2)
 
-    # Parse the uuid
+    # Parse the device uuid
     match = _CLIENTID_RE.fullmatch(clientid)
     if match is None:
         _LOGGER.error("Clientid %s is not valid", clientid)
+        return "ko", 400
+
     dev_uuid = match.group(1)
 
     # Lookup key by the given username.
