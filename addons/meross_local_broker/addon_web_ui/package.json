@@ -5,7 +5,7 @@
   "scripts": {
     "ng": "ng",
     "build": "npm run write:env -s && ng build --prod --base-href ./local_meross-offline-broker",
-    "start": "npm run write:env -s && ng serve --proxy-config proxy.conf.js",
+    "start": "npm run write:env -s && ng serve",
     "lint": "ng lint && stylelint \"src/**/*.scss\" --syntax scss && htmlhint \"src\" --config .htmlhintrc",
     "test": "npm run write:env -s && ng test",
     "test:ci": "npm run write:env -s && npm run lint -s && ng test --configuration=ci",

@@ -1,35 +1,4 @@
 <div class="container">
-  <div class="container-head">
-    <mat-card class="service-status-card">
-      <mat-card-header>
-        <div mat-card-avatar>
-          <mat-icon aria-hidden="false">dns</mat-icon>
-        </div>
-        <mat-card-title>MQTT Broker</mat-card-title>
-        <!--<mat-card-subtitle class="running-status">Running</mat-card-subtitle>-->
-      </mat-card-header>
-    </mat-card>
-    <mat-card class="service-status-card">
-      <mat-card-header>
-        <div mat-card-avatar>
-          <mat-icon aria-hidden="false">dns</mat-icon>
-        </div>
-        <mat-card-title>HTTP API</mat-card-title>
-        <!--<mat-card-subtitle class="running-status">Running</mat-card-subtitle>-->
-      </mat-card-header>
-    </mat-card>
-
-    <mat-card class="service-status-card">
-      <mat-card-header>
-        <div mat-card-avatar>
-          <mat-icon aria-hidden="false">dns</mat-icon>
-        </div>
-        <mat-card-title>Zeroconf Daemon</mat-card-title>
-        <!--<mat-card-subtitle class="running-status">Running</mat-card-subtitle>-->
-      </mat-card-header>
-    </mat-card>
-  </div>
-
   <div class="max-400">
     <mat-toolbar color="primary">
       <span>Paired devices</span>
@@ -40,7 +9,7 @@
       <!-- Device Name Column -->
       <ng-container matColumnDef="deviceId">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Device Name</th>
-        <td mat-cell *matCellDef="let element">{{ element.deviceName }} ({{ element.uuid }})</td>
+        <td mat-cell *matCellDef="let element">{{ element.deviceName }} <br/> ({{ element.uuid }})</td>
       </ng-container>
 
       <ng-container matColumnDef="network">

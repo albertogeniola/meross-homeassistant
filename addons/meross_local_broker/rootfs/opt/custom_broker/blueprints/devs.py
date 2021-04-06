@@ -3,6 +3,7 @@ import re
 from _md5 import md5
 from flask import Blueprint, request
 from db_helper import dbhelper
+from model.enums import OnlineStatus
 
 devs_blueprint = Blueprint('_devs', __name__)
 _LOGGER = logging.getLogger(__name__)
@@ -92,8 +93,10 @@ def device_login():
 
     if expected_digest == md5hash:
         dbhelper.associate_user_device(userid=userid, mac=mac, uuid=dev_uuid)
+        dbhelper.update_device_status(device_uuid=dev_uuid, status=OnlineStatus.ONLINE)
         _LOGGER.info(
-            f"Device login attempt succeeded. Device with mac \"{mac}\" (uuid {dev_uuid}) has been associated to userid \"{userid}\"")
+            f"Device login attempt succeeded. Device with mac \"{mac}\" (uuid {dev_uuid}) has been associated to "
+            f"userid \"{userid}\"")
         return "ok", 200
     else:
         _LOGGER.warning(f"Device login attempt failed (device with mac \"{mac}\", userid \"{userid}\")")

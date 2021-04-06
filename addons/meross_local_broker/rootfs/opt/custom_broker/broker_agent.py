@@ -5,6 +5,7 @@ import ssl
 import paho.mqtt.client as mqtt
 import time
 import re
+import json
 
 from database import init_db
 from db_helper import dbhelper
@@ -23,6 +24,8 @@ handler.setFormatter(formatter)
 l.addHandler(handler)
 
 APPLIANCE_PUBLISH_TOPIC_RE = re.compile("/appliance/([a-zA-Z0-9]+)/publish")
+DISCONNECTION_TOPIC_RE = re.compile("^\$SYS/client-disconnections$")
+_CLIENTID_RE = re.compile('^fmware:([a-zA-Z0-9]+)_[a-zA-Z0-9]+$')
 
 
 def parse_args():
@@ -35,6 +38,27 @@ def parse_args():
     parser.add_argument('--cert-ca', required=True, type=str, help='Path to the root CA certificate path')
     parser.set_defaults(debug=False)
     return parser.parse_args()
+
+
+def _handle_device_disconnected(payload: str) -> None:
+    l.debug("Broker reported device disconnect: %s", payload)
+    evt = json.loads(payload)
+    if evt.get("event") != "disconnect":
+        l.warning("Invalid or unhandled event received: %s", evt.get("event"))
+        return
+    data = evt.get("data")
+    client_id = data.get("client_id")
+    username = data.get("username")
+    address = data.get("address")
+    reason = data.get("reason")
+    l.debug("Broker reported client %s (username: %s, ip: %s) disconnected for reason %s", client_id, username, address, str(reason))
+
+    # Only proceed if the client-id belongs to a hw device
+    device_match = _CLIENTID_RE.fullmatch(client_id)
+    if device_match:
+        uuid = device_match.group(1)
+        dbhelper.update_device_status(device_uuid=uuid, status=OnlineStatus.OFFLINE)
+        l.info("Device %s has disconnected from broker", uuid)
 
 
 class Broker:
@@ -54,7 +78,6 @@ class Broker:
 
         context = ssl.create_default_context(cafile=self.cert_ca)
         context.check_hostname = False
-        # context.set_ciphers(None)
         context.verify_mode = ssl.CERT_REQUIRED
         self.c.tls_set_context(context)
 
@@ -65,8 +88,6 @@ class Broker:
     def setup(self):
         l.debug("Connecting as %s : %s", self.username, self.password)
         self.c.connect(host=self.hostname, port=self.port)
-        # l.debug("Starting mqtt thread loop")
-        # self.c.loop_start()
 
     def _on_connect(self, client, userdata, rc, other):
         l.debug("Connected to broker, rc=%s", str(rc))
@@ -101,17 +122,23 @@ class Broker:
 
     def _handle_message(self, topic, payload):
         try:
+            disconnection_match = DISCONNECTION_TOPIC_RE.match(topic)
+            if disconnection_match is not None:
+                _handle_device_disconnected(payload)
+                return
+
             # Extract the device_uuid from he topic
             match = APPLIANCE_PUBLISH_TOPIC_RE.fullmatch(topic)
             if match is None:
                 l.warning("Skipped message against topic %s.", topic)
                 return
 
-            # If the message comes from a known device, update its online status
-
-
             # Find the USER-ID assigned to the given device
             device_uuid = match.group(1)
+
+            # If the message comes from a known device, update its online status
+            dbhelper.update_device_status(device_uuid=device_uuid, status=OnlineStatus.ONLINE)
+
             user = dbhelper.find_user_owner_by_device_uuid(device_uuid)
             if user is None:
                 l.warning("No user associated to device UUID %s, message will be skipped.", device_uuid)
@@ -123,18 +150,6 @@ class Broker:
             l.exception("An error occurred while handling message %s received on topic %s", str(payload), str(topic))
 
 
-class OnlineStatusManager:
-    def __init__(self):
-        self._online_dev_status={}
-
-    def notify_device_online(self, uuid: str):
-        old_status = self._online_dev_status.get(uuid)
-        if old_status is None:
-            dbhelper.update_device_status(device_uuid=uuid, status=OnlineStatus.ONLINE)
-            self._online_dev_status[uuid] = OnlineStatus.ONLINE
-        
-
-
 def main():
     args = parse_args()
     if args.debug:
@@ -143,6 +158,9 @@ def main():
 
     # Init or setup DB
     init_db()
+
+    # Set all devices to unknown online status
+    dbhelper.reset_device_online_status()
 
     b = Broker(hostname=args.host, port=args.port, username=args.username, password=args.password, cert_ca=args.cert_ca)
 

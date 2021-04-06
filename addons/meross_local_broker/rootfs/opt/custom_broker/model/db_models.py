@@ -1,6 +1,6 @@
 from typing import Dict
 
-from sqlalchemy import Column, String, BigInteger, Integer
+from sqlalchemy import Column, String, BigInteger, Integer, DateTime
 from sqlalchemy import ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from database import Base
@@ -88,6 +88,9 @@ class Device(Base, Serializer):
 
     user_id = Column(String, ForeignKey('users.user_id'))
     owner_user = relationship("User", back_populates="owned_devices")
+
+    # Technical fields
+    last_seen_time = Column(DateTime)
 
     def __init__(self, mac: str, *args, **kwargs):
         self.mac = mac

@@ -2,6 +2,8 @@ from typing import Optional, List
 
 from database import db_session
 from model.db_models import UserToken, Device, User
+from datetime import datetime
+from model.enums import OnlineStatus
 
 
 class DbHelper:
@@ -51,6 +53,19 @@ class DbHelper:
 
     def get_all_devices(self) -> List[Device]:
         return self._s.query(Device).all()
+
+    def update_device_status(self, device_uuid: str, status: OnlineStatus) -> None:
+        dev = self._s.query(Device).filter(Device.uuid == device_uuid).first()
+        if dev is None:
+            raise Exception("Device %s was not present into the database.")
+        dev.online_status = status
+        dev.last_seen_time = datetime.now()
+        self._s.add(dev)
+        self._s.commit()
+
+    def reset_device_online_status(self) -> None:
+        self._s.query(Device).update({Device.online_status: OnlineStatus.UNKNOWN})
+        self._s.commit()
 
 
 dbhelper = DbHelper()
