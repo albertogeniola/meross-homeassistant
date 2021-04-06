@@ -156,7 +156,11 @@ class SwitchEntityWrapper(SwitchEntity):
     def today_energy_kwh(self) -> Optional[float]:
         if self._daily_consumtpion is not None:
             today = datetime.today()
-            date, total = max(self._daily_consumtpion, key=lambda x: x.get('date'))
+            total = 0
+            daystart = datetime(year=today.year, month=today.month, day=today.day, hour=0, second=0)
+            for x in self._daily_consumtpion:
+              if x['date'] == daystart:
+                total = x['total_consumption_kwh']
             return total
 
 
