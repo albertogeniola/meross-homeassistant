@@ -5,11 +5,21 @@
 A full-featured Homeassistant component to drive Meross devices. 
 This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
 
+## :new: :rocket: Local-Only Addon under development :rocket:
+Meross Plugin has gained great success and popularity among the HomeAssistant users. However, the Meross engineers are imposing
+new limits on their MQTT broker system, which cause problems to the HA users who want to implement aggressive polling or have
+more than 10 devices connected to HA. For this reason, I am working on a new HomeAssistant addon, namely "Meross Local Addon", 
+which aims at re-implementing the Meross MQTT Broker and HTTP API layer locally to the addon. This would basically allow users
+to rely only on LAN-local connection, using HomeAssistant as command center. 
+
+As you can imagine, there is a huge work behind that: first I need to reverse-engineer the Meross protocols, then I need to 
+implement any "logic-layer" implemented on Meross Systems on the new addon I am developing and, eventually, I have to make
+sure that everything works together. That means that I am not able to spend much time in solving issues that may arise in 
+the meantime, and for that I apologize. If you like this project and you want to support me, please consider donating:
+that motivates me and helps me buy _more ram_ which is absolutely necessary when developing on a virtualized environment.
+
 ## Version 1.0 is here!
-After months of work and sleepless weekends, it's finally time to present to the Meross community the new version of the 
-HomeAssistant component that allows Meross device controlling. The new version of this library is based on the 
-complete refactored low-level MerossIot library. It's now fully async, based on Meross push notifications and 
-much more robust and resilient to network disconnections.
+After months of work and sleepless weekends, it's finally time to present to the Meross community the new version of the HomeAssistant component that allows Meross device controlling. The new version of this library is based on the complete refactored low-level MerossIot library. It's now fully async, based on Meross push notifications and much more robust and resilient to network disconnections.
 
 ### Updating from legacy versions
 In case you are updating the component from legacy versions, you need to remove the previous one and fully remove
