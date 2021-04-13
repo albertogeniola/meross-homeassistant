@@ -15,7 +15,7 @@ import { Observable, Subscription } from 'rxjs';
   styleUrls: ['./home.component.scss'],
 })
 export class HomeComponent implements AfterViewInit, OnInit {
-  displayedColumns: string[] = ['deviceId', 'network', 'online_status'];
+  displayedColumns: string[] = ['deviceId', 'network', 'status'];
   dataSource = new MatTableDataSource<Device>([]);
   private _autoUpdateSubscription: Subscription = null;
 
