@@ -18,8 +18,6 @@ interface Environment {
   backend: string;
 }
 
-
-
 declare var __env: Environment;
 __env.version = env.npm_package_version;
 

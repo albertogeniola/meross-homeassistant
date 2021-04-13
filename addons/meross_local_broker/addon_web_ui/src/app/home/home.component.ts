@@ -9,29 +9,14 @@ import { AdminService } from '@app/services/admin';
 import { MatSlideToggleChange } from '@angular/material/slide-toggle';
 import { Observable, Subscription } from 'rxjs';
 
-const ELEMENT_DATA: Device[] = [
-  {
-    mac: 'macadd',
-    uuid: 'uuid',
-    deviceName: 'test',
-    deviceType: 'string',
-    deviceSubType: 'string',
-    firmwareVersion: ' string',
-    domain: 'string',
-    reservedDomain: 'string',
-    userId: 'string',
-    status: DeviceOnlineStatus.UNKNOWN
-  },
-];
-
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
 })
 export class HomeComponent implements AfterViewInit, OnInit {
-  displayedColumns: string[] = ['deviceId', 'network', 'status'];
-  dataSource = new MatTableDataSource<Device>(ELEMENT_DATA);
+  displayedColumns: string[] = ['deviceId', 'network', 'online_status'];
+  dataSource = new MatTableDataSource<Device>([]);
   private _autoUpdateSubscription: Subscription = null;
 
   //private autoDeviceUpdate = false;

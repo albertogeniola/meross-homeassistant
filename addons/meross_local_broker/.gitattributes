@@ -2,6 +2,6 @@
 *.sh eol=lf
 *.acl eol=lf
 *.pw eol=lf
-/etc/services.d/*/run text eol=lf
-/etc/services.d/*/finish text eol=lf
+/etc/fix-attrs.d/** text eol=lf
+/etc/services.d/** text eol=lf
 /etc/nginx/ingress.conf text eol=lf

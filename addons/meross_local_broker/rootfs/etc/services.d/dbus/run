@@ -1,7 +1,7 @@
-#!/usr/bin/with-contenv bash
+#!/usr/bin/with-contenv bashio
 # ==============================================================================
 # Starts the D-Bus daemon
 # ==============================================================================
 # shellcheck disable=SC1091
-
+bashio::log.info "Starting dbus daemon"
 exec dbus-daemon --system --nofork || echo 'Failed to start D-Bus daemon'

@@ -11,6 +11,7 @@ do
 done
 
 # Start the Avahi daemon
+bashio::log.info "Starting the Avahi Daemon"
 debug=$(bashio::config 'debug_mode')
 if [[ $debug == true ]]; then
     exec avahi-daemon --debug

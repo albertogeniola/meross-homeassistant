@@ -27,19 +27,20 @@ COPY rootfs/opt/custom_broker/requirements.txt requirements.txt
 # hadolint ignore=DL3003
 RUN apt-get update \
   && apt-get --no-install-recommends install -y \
+    avahi-utils \
+    build-essential \
     git \
     cmake \
-    build-essential \
     libssl-dev \
-    libavahi-client-dev \
     python3-dev \
-    avahi-daemon \
+    libavahi-client-dev \  
     libavahi-compat-libdnssd-dev \
-    avahi-utils \
+    avahi-daemon \
     dbus \
     bash \
     sqlite \
     curl \
+    socat \
     openssl \
     python3 \
     python3-setuptools \

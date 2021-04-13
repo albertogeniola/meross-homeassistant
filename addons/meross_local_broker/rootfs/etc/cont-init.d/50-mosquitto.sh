@@ -32,3 +32,7 @@ if [[ ! -f $MQTT_CA_KEY_PATH ]] || [[ ! -f $MQTT_CA_CRT_PATH ]] || [[ ! -f $MQTT
 else
   bashio::log.info "All certificate files seems present."
 fi
+
+# Align permissions
+bashio::log.info "Aligning permissions for certificates"
+chown -vR mosquitto:mosquitto /data/mqtt/certs 

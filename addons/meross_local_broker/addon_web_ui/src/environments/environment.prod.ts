@@ -8,10 +8,10 @@ import { env } from './.env';
 
 interface Environment {
   production: boolean;
-  version: string,
-  defaultLanguage: string,
-  supportedLanguages: Array<string>,
-  backend: string,
+  version: string;
+  defaultLanguage: string;
+  supportedLanguages: Array<string>;
+  backend: string;
 }
 
 declare var __env: Environment;
