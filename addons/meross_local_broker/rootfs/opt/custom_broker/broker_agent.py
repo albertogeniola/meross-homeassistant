@@ -13,6 +13,7 @@ from model.enums import OnlineStatus
 
 CLIENT_ID = 'broker_agent'
 APPLIANCE_MESSAGE_TOPICS = '/appliance/+/publish'
+DISCONNECTION_TOPIC = '$SYS/client-disconnections'
 
 l = logging.getLogger()
 l.setLevel(logging.INFO)
@@ -91,7 +92,7 @@ class Broker:
 
     def _on_connect(self, client, userdata, rc, other):
         l.debug("Connected to broker, rc=%s", str(rc))
-        self.c.subscribe(APPLIANCE_MESSAGE_TOPICS)
+        self.c.subscribe([(APPLIANCE_MESSAGE_TOPICS, 2), (DISCONNECTION_TOPIC, 2)])
 
     def _on_subscribe(self, client, userdata, mid, granted_qos):
         l.debug("Subscribed to relevant topics")
