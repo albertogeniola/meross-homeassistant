@@ -7,7 +7,6 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class OnlineStatus(Enum):
-
     NOT_ONLINE = 0
     ONLINE = 1
     OFFLINE = 2

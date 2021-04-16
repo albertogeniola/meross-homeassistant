@@ -1,9 +1,9 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Device } from '@app/model/device';
+import { Device, DeviceOnlineStatus } from '@app/model/device';
 import { environment } from '@env/environment';
 import { Observable, of } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { catchError, tap, map } from 'rxjs/operators';
 
 /**
  * Interface for ADMIN apis
@@ -27,11 +27,34 @@ export class AdminService {
     };
   }
 
+  updateDevice(uuid: string, devicePatch: any): Observable<Device> {
+    var headers = new HttpHeaders();
+    headers.append('Content-Type', 'application/json; charset=utf-8');
+    return this.http
+      .put<any>(environment.backend + '/_admin_/devices/' + uuid, devicePatch, { headers })
+      .pipe(
+        map((device) => {
+          // Convert date
+          device.last_seen_time = new Date(device.last_seen_time);
+          return device as Device;
+        }, catchError(this.handleError<Device>('updateDevice', null)))
+      );
+  }
+
   listDevices(): Observable<Device[]> {
     var headers = new HttpHeaders();
     headers.append('Content-Type', 'application/json; charset=utf-8');
     return this.http
-      .get<Device[]>(environment.backend + '/_admin_/devices', { headers })
-      .pipe(catchError(this.handleError<Device[]>('listDevices', [])));
+      .get<any[]>(environment.backend + '/_admin_/devices', { headers })
+      .pipe(
+        map((devices) =>
+          devices.map((device) => {
+            // Convert date
+            device.last_seen_time = new Date(device.last_seen_time);
+            return device as Device;
+          })
+        ),
+        catchError(this.handleError<Device[]>('listDevices', []))
+      );
   }
 }

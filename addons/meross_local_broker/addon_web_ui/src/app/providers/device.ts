@@ -21,7 +21,7 @@ import {
 export class DeviceStore {
   // Internal device handler
   private _devices: BehaviorSubject<Device[]> = new BehaviorSubject([]);
-  private REFRESH_TIME : number = 10000;
+  private REFRESH_TIME: number = 10000;
 
   // Exposed observable
   public readonly devices: Observable<Device[]> = this._devices.asObservable();
@@ -40,5 +40,9 @@ export class DeviceStore {
 
   private devicesUpdate(): Observable<Device[]> {
     return this.adminService.listDevices();
+  }
+
+  public updateDeviceName(deviceUuid: string, deviceName: string): Observable<Device> {
+    return this.adminService.updateDevice(deviceUuid, { device_name: deviceName });
   }
 }

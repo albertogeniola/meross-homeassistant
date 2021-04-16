@@ -3,19 +3,20 @@ export enum DeviceOnlineStatus {
   NOT_ONLINE = 0,
   ONLINE = 1,
   OFFLINE = 2,
-  UPGRADING = 3
-
+  UPGRADING = 3,
 }
 
 export interface Device {
-  mac: string;
-  uuid: string;
-  deviceName: string;
-  deviceType: string;
-  deviceSubType: string;
-  firmwareVersion: string;
+  readonly mac: string;
+  readonly uuid: string;
+  readonly device_type: string;
+  readonly device_sub_type: string;
+  readonly firmware_version: string;
+  readonly hardware_version: string;
+  readonly user_id: string;
+  readonly online_status: DeviceOnlineStatus;
+  readonly last_seen_time: Date;
+  device_name: string;
   domain: string;
-  reservedDomain: string;
-  userId: string;
-  status: DeviceOnlineStatus;
+  reserved_domain: string;
 }

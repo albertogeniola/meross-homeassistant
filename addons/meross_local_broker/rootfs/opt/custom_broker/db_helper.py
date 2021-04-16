@@ -51,6 +51,17 @@ class DbHelper:
             return None
         return dev.owner_user
 
+    def get_device_by_uuid(self, device_uuid: str) -> Optional[Device]:
+        dev = self._s.query(Device).filter(Device.uuid == device_uuid).first()
+        if dev is None:
+            return None
+        return dev
+
+    def update_device(self, device: Device) -> Device:
+        self._s.add(device)
+        self._s.commit()
+        return device
+
     def get_all_devices(self) -> List[Device]:
         return self._s.query(Device).all()
 

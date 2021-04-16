@@ -98,5 +98,5 @@ class Device(Base, Serializer):
     def serialize(self):
         d = Serializer.serialize(self)
         del d['owner_user']
-        d['online_status'] = self.online_status.name
+        d['online_status'] = self.online_status.value
         return d
