@@ -4,7 +4,6 @@ CONFIG_PATH=/data/options.json
 
 pushd /opt/custom_broker >/dev/null
 
-# Start flask
 debug=$(bashio::config 'debug_mode')
 
 if [[ $debug == true ]]; then

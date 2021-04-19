@@ -1,7 +1,11 @@
 import argparse
 import logging
+import string
 import sys
 import ssl
+from _md5 import md5
+from random import random
+
 import paho.mqtt.client as mqtt
 import time
 import re
@@ -14,6 +18,7 @@ from model.enums import OnlineStatus
 CLIENT_ID = 'broker_agent'
 APPLIANCE_MESSAGE_TOPICS = '/appliance/+/publish'
 DISCONNECTION_TOPIC = '$SYS/client-disconnections'
+AGENT_TOPIC = '/_agent'
 
 l = logging.getLogger()
 l.setLevel(logging.INFO)
@@ -27,6 +32,40 @@ l.addHandler(handler)
 APPLIANCE_PUBLISH_TOPIC_RE = re.compile("/appliance/([a-zA-Z0-9]+)/publish")
 DISCONNECTION_TOPIC_RE = re.compile("^\$SYS/client-disconnections$")
 _CLIENTID_RE = re.compile('^fmware:([a-zA-Z0-9]+)_[a-zA-Z0-9]+$')
+
+
+def _build_mqtt_message(method: str, namespace: str, payload: dict, dev_key: str):
+    # Generate a random 16 byte string
+    randomstring = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16))
+
+    # Hash it as md5
+    md5_hash = md5()
+    md5_hash.update(randomstring.encode('utf8'))
+    messageId = md5_hash.hexdigest().lower()
+    timestamp = int(round(time.time()))
+
+    # Hash the messageId, the key and the timestamp
+    md5_hash = md5()
+    strtohash = "%s%s%s" % (messageId, dev_key, timestamp)
+    md5_hash.update(strtohash.encode("utf8"))
+    signature = md5_hash.hexdigest().lower()
+
+    data = {
+        "header":
+            {
+                "from": "/_agent",
+                "messageId": messageId,  # Example: "122e3e47835fefcd8aaf22d13ce21859"
+                "method": method,  # Example: "GET",
+                "namespace": namespace,  # Example: "Appliance.System.All",
+                "payloadVersion": 1,
+                "sign": signature,  # Example: "b4236ac6fb399e70c3d61e98fcb68b74",
+                "timestamp": timestamp,
+                'triggerSrc': 'Agent'
+            },
+        "payload": payload
+    }
+    strdata = json.dumps(data)
+    return strdata.encode("utf-8"), messageId
 
 
 def parse_args():
@@ -85,6 +124,7 @@ class Broker:
         self.c.on_connect = self._on_connect
         self.c.on_disconnect = self._on_disconnect
         self.c.on_message = self._on_message
+        self._devices_sys_info = {}
 
     def setup(self):
         l.debug("Connecting as %s : %s", self.username, self.password)
@@ -92,7 +132,7 @@ class Broker:
 
     def _on_connect(self, client, userdata, rc, other):
         l.debug("Connected to broker, rc=%s", str(rc))
-        self.c.subscribe([(APPLIANCE_MESSAGE_TOPICS, 2), (DISCONNECTION_TOPIC, 2)])
+        self.c.subscribe([(APPLIANCE_MESSAGE_TOPICS, 2), (DISCONNECTION_TOPIC, 2), (AGENT_TOPIC, 2)])
 
     def _on_subscribe(self, client, userdata, mid, granted_qos):
         l.debug("Subscribed to relevant topics")
@@ -121,31 +161,77 @@ class Broker:
         self.c.loop_stop(True)
         l.info("MQTT Client has fully disconnected.")
 
+    def _issue_device_channel_discovery(self, device_uuid: str) -> None:
+        msg = _build_mqtt_message(method="GET", namespace="Appliance.System.All", payload={}, dev_key='')
+        self.c.publish(topic=f"/appliance/{device_uuid}/subscribe", payload=msg)
+
+    def _handle_device_publication(self, device_uuid, topic, payload):
+        # If the message comes from a known device, update its online status
+        dbhelper.update_device_status(device_uuid=device_uuid, status=OnlineStatus.ONLINE)
+
+        user = dbhelper.find_user_owner_by_device_uuid(device_uuid)
+        if user is None:
+            l.warning("No user associated to device UUID %s, message will be skipped.", device_uuid)
+            return
+
+        # If this is the first time we see this device, update its channel status
+        if device_uuid not in self._devices_sys_info:
+            l.info("No info is available for device %s. Issuing SystemAll command to discover its channels "
+                   "and supplementary data", device_uuid)
+            self._issue_device_channel_discovery(device_uuid)
+
+        l.debug("Forwarding message for device %s to user %s", device_uuid, user)
+        self.c.publish(topic=f"/app/{user.user_id}/subscribe", payload=payload)
+
+    def _handle_message_to_agent(self, topic, payload):
+        l.debug("Received message on topic %s: %s", topic, str(payload))
+
+        # Try to guess the channels from the system_all payload
+        namespace = payload.get('header', {}).get('namespace', None)
+        method = payload.get('header', {}).get('method', None)
+        from_appliance = payload.get('header', {}).get('from', None)
+
+        if namespace == 'Appliance.System.All' and method == 'GETACK':
+            # Retrieve appliance uuid
+            match = APPLIANCE_PUBLISH_TOPIC_RE.fullmatch(from_appliance)
+            appliance_uuid = match.group(1)
+
+            # Retrieve system_all info
+            digest = payload.get('payload', {}).get('all', {}).get('digest', None)
+            if digest is None:
+                l.warning("Missing or invalid payload Appliance.System.All payload")
+                return
+
+            # Guess channels and Store Appliance info on DB
+            # Guess by togglex
+            togglex_devices = digest.get('togglex')
+            if togglex_devices is not None and len(togglex_devices) > 0:
+                l.debug("Guessing channels via togglex")
+                for d in togglex_devices:
+                    device_id = d.get('channel')
+                    dbhelper.update_device_channel(device_uuid=appliance_uuid, channel_id=device_id)
+            else:
+                l.error("Could not guess the channels for device uuid %s", appliance_uuid)
+
     def _handle_message(self, topic, payload):
         try:
+            # Handling DISCONNECTION control messages
             disconnection_match = DISCONNECTION_TOPIC_RE.match(topic)
             if disconnection_match is not None:
                 _handle_device_disconnected(payload)
                 return
 
-            # Extract the device_uuid from he topic
+            # Handling messages pushed to APPLIANCE publication topics
             match = APPLIANCE_PUBLISH_TOPIC_RE.fullmatch(topic)
-            if match is None:
-                l.warning("Skipped message against topic %s.", topic)
+            if match is not None:
+                device_uuid = match.group(1)
+                self._handle_device_publication(device_uuid=device_uuid, topic=topic, payload=payload)
                 return
 
-            # Find the USER-ID assigned to the given device
-            device_uuid = match.group(1)
-
-            # If the message comes from a known device, update its online status
-            dbhelper.update_device_status(device_uuid=device_uuid, status=OnlineStatus.ONLINE)
-
-            user = dbhelper.find_user_owner_by_device_uuid(device_uuid)
-            if user is None:
-                l.warning("No user associated to device UUID %s, message will be skipped.", device_uuid)
+            # Handling messages pushed to /_agent dedicated topic
+            if topic == AGENT_TOPIC:
+                self._handle_message_to_agent(topic=topic, payload=payload)
                 return
-            l.debug("Forwarding message for device %s to user %s", device_uuid, user)
-            self.c.publish(topic=f"/app/{user.user_id}/subscribe", payload=payload)
 
         except Exception as ex:
             l.exception("An error occurred while handling message %s received on topic %s", str(payload), str(topic))

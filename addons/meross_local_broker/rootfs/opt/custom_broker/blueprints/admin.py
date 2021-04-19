@@ -32,10 +32,10 @@ def update_device(uuid: str) -> Dict:
         raise BadRequestError(msg=f"Device with UUID {uuid} does not exist")
 
     # Path supported methods: device name
-    name = device_patch.get("device_name")
+    name = device_patch.get("dev_name")
     if name is not None:
-        device.device_name = name
-        del device_patch["device_name"]
+        device.dev_name = name
+        del device_patch["dev_name"]
 
     # Raise an error if the user has tried to update any other attribute
     if len(device_patch.keys()) > 0:

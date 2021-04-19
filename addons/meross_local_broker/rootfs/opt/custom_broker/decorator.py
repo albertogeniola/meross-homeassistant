@@ -46,14 +46,21 @@ def meross_http_api(original_function=None, login_required=True):
             # - sign: message signature
             # - timestamp
             # - nonce
-            j = request.get_json()
-            if j is None:
-                raise BadRequestError("Missing json payload")
-
-            params = j.get('params')
-            signature = j.get('sign')
-            timestamp = j.get('timestamp')
-            nonce = j.get('nonce')
+            if request.json is not None:
+                l.debug("Found input json (%s)", str(request.json))
+                j = request.json
+                params = j.get('params')
+                signature = j.get('sign')
+                timestamp = j.get('timestamp')
+                nonce = j.get('nonce')
+            elif request.form is not None:
+                l.debug("Parsing input from form data: %s", str(request.form))
+                params = request.form.get('params')
+                signature = request.form.get('sign')
+                timestamp = request.form.get('timestamp')
+                nonce = request.form.get('nonce')
+            else:
+                raise BadRequestError("Missing or invalid payload")
 
             if params is None:
                 raise BadRequestError("Empty params payload")

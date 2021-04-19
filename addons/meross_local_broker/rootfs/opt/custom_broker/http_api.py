@@ -8,15 +8,16 @@ from blueprints.auth import auth_blueprint
 from blueprints.devs import devs_blueprint
 from blueprints.profile import profile_blueprint
 from blueprints.admin import admin_blueprint
+from blueprints.device import device_blueprint
 from codes import ErrorCodes
 from database import db_session, init_db
 from messaging import make_api_response
 from model.exception import HttpApiError, BadRequestError
 
-_LOG_URL = "/v1/log/user"
-_DEV_LIST = "/v1/Device/devList"
-_HUB_DUBDEV_LIST = "/v1/Hub/getSubDevices"
-_LOGOUT_URL = "/v1/Profile/logout"
+#_LOG_URL = "/v1/log/user"
+#_DEV_LIST = "/v1/Device/devList"
+#_HUB_DUBDEV_LIST = "/v1/Hub/getSubDevices"
+#_LOGOUT_URL = "/v1/Profile/logout"
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,9 +28,9 @@ CORS(app)  # TODO: Fix this. Maybe we can restrict the origin access. In case we
 
 app.register_blueprint(auth_blueprint, url_prefix="/v1/Auth")
 app.register_blueprint(profile_blueprint, url_prefix="/v1/Profile")
+app.register_blueprint(device_blueprint, url_prefix="/v1/Device")
 app.register_blueprint(devs_blueprint, url_prefix="/_devs_")
 app.register_blueprint(admin_blueprint, url_prefix="/_admin_")
-#app.register_blueprint(device_bludprint)
 #app.register_blueprint(hub_blueprint)
 
 

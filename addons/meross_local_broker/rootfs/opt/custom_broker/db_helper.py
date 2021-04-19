@@ -1,7 +1,7 @@
 from typing import Optional, List
 
 from database import db_session
-from model.db_models import UserToken, Device, User
+from model.db_models import UserToken, Device, User, DeviceChannel
 from datetime import datetime
 from model.enums import OnlineStatus
 
@@ -68,11 +68,34 @@ class DbHelper:
     def update_device_status(self, device_uuid: str, status: OnlineStatus) -> None:
         dev = self._s.query(Device).filter(Device.uuid == device_uuid).first()
         if dev is None:
-            raise Exception("Device %s was not present into the database.")
+            raise Exception("Device %s was not present into the database." % device_uuid)
         dev.online_status = status
         dev.last_seen_time = datetime.now()
         self._s.add(dev)
         self._s.commit()
+
+    def update_device_channel(self, device_uuid: str, channel_id: int) -> DeviceChannel:
+        dev = self._s.query(Device).filter(Device.uuid == device_uuid).first()
+        if dev is None:
+            raise Exception("Device %s was not present into the database." % device_uuid)
+
+        channel = None
+        for c in dev.channels:
+            if c.channel_id == channel_id:
+                # Update this channel
+                # TODO: channel name/type update?
+                channel = c
+                break
+
+        if channel is None:
+            channel = DeviceChannel()
+            channel.channel_id = channel_id
+            channel.device_uuid = device_uuid
+
+            self._s.add(dev)
+            self._s.commit()
+
+        return channel
 
     def reset_device_online_status(self) -> None:
         self._s.query(Device).update({Device.online_status: OnlineStatus.UNKNOWN})

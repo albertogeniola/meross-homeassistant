@@ -14,30 +14,13 @@ export interface SetNameDialogData {
   device: Device;
 }
 
-var mock: Device[] = [
-  {
-    device_name: null,
-    device_sub_type: null,
-    device_type: null,
-    domain: null,
-    firmware_version: null,
-    hardware_version: null,
-    last_seen_time: new Date('Fri, 16 Apr 2021 09:17:23 GMT'),
-    mac: '34:29:8f:1a:5b:2d',
-    online_status: DeviceOnlineStatus.OFFLINE,
-    reserved_domain: null,
-    user_id: '1',
-    uuid: '19011890809879251h0434298f1a5b2d',
-  },
-];
-
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
 })
 export class HomeComponent implements AfterViewInit, OnInit {
-  displayedColumns: string[] = ['deviceId', 'network', 'status'];
+  displayedColumns: string[] = ['deviceId', 'network', 'status', 'userId'];
   dataSource = new MatTableDataSource<Device>([]);
   autoUpdate = true;
   private _autoUpdateSubscription: Subscription = null;
@@ -48,8 +31,7 @@ export class HomeComponent implements AfterViewInit, OnInit {
   constructor(private deviceStore: DeviceStore, public dialog: MatDialog) {}
   ngOnInit(): void {
     // Update the device list once
-    this.dataSource.data = mock;
-    //this.deviceStore.devices.subscribe((devices) => (this.dataSource.data = devices));
+    this.deviceStore.devices.subscribe((devices) => (this.dataSource.data = devices));
   }
 
   onAutodeviceUpdate(e: MatSlideToggleChange) {
@@ -75,7 +57,6 @@ export class HomeComponent implements AfterViewInit, OnInit {
 
     dialogRef.afterClosed().subscribe((result) => {
       console.log('The dialog was closed');
-      //this.animal = result;
     });
   }
 }
@@ -92,7 +73,7 @@ export class SetDeviceNameDialog {
     private deviceStore: DeviceStore,
     @Inject(MAT_DIALOG_DATA) public data: SetNameDialogData
   ) {
-    this.newDeviceName = data.device.device_name;
+    this.newDeviceName = data.device.dev_name;
   }
 
   onNoClick(): void {
@@ -101,7 +82,9 @@ export class SetDeviceNameDialog {
 
   setDeviceName(): void {
     this.deviceStore.updateDeviceName(this.data.device.uuid, this.newDeviceName).subscribe((d) => {
-      this.data.device = d;
+      if (d !== null) {
+        this.data.device.dev_name = this.newDeviceName;
+      }
       this.dialogRef.close();
     });
   }

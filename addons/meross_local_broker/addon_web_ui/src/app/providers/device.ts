@@ -43,6 +43,6 @@ export class DeviceStore {
   }
 
   public updateDeviceName(deviceUuid: string, deviceName: string): Observable<Device> {
-    return this.adminService.updateDevice(deviceUuid, { device_name: deviceName });
+    return this.adminService.updateDevice(deviceUuid, { dev_name: deviceName });
   }
 }
