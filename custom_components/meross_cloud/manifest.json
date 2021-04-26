@@ -7,5 +7,5 @@
   "requirements": ["meross-iot==0.4.1.1rc1"],
   "config_flow": true,
   "quality_scale": "platinum",
-  "version": "1.0"
+  "version": "1.0.5"
 }
