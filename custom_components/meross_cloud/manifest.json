@@ -6,5 +6,6 @@
   "codeowners": ["@albertogeniola"],
   "requirements": ["meross-iot==0.4.0.1"],
   "config_flow": true,
-  "quality_scale": "platinum"
+  "quality_scale": "platinum",
+  "version": "1.0"
 }
