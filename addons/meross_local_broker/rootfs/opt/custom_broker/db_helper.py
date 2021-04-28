@@ -1,9 +1,13 @@
+import logging
 from typing import Optional, List
 
 from database import db_session
 from model.db_models import UserToken, Device, User, DeviceChannel
 from datetime import datetime
 from model.enums import OnlineStatus
+
+
+l = logging.getLogger()
 
 
 class DbHelper:
@@ -82,17 +86,19 @@ class DbHelper:
         channel = None
         for c in dev.channels:
             if c.channel_id == channel_id:
-                # Update this channel
-                # TODO: channel name/type update?
+                l.debug("Channel %d already attached to device uuid %s: channel__id %s", channel_id, device_uuid, c.device_channel_id)
                 channel = c
                 break
 
+        # TODO: channel name/type update?
+
         if channel is None:
+            l.info("Discovered channel index %d on device uuid %s", channel_id, device_uuid)
             channel = DeviceChannel()
             channel.channel_id = channel_id
             channel.device_uuid = device_uuid
 
-            self._s.add(dev)
+            self._s.add(channel)
             self._s.commit()
 
         return channel

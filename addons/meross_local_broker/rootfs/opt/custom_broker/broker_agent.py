@@ -4,7 +4,7 @@ import string
 import sys
 import ssl
 from _md5 import md5
-from random import random
+import random
 
 import paho.mqtt.client as mqtt
 import time
@@ -80,13 +80,11 @@ def parse_args():
     return parser.parse_args()
 
 
-def _handle_device_disconnected(payload: str) -> None:
-    l.debug("Broker reported device disconnect: %s", payload)
-    evt = json.loads(payload)
-    if evt.get("event") != "disconnect":
-        l.warning("Invalid or unhandled event received: %s", evt.get("event"))
+def _handle_device_disconnected(payload: dict) -> None:
+    if payload.get("event") != "disconnect":
+        l.warning("Invalid or unhandled event received: %s", payload.get("event"))
         return
-    data = evt.get("data")
+    data = payload.get("data")
     client_id = data.get("client_id")
     username = data.get("username")
     address = data.get("address")
@@ -162,10 +160,11 @@ class Broker:
         l.info("MQTT Client has fully disconnected.")
 
     def _issue_device_channel_discovery(self, device_uuid: str) -> None:
-        msg = _build_mqtt_message(method="GET", namespace="Appliance.System.All", payload={}, dev_key='')
+        device = dbhelper.get_device_by_uuid(device_uuid=device_uuid)
+        msg, message_id = _build_mqtt_message(method="GET", namespace="Appliance.System.All", payload={}, dev_key=device.owner_user.mqtt_key)
         self.c.publish(topic=f"/appliance/{device_uuid}/subscribe", payload=msg)
 
-    def _handle_device_publication(self, device_uuid, topic, payload):
+    def _handle_device_publication(self, device_uuid: str, topic: str, payload: dict):
         # If the message comes from a known device, update its online status
         dbhelper.update_device_status(device_uuid=device_uuid, status=OnlineStatus.ONLINE)
 
@@ -175,17 +174,15 @@ class Broker:
             return
 
         # If this is the first time we see this device, update its channel status
-        if device_uuid not in self._devices_sys_info:
+        if device_uuid not in self._devices_sys_info.keys():
             l.info("No info is available for device %s. Issuing SystemAll command to discover its channels "
                    "and supplementary data", device_uuid)
             self._issue_device_channel_discovery(device_uuid)
 
         l.debug("Forwarding message for device %s to user %s", device_uuid, user)
-        self.c.publish(topic=f"/app/{user.user_id}/subscribe", payload=payload)
+        self.c.publish(topic=f"/app/{user.user_id}/subscribe", payload=json.dumps(payload))
 
-    def _handle_message_to_agent(self, topic, payload):
-        l.debug("Received message on topic %s: %s", topic, str(payload))
-
+    def _handle_message_to_agent(self, topic: str, payload: dict) -> None:
         # Try to guess the channels from the system_all payload
         namespace = payload.get('header', {}).get('namespace', None)
         method = payload.get('header', {}).get('method', None)
@@ -199,38 +196,60 @@ class Broker:
             # Retrieve system_all info
             digest = payload.get('payload', {}).get('all', {}).get('digest', None)
             if digest is None:
-                l.warning("Missing or invalid payload Appliance.System.All payload")
+                l.warning("Missing or invalid payload Appliance.System.All payload: could not find digest attribute")
                 return
+
+            system = payload.get('payload', {}).get('all', {}).get('system', None)
+            if system is None:
+                l.warning("Missing or invalid payload Appliance.System.All payload: could not find system attribute")
+                return
+
+            # Update device info
+            hardware = system.get('hardware')
+            firmware = system.get('firmware')
+            time  = system.get('time')
+            online = system.get('online')
+            device = dbhelper.get_device_by_uuid(device_uuid=appliance_uuid)
+            device.device_type = hardware.get('type')
+            device.sub_type = hardware.get('subType')
+            device.hdware_version = hardware.get('version')
+            device.fmware_version = firmware.get('version')
+            device.domain = f"{firmware.get('server')}:{firmware.get('port')}"
+            device.online_status = OnlineStatus(online.get('status'))
+            dbhelper.update_device(device)
 
             # Guess channels and Store Appliance info on DB
             # Guess by togglex
-            togglex_devices = digest.get('togglex')
-            if togglex_devices is not None and len(togglex_devices) > 0:
+            togglex_switches = digest.get('togglex')
+            if togglex_switches is not None and len(togglex_switches) > 0:
                 l.debug("Guessing channels via togglex")
-                for d in togglex_devices:
-                    device_id = d.get('channel')
-                    dbhelper.update_device_channel(device_uuid=appliance_uuid, channel_id=device_id)
+                for d in togglex_switches:
+                    channel_id = d.get('channel')
+                    dbhelper.update_device_channel(device_uuid=appliance_uuid, channel_id=channel_id)
             else:
                 l.error("Could not guess the channels for device uuid %s", appliance_uuid)
 
-    def _handle_message(self, topic, payload):
+    def _handle_message(self, topic: str, payload: str):
         try:
             # Handling DISCONNECTION control messages
             disconnection_match = DISCONNECTION_TOPIC_RE.match(topic)
             if disconnection_match is not None:
-                _handle_device_disconnected(payload)
+                p = json.loads(payload)
+                _handle_device_disconnected(payload=p)
                 return
 
             # Handling messages pushed to APPLIANCE publication topics
             match = APPLIANCE_PUBLISH_TOPIC_RE.fullmatch(topic)
             if match is not None:
                 device_uuid = match.group(1)
-                self._handle_device_publication(device_uuid=device_uuid, topic=topic, payload=payload)
+                p = json.loads(payload)
+                self._handle_device_publication(device_uuid=device_uuid, topic=topic, payload=p)
                 return
 
             # Handling messages pushed to /_agent dedicated topic
             if topic == AGENT_TOPIC:
-                self._handle_message_to_agent(topic=topic, payload=payload)
+                p = json.loads(payload)
+                self._handle_message_to_agent(topic=topic, payload=p)
                 return
 
         except Exception as ex:
