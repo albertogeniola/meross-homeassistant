@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import logging
 import string
 import sys
@@ -32,6 +33,7 @@ l.addHandler(handler)
 APPLIANCE_PUBLISH_TOPIC_RE = re.compile("/appliance/([a-zA-Z0-9]+)/publish")
 DISCONNECTION_TOPIC_RE = re.compile("^\$SYS/client-disconnections$")
 _CLIENTID_RE = re.compile('^fmware:([a-zA-Z0-9]+)_[a-zA-Z0-9]+$')
+_DEVICE_UPDATE_CACHE_INTERVAL_SECONDS = 60
 
 
 def _build_mqtt_message(method: str, namespace: str, payload: dict, dev_key: str):
@@ -122,7 +124,7 @@ class Broker:
         self.c.on_connect = self._on_connect
         self.c.on_disconnect = self._on_disconnect
         self.c.on_message = self._on_message
-        self._devices_sys_info = {}
+        self._devices_sys_info_timestamp = {}
 
     def setup(self):
         l.debug("Connecting as %s : %s", self.username, self.password)
@@ -173,9 +175,10 @@ class Broker:
             l.warning("No user associated to device UUID %s, message will be skipped.", device_uuid)
             return
 
-        # If this is the first time we see this device, update its channel status
-        if device_uuid not in self._devices_sys_info.keys():
-            l.info("No info is available for device %s. Issuing SystemAll command to discover its channels "
+        # If this is the first time we see this device or if its cached info is old, update its channel status
+        last_update_ts = self._devices_sys_info_timestamp.get(device_uuid)
+        if last_update_ts is None or (datetime.now() - last_update_ts).seconds > _DEVICE_UPDATE_CACHE_INTERVAL_SECONDS:
+            l.info("Update required for device %s Issuing SystemAll command to discover its channels "
                    "and supplementary data", device_uuid)
             self._issue_device_channel_discovery(device_uuid)
 
@@ -207,7 +210,7 @@ class Broker:
             # Update device info
             hardware = system.get('hardware')
             firmware = system.get('firmware')
-            time  = system.get('time')
+            time = system.get('time')
             online = system.get('online')
             device = dbhelper.get_device_by_uuid(device_uuid=appliance_uuid)
             device.device_type = hardware.get('type')
@@ -228,6 +231,11 @@ class Broker:
                     dbhelper.update_device_channel(device_uuid=appliance_uuid, channel_id=channel_id)
             else:
                 l.error("Could not guess the channels for device uuid %s", appliance_uuid)
+
+            # Update the last update timestamp
+            ts = datetime.now()
+            l.info("Setting last update timestamp to %s for device %s", ts, appliance_uuid)
+            self._devices_sys_info_timestamp[device.uuid] = ts
 
     def _handle_message(self, topic: str, payload: str):
         try:
