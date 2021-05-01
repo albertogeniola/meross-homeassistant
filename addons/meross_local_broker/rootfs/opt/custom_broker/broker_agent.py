@@ -82,25 +82,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def _handle_device_disconnected(payload: dict) -> None:
-    if payload.get("event") != "disconnect":
-        l.warning("Invalid or unhandled event received: %s", payload.get("event"))
-        return
-    data = payload.get("data")
-    client_id = data.get("client_id")
-    username = data.get("username")
-    address = data.get("address")
-    reason = data.get("reason")
-    l.debug("Broker reported client %s (username: %s, ip: %s) disconnected for reason %s", client_id, username, address, str(reason))
-
-    # Only proceed if the client-id belongs to a hw device
-    device_match = _CLIENTID_RE.fullmatch(client_id)
-    if device_match:
-        uuid = device_match.group(1)
-        dbhelper.update_device_status(device_uuid=uuid, status=OnlineStatus.OFFLINE)
-        l.info("Device %s has disconnected from broker", uuid)
-
-
 class Broker:
     def __init__(self,
                  hostname: str,
@@ -219,16 +200,28 @@ class Broker:
             device.fmware_version = firmware.get('version')
             device.domain = f"{firmware.get('server')}:{firmware.get('port')}"
             device.online_status = OnlineStatus(online.get('status'))
+            device.local_ip = firmware.get('innerIp')
             dbhelper.update_device(device)
 
             # Guess channels and Store Appliance info on DB
-            # Guess by togglex
             togglex_switches = digest.get('togglex')
+            # TODO: implement other channel guessing
+            # light_switches = digest.get('light')
+            # spray_switches = digest.get('spray')
+
+            # Guess by togglex
             if togglex_switches is not None and len(togglex_switches) > 0:
                 l.debug("Guessing channels via togglex")
                 for d in togglex_switches:
                     channel_id = d.get('channel')
                     dbhelper.update_device_channel(device_uuid=appliance_uuid, channel_id=channel_id)
+            # Guess by "light"
+            # elif light_switches is not None:
+            #     pass
+            #
+            # # Guess by "spray"
+            # elif spray_switches is not None:
+            #     pass
             else:
                 l.error("Could not guess the channels for device uuid %s", appliance_uuid)
 
@@ -237,13 +230,38 @@ class Broker:
             l.info("Setting last update timestamp to %s for device %s", ts, appliance_uuid)
             self._devices_sys_info_timestamp[device.uuid] = ts
 
+    def _handle_device_disconnected(self, payload: dict) -> None:
+        if payload.get("event") != "disconnect":
+            l.warning("Invalid or unhandled event received: %s", payload.get("event"))
+            return
+        data = payload.get("data")
+        client_id = data.get("client_id")
+        username = data.get("username")
+        address = data.get("address")
+        reason = data.get("reason")
+        l.debug("Broker reported client %s (username: %s, ip: %s) disconnected for reason %s", client_id, username,
+                address, str(reason))
+
+        # Only proceed if the client-id belongs to a hw device
+        device_match = _CLIENTID_RE.fullmatch(client_id)
+        if device_match:
+            uuid = device_match.group(1)
+            dbhelper.update_device_status(device_uuid=uuid, status=OnlineStatus.OFFLINE)
+            l.info("Device %s has disconnected from broker", uuid)
+
+            # Clear last timestamp update
+            del self._devices_sys_info_timestamp[uuid]
+
     def _handle_message(self, topic: str, payload: str):
         try:
+            # TODO: Implement message signature checks.
+            #  For now, we trust the message regardless of its signature.
+
             # Handling DISCONNECTION control messages
             disconnection_match = DISCONNECTION_TOPIC_RE.match(topic)
             if disconnection_match is not None:
                 p = json.loads(payload)
-                _handle_device_disconnected(payload=p)
+                self._handle_device_disconnected(payload=p)
                 return
 
             # Handling messages pushed to APPLIANCE publication topics

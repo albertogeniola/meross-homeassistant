@@ -20,7 +20,7 @@ export interface SetNameDialogData {
   styleUrls: ['./home.component.scss'],
 })
 export class HomeComponent implements AfterViewInit, OnInit {
-  displayedColumns: string[] = ['deviceId', 'network', 'status', 'userId'];
+  displayedColumns: string[] = ['deviceId', 'network', 'status', 'userId', 'type'];
   dataSource = new MatTableDataSource<Device>([]);
   autoUpdate = true;
   private _autoUpdateSubscription: Subscription = null;

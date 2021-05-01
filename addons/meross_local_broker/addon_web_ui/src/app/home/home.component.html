@@ -1,5 +1,5 @@
 <div class="container">
-  <div class="max-400">
+  <div class="max-800">
     <mat-toolbar color="primary">
       <span>Paired devices</span>
       <span class="spacer"></span>
@@ -34,9 +34,17 @@
         </td>
       </ng-container>
 
+      <ng-container matColumnDef="type">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Device Type</th>
+        <td mat-cell *matCellDef="let element">{{ element.device_type }}</td>
+      </ng-container>
+
       <ng-container matColumnDef="network">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Network Info</th>
-        <td mat-cell *matCellDef="let element">{{ element.mac }}</td>
+        <td mat-cell *matCellDef="let element">
+          <span class="mat-small">{{ element.mac }}</span>
+          <span class="mat-small" *ngIf="element.local_ip"><br />({{ element.local_ip }})</span>
+        </td>
       </ng-container>
 
       <ng-container matColumnDef="userId">

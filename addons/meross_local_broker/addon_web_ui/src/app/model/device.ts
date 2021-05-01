@@ -6,6 +6,10 @@ export enum DeviceOnlineStatus {
   UPGRADING = 3,
 }
 
+export interface DeviceChannel {
+  // TODO: define this interface
+}
+
 export interface Device {
   readonly mac: string;
   readonly uuid: string;
@@ -16,6 +20,8 @@ export interface Device {
   readonly user_id: string;
   readonly online_status: DeviceOnlineStatus;
   readonly last_seen_time: Date;
+  readonly local_ip: string;
+  readonly channels: DeviceChannel[];
   dev_name: string;
   domain: string;
   reserved_domain: string;

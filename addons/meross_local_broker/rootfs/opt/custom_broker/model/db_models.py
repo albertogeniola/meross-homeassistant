@@ -101,6 +101,8 @@ class Device(Base, Serializer):
     domain = Column(String(255))
     reserved_domain = Column(String(255))
 
+    local_ip = Column(String(16))
+
     user_id = Column(String, ForeignKey('users.user_id'))
     owner_user = relationship("User", back_populates="owned_devices")
 
