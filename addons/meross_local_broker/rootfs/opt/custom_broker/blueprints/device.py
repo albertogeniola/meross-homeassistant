@@ -1,4 +1,4 @@
-import logging
+from logger import get_logger
 from typing import Dict
 from flask import Blueprint, g
 from decorator import meross_http_api
@@ -6,7 +6,7 @@ from messaging import make_api_response
 from model.db_models import Device
 
 device_blueprint = Blueprint('device', __name__)
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 @device_blueprint.route('/devList', methods=['POST'])

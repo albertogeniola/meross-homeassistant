@@ -48,6 +48,7 @@ RUN apt-get update \
     nginx \
     software-properties-common \
     xsltproc \
+    logrotate \
   && mkdir -p /tmp/go \
   && curl https://dl.google.com/go/go1.16.3.linux-${BUILD_ARCH}.tar.gz --output go.tar.gz \
   && tar -C /usr/local -xzf go.tar.gz \

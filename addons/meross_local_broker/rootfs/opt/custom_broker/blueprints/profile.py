@@ -1,4 +1,4 @@
-import logging
+from logger import get_logger
 from typing import Dict
 
 from flask import Blueprint, g
@@ -8,7 +8,7 @@ from decorator import meross_http_api
 from messaging import make_api_response
 
 profile_blueprint = Blueprint('profile', __name__)
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 @profile_blueprint.route('/logout', methods=['POST'])

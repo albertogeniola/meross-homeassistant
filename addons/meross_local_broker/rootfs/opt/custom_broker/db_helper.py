@@ -1,4 +1,4 @@
-import logging
+from logger import get_logger
 from typing import Optional, List
 
 from database import db_session
@@ -7,7 +7,7 @@ from datetime import datetime
 from model.enums import OnlineStatus
 
 
-l = logging.getLogger()
+l = get_logger(__name__)
 
 
 class DbHelper:
@@ -20,7 +20,7 @@ class DbHelper:
         self._s.commit()
         return token
 
-    def associate_user_device(self, userid: int, mac: str, uuid: str) -> None:
+    def associate_user_device(self, userid: int, mac: str, uuid: str, device_client_id: str) -> None:
         # Check if a device with that MAC already exists. If so, update its user_id.
         # If not, create a new one
         d = self._s.query(Device).filter(Device.mac == mac).first()
@@ -28,6 +28,7 @@ class DbHelper:
             d = Device(mac=mac)
         d.user_id = userid
         d.uuid = uuid
+        d.client_id = device_client_id
         self._s.add(d)
         self._s.commit()
 

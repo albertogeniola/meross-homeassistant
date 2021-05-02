@@ -1,9 +1,9 @@
-import logging
+from logger import get_logger
 from enum import Enum
 from typing import Union
 
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 class OnlineStatus(Enum):

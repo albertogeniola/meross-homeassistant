@@ -1,4 +1,4 @@
-import logging
+from logger import get_logger
 from typing import Dict, List
 
 from flask import jsonify, request
@@ -8,7 +8,7 @@ from model.db_models import Device
 from model.exception import BadRequestError
 
 admin_blueprint = Blueprint('admin', __name__)
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 # TODO: check super-admin role...

@@ -1,4 +1,4 @@
-import logging
+from logger import get_logger
 
 from flask import Flask
 from flask.logging import default_handler
@@ -20,7 +20,9 @@ from model.exception import HttpApiError, BadRequestError
 #_LOGOUT_URL = "/v1/Profile/logout"
 
 
-_LOGGER = logging.getLogger(__name__)
+# Configure main logger
+_LOGGER = get_logger("http_api")
+
 
 app = Flask(__name__)
 CORS(app)  # TODO: Fix this. Maybe we can restrict the origin access. In case we use an nginx, this might be superfluous
@@ -33,12 +35,6 @@ app.register_blueprint(devs_blueprint, url_prefix="/_devs_")
 app.register_blueprint(admin_blueprint, url_prefix="/_admin_")
 #app.register_blueprint(hub_blueprint)
 
-
-root = logging.getLogger()
-root.addHandler(default_handler)
-
-# TODO: make this configurable
-root.setLevel(logging.DEBUG)
 
 init_db()
 
@@ -66,5 +62,5 @@ def handle_http_exception(e):
     return make_api_response(data=None, info=e.error_code.name, api_status=e.error_code)
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     app.run(port=2002, host="127.0.0.1")

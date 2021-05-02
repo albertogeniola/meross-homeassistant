@@ -1,4 +1,4 @@
-import logging
+from logger import get_logger
 from typing import Dict
 
 from flask import Blueprint
@@ -9,7 +9,7 @@ from messaging import make_api_response
 from model.exception import HttpApiError
 
 auth_blueprint = Blueprint('auth', __name__)
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 @auth_blueprint.route('/Login', methods=['POST'])

@@ -1,6 +1,6 @@
 import base64
 import json
-import logging
+from logger import get_logger
 import re
 from functools import wraps
 
@@ -12,7 +12,7 @@ from messaging import verify_message_signature
 from model.exception import BadRequestError, HttpApiError
 
 TOKEN_EXTRACTOR = re.compile("^Basic ([a-zA-Z0-9]+)")
-l = logging.getLogger(__name__)
+l = get_logger(__name__)
 
 
 def meross_http_api(original_function=None, login_required=True):

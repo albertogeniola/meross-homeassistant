@@ -1,7 +1,7 @@
-import logging
+from logger import get_logger
 import re
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 camel_pat = re.compile(r'([A-Z])')

@@ -1,37 +1,37 @@
 import argparse
 from datetime import datetime
-import logging
+from logger import get_logger
 import string
 import sys
 import ssl
 from _md5 import md5
 import random
+from threading import RLock
 
 import paho.mqtt.client as mqtt
 import time
 import re
 import json
 
+from broker_bridge import BrokerDeviceBridge
 from database import init_db
 from db_helper import dbhelper
 from model.enums import OnlineStatus
 
 CLIENT_ID = 'broker_agent'
 APPLIANCE_MESSAGE_TOPICS = '/appliance/+/publish'
+APPLIANCE_SUBSCRIBE_TOPIC = '/appliance/+/subscribe'
+NAT_TOPIC = '/_nat_/#'
 DISCONNECTION_TOPIC = '$SYS/client-disconnections'
 AGENT_TOPIC = '/_agent'
 
-l = logging.getLogger()
-l.setLevel(logging.INFO)
+l = get_logger(__name__)
 
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - BROKER: %(message)s')
-handler.setFormatter(formatter)
-l.addHandler(handler)
 
 APPLIANCE_PUBLISH_TOPIC_RE = re.compile("/appliance/([a-zA-Z0-9]+)/publish")
+APPLIANCE_SUBSCRIBE_TOPIC_RE = re.compile("/appliance/([a-zA-Z0-9]+)/subscribe")
 DISCONNECTION_TOPIC_RE = re.compile("^\$SYS/client-disconnections$")
+_NAT_RE = re.compile("/_nat_/([a-zA-Z0-9]+)(/.*)")
 _CLIENTID_RE = re.compile('^fmware:([a-zA-Z0-9]+)_[a-zA-Z0-9]+$')
 _DEVICE_UPDATE_CACHE_INTERVAL_SECONDS = 60
 
@@ -105,7 +105,9 @@ class Broker:
         self.c.on_connect = self._on_connect
         self.c.on_disconnect = self._on_disconnect
         self.c.on_message = self._on_message
+        self._lock = RLock()
         self._devices_sys_info_timestamp = {}
+        self._bridges = {}
 
     def setup(self):
         l.debug("Connecting as %s : %s", self.username, self.password)
@@ -113,7 +115,7 @@ class Broker:
 
     def _on_connect(self, client, userdata, rc, other):
         l.debug("Connected to broker, rc=%s", str(rc))
-        self.c.subscribe([(APPLIANCE_MESSAGE_TOPICS, 2), (DISCONNECTION_TOPIC, 2), (AGENT_TOPIC, 2)])
+        self.c.subscribe([(NAT_TOPIC, 2), (APPLIANCE_MESSAGE_TOPICS, 2), (DISCONNECTION_TOPIC, 2), (APPLIANCE_SUBSCRIBE_TOPIC, 2), (AGENT_TOPIC, 2)])
 
     def _on_subscribe(self, client, userdata, mid, granted_qos):
         l.debug("Subscribed to relevant topics")
@@ -144,7 +146,10 @@ class Broker:
 
     def _issue_device_channel_discovery(self, device_uuid: str) -> None:
         device = dbhelper.get_device_by_uuid(device_uuid=device_uuid)
-        msg, message_id = _build_mqtt_message(method="GET", namespace="Appliance.System.All", payload={}, dev_key=device.owner_user.mqtt_key)
+        msg, message_id = _build_mqtt_message(method="GET",
+                                              namespace="Appliance.System.All",
+                                              payload={},
+                                              dev_key=device.owner_user.mqtt_key)
         self.c.publish(topic=f"/appliance/{device_uuid}/subscribe", payload=msg)
 
     def _handle_device_publication(self, device_uuid: str, topic: str, payload: dict):
@@ -163,8 +168,12 @@ class Broker:
                    "and supplementary data", device_uuid)
             self._issue_device_channel_discovery(device_uuid)
 
-        l.debug("Forwarding message for device %s to user %s", device_uuid, user)
+        # Forward the device push notification to the app channel
+        l.debug("Forwarding message for device %s to user %s on local broker", device_uuid, user)
         self.c.publish(topic=f"/app/{user.user_id}/subscribe", payload=json.dumps(payload))
+
+        # In case there is a bridged remote connection, forward the event to the remote broker as well
+        self._forward_message_to_remote(bridge_uuid=device_uuid, topic=topic, payload=json.dumps(payload))
 
     def _handle_message_to_agent(self, topic: str, payload: dict) -> None:
         # Try to guess the channels from the system_all payload
@@ -252,7 +261,7 @@ class Broker:
             # Clear last timestamp update
             del self._devices_sys_info_timestamp[uuid]
 
-    def _handle_message(self, topic: str, payload: str):
+    def _handle_message(self, topic: str, payload: bytes):
         try:
             # TODO: Implement message signature checks.
             #  For now, we trust the message regardless of its signature.
@@ -278,11 +287,57 @@ class Broker:
                 self._handle_message_to_agent(topic=topic, payload=p)
                 return
 
+            # Handling messages pushed to /_nat_/ topic
+            match = _NAT_RE.fullmatch(topic)
+            if match is not None:
+                originating_bridge_uuid = match.group(1)
+                original_topic = match.group(2)
+                p = json.loads(payload)
+                p['header']['from']=original_topic
+                original_payload = json.dumps(p).encode('utf8')
+                self._forward_message_to_remote(topic=original_topic, payload=original_payload, bridge_uuid=originating_bridge_uuid)
+                return
+
         except Exception as ex:
             l.exception("An error occurred while handling message %s received on topic %s", str(payload), str(topic))
 
+    def _get_or_create_bridge(self, device_uuid: str) -> BrokerDeviceBridge:
+        bridge: BrokerDeviceBridge = self._bridges.get(device_uuid)
+        if bridge is None:
+            l.info("Creating MQTT bridge for device %s", device_uuid)
+            # Retrieve device info
+            device = dbhelper.get_device_by_uuid(device_uuid=device_uuid)
+            # FIXME: pass Meross info
+            bridge = BrokerDeviceBridge(broker=self,
+                                        device_client_id=device.client_id,
+                                        meross_device_mac=device.mac,
+                                        meross_user_id='46884',
+                                        meross_key='b11d6c6af9fa3f476bccad7e060ef1ff')
+            bridge.start()
+            self._bridges[device_uuid]=bridge
+        return bridge
+
+    def forward_device_command_locally(self, topic: str, payload: bytes, originating_bridge_uuid: str):
+        # When a device receives a command from Meross Cloud, we need to forward it to the local broker.
+        # In order to send back the ACK to that command, we apply stateless NAT 1:1, so that we can later
+        # intercept the reponses to such messages and forward them to the remote broker
+        with self._lock:
+            message_data = json.loads(payload)
+            from_attribute = message_data.get('header', {}).get('from', None)
+            natted_from = f"/_nat_/{originating_bridge_uuid}{from_attribute}"
+            message_data['header']['from'] = natted_from
+            newdata = json.dumps(message_data).encode('utf8')
+            self.c.publish(topic=topic, payload=newdata)
+
+    def _forward_message_to_remote(self, topic: str, payload: bytearray, bridge_uuid: str):
+        bridge = self._get_or_create_bridge(device_uuid=bridge_uuid)
+        if bridge is not None:
+            l.debug("Forwarding message %s on topic %s to remote meross broker", str(payload), topic)
+            bridge.send_message(topic=topic, payload=payload)
+
 
 def main():
+    # Parse Args
     args = parse_args()
     if args.debug:
         handler.setLevel(logging.DEBUG)
