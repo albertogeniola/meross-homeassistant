@@ -1,3 +1,5 @@
+from meross_iot.http_api import _SECRET
+
+
 _DB_PATH = '/data/database.db'
-_SECRET = "23x17ahWarFH6w29"
 BASE62_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

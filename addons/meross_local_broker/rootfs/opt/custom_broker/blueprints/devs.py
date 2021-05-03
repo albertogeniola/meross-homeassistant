@@ -1,9 +1,11 @@
+from meross_iot.model.enums import OnlineStatus
+
 from logger import get_logger
 import re
 from _md5 import md5
 from flask import Blueprint, request
 from db_helper import dbhelper
-from model.enums import OnlineStatus
+
 
 devs_blueprint = Blueprint('_devs', __name__)
 _LOGGER = get_logger(__name__)

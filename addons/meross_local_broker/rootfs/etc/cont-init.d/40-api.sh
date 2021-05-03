@@ -26,7 +26,13 @@ ADMIN_EMAIL=$(jq --raw-output ".email" $CONFIG_PATH)
 ADMIN_PASSWORD=$(jq --raw-output ".password" $CONFIG_PATH)
 
 bashio::log.info "Setting up the database in $DB_PATH"
-python3 db_setup.py --email "$ADMIN_EMAIL" --password "$ADMIN_PASSWORD"
+LOGIN_MEROSS=$(bashio::config 'federate_with_meross')
+if [[ $LOGIN_MEROSS == true ]]; then
+  python3 setup.py --email "$ADMIN_EMAIL" --password "$ADMIN_PASSWORD" --federate-remote-broker
+else
+  python3 setup.py --email "$ADMIN_EMAIL" --password "$ADMIN_PASSWORD"
+fi
+
 if [[ $? -ne 0 ]]; then
   bashio::log.error "Error when setting up the database file. Aborting."
   exit 1

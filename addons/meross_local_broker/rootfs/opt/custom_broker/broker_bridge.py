@@ -1,20 +1,9 @@
-import argparse
-from datetime import datetime
 from logger import get_logger
-import string
-import sys
 import ssl
 from _md5 import md5
-import random
 import paho.mqtt.client as mqtt
-import time
-import re
-import json
 from threading import RLock
 
-from database import init_db
-from db_helper import dbhelper
-from model.enums import OnlineStatus
 
 
 APPLIANCE_SUBSCRIBE_TOPIC = '/appliance/+/subscribe'

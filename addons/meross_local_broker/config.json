@@ -9,13 +9,15 @@
   "options": {
     "email": "meross_local@local",
     "password": "Changeme!",
-    "debug_mode": false
+    "debug_mode": false,
+    "federate_with_meross": false
   },
   "schema": {
     "resetdb": "int(0,1)?",
     "email": "str",
     "password": "str",
-    "debug_mode": "bool"
+    "debug_mode": "bool",
+    "federate_with_meross": "bool"
   },
   "ports": {
     "2001/tcp": 2001,

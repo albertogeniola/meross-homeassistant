@@ -7,7 +7,7 @@ from functools import wraps
 from flask import request, g
 
 from authentication import verify_token
-from codes import ErrorCodes
+from codes import ExtendedErrorCodes
 from messaging import verify_message_signature
 from model.exception import BadRequestError, HttpApiError
 
@@ -24,17 +24,17 @@ def meross_http_api(original_function=None, login_required=True):
             if login_required:
                 auth_str = request.headers.get("Authorization")
                 if auth_str is None:
-                    raise HttpApiError(error_code=ErrorCodes.CODE_TOKEN_ERROR)
+                    raise HttpApiError(error_code=ExtendedErrorCodes.CODE_TOKEN_ERROR)
 
                 res = TOKEN_EXTRACTOR.match(auth_str)
                 if not res:
-                    raise HttpApiError(error_code=ErrorCodes.CODE_TOKEN_ERROR)
+                    raise HttpApiError(error_code=ExtendedErrorCodes.CODE_TOKEN_ERROR)
 
                 token = res.group(1)
                 l.debug("User provided token: %s", token)
                 user = verify_token(token)
                 if user is None:
-                    raise HttpApiError(error_code=ErrorCodes.CODE_TOKEN_ERROR)
+                    raise HttpApiError(error_code=ExtendedErrorCodes.CODE_TOKEN_ERROR)
 
                 l.info("User %s recognized by token %s", user, token)
 

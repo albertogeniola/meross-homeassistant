@@ -1,8 +1,11 @@
 import argparse
+import logging
 from datetime import datetime
-from logger import get_logger
+
+from meross_iot.model.enums import OnlineStatus
+
+from logger import get_logger, set_logger_level
 import string
-import sys
 import ssl
 from _md5 import md5
 import random
@@ -16,7 +19,7 @@ import json
 from broker_bridge import BrokerDeviceBridge
 from database import init_db
 from db_helper import dbhelper
-from model.enums import OnlineStatus
+
 
 CLIENT_ID = 'broker_agent'
 APPLIANCE_MESSAGE_TOPICS = '/appliance/+/publish'
@@ -340,8 +343,7 @@ def main():
     # Parse Args
     args = parse_args()
     if args.debug:
-        handler.setLevel(logging.DEBUG)
-        l.setLevel(logging.DEBUG)
+        set_logger_level(logging.DEBUG)
 
     # Init or setup DB
     init_db()

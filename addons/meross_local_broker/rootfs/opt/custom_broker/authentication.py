@@ -2,7 +2,7 @@ import uuid
 from _sha256 import sha256
 from typing import Tuple, Optional
 
-from codes import ErrorCodes
+from codes import ExtendedErrorCodes
 from db_helper import dbhelper
 from model.db_models import User, UserToken
 from model.exception import HttpApiError
@@ -34,12 +34,12 @@ def _user_login(email: str, password: str) -> Tuple[User, UserToken]:
     # email, userid, salt, password, mqtt_key
     user = dbhelper.get_user_by_email(email=email)
     if user is None:
-        raise HttpApiError(ErrorCodes.CODE_UNEXISTING_ACCOUNT)
+        raise HttpApiError(ExtendedErrorCodes.CODE_UNEXISTING_ACCOUNT)
 
     computed_hashed_password = _hash_password(salt=user.salt, password=password)
 
     if computed_hashed_password != user.password:
-        raise HttpApiError(ErrorCodes.CODE_WRONG_CREDENTIALS)
+        raise HttpApiError(ExtendedErrorCodes.CODE_WRONG_CREDENTIALS)
 
     # If ok, generate an HTTP_TOKEN
     hash = sha256()

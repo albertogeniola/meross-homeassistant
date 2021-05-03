@@ -1,10 +1,11 @@
+from meross_iot.model.enums import OnlineStatus
+
 from logger import get_logger
 from typing import Optional, List
 
 from database import db_session
 from model.db_models import UserToken, Device, User, DeviceChannel
 from datetime import datetime
-from model.enums import OnlineStatus
 
 
 l = get_logger(__name__)

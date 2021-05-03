@@ -1,10 +1,10 @@
 from typing import Dict
 
+from meross_iot.model.enums import OnlineStatus
 from sqlalchemy import Column, String, BigInteger, Integer, DateTime
 from sqlalchemy import ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from database import Base
-from model.enums import OnlineStatus
 from sqlalchemy.inspection import inspect
 
 
@@ -22,8 +22,8 @@ class User(Base, Serializer):
     __tablename__ = 'users'
     __table_args__ = {'sqlite_autoincrement': True}
 
-    user_id = Column(Integer, primary_key=True, autoincrement=True)
-    email = Column(String(64), unique=True)
+    email = Column(String(64), primary_key=True, unique=True)
+    user_id = Column(Integer, unique=True)
     salt = Column(String(64))
     password = Column(String(64))
     mqtt_key = Column(String(64))
