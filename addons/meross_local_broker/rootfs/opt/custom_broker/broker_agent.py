@@ -5,10 +5,7 @@ from datetime import datetime
 from meross_iot.model.enums import OnlineStatus
 
 from logger import get_logger, set_logger_level
-import string
 import ssl
-from _md5 import md5
-import random
 from threading import RLock
 
 import paho.mqtt.client as mqtt
@@ -19,7 +16,7 @@ import json
 from broker_bridge import BrokerDeviceBridge
 from database import init_db
 from db_helper import dbhelper
-
+from protocol import _build_mqtt_message
 
 CLIENT_ID = 'broker_agent'
 APPLIANCE_MESSAGE_TOPICS = '/appliance/+/publish'
@@ -37,40 +34,6 @@ DISCONNECTION_TOPIC_RE = re.compile("^\$SYS/client-disconnections$")
 _NAT_RE = re.compile("/_nat_/([a-zA-Z0-9]+)(/.*)")
 _CLIENTID_RE = re.compile('^fmware:([a-zA-Z0-9]+)_[a-zA-Z0-9]+$')
 _DEVICE_UPDATE_CACHE_INTERVAL_SECONDS = 60
-
-
-def _build_mqtt_message(method: str, namespace: str, payload: dict, dev_key: str):
-    # Generate a random 16 byte string
-    randomstring = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16))
-
-    # Hash it as md5
-    md5_hash = md5()
-    md5_hash.update(randomstring.encode('utf8'))
-    messageId = md5_hash.hexdigest().lower()
-    timestamp = int(round(time.time()))
-
-    # Hash the messageId, the key and the timestamp
-    md5_hash = md5()
-    strtohash = "%s%s%s" % (messageId, dev_key, timestamp)
-    md5_hash.update(strtohash.encode("utf8"))
-    signature = md5_hash.hexdigest().lower()
-
-    data = {
-        "header":
-            {
-                "from": "/_agent",
-                "messageId": messageId,  # Example: "122e3e47835fefcd8aaf22d13ce21859"
-                "method": method,  # Example: "GET",
-                "namespace": namespace,  # Example: "Appliance.System.All",
-                "payloadVersion": 1,
-                "sign": signature,  # Example: "b4236ac6fb399e70c3d61e98fcb68b74",
-                "timestamp": timestamp,
-                'triggerSrc': 'Agent'
-            },
-        "payload": payload
-    }
-    strdata = json.dumps(data)
-    return strdata.encode("utf-8"), messageId
 
 
 def parse_args():
@@ -176,7 +139,7 @@ class Broker:
         self.c.publish(topic=f"/app/{user.user_id}/subscribe", payload=json.dumps(payload))
 
         # In case there is a bridged remote connection, forward the event to the remote broker as well
-        self._forward_message_to_remote(bridge_uuid=device_uuid, topic=topic, payload=json.dumps(payload))
+        self._forward_message_to_remote(bridge_uuid=device_uuid, topic=topic, payload=json.dumps(payload).encode("utf8"))
 
     def _handle_message_to_agent(self, topic: str, payload: dict) -> None:
         # Try to guess the channels from the system_all payload
@@ -314,8 +277,8 @@ class Broker:
             bridge = BrokerDeviceBridge(broker=self,
                                         device_client_id=device.client_id,
                                         meross_device_mac=device.mac,
-                                        meross_user_id='46884',
-                                        meross_key='b11d6c6af9fa3f476bccad7e060ef1ff')
+                                        meross_user_id=str(device.user_id),
+                                        meross_key=device.owner_user.mqtt_key)
             bridge.start()
             self._bridges[device_uuid]=bridge
         return bridge
@@ -337,6 +300,8 @@ class Broker:
         if bridge is not None:
             l.debug("Forwarding message %s on topic %s to remote meross broker", str(payload), topic)
             bridge.send_message(topic=topic, payload=payload)
+        else:
+            l.debug("Bridge creation failed for device %s", bridge_uuid)
 
 
 def main():
