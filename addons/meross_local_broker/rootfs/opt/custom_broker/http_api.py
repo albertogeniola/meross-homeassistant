@@ -61,4 +61,4 @@ def handle_http_exception(e):
 
 
 if __name__ == '__main__':
-    app.run(port=2002, host="127.0.0.1")
+    app.run(port=2002, host="0.0.0.0")

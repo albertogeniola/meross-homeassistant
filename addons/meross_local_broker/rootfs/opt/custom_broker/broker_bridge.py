@@ -9,13 +9,14 @@ from threading import RLock
 
 from protocol import _build_mqtt_message
 
-APPLIANCE_SUBSCRIBE_TOPIC = '/appliance/+/subscribe'
+APPLIANCE_SUBSCRIBE_TOPIC_PATTERN = '/appliance/%s/subscribe'
 l = get_logger(__name__)
 
 
 class BrokerDeviceBridge:
     def __init__(self,
                  broker,
+                 device_uuid: str,
                  device_client_id: str,
                  meross_device_mac: str,
                  meross_user_id: str,
@@ -26,7 +27,7 @@ class BrokerDeviceBridge:
         self._l = RLock()
         self._broker_ref = broker
         self._connected = False
-
+        self._uuid = device_uuid
         self._user_id = meross_user_id
         self._hostname = meross_mqtt_server
         self._port = meross_mqtt_port
@@ -64,16 +65,16 @@ class BrokerDeviceBridge:
         self._connected = True
 
         # Subscribe to the remote Meross MQTT Broker
-        client.subscribe(topic=APPLIANCE_SUBSCRIBE_TOPIC, qos=0)
+        client.subscribe(topic=APPLIANCE_SUBSCRIBE_TOPIC_PATTERN % self._uuid, qos=0)
 
     def _on_subscribe(self, client, userdata, mid, granted_qos):
-        l.debug("Subscribed to Meross Iot topic. Issuing BIND command.")
+        l.debug("Subscribed to Meross MQTT topics.")
         # TODO: Handle binding (re-issue binding message at every reconnection?)
 
     def _on_message(self, client, userdata, msg):
         # Forward the message to the local broker
-        l.debug("Received message %s from Meross Remote Broker on topic %s", str(msg.payload), str(msg.topic))
-        self._broker_ref.forward_device_command_locally(topic=msg.topic, payload=msg.payload)
+        l.debug("Meross MQTT -> Device Bridge (%s), topic: %s, message: %s", self._uuid, str(msg.topic), str(msg.payload))
+        self._broker_ref.forward_device_command_locally(topic=msg.topic, payload=msg.payload, originating_bridge_uuid=self._uuid)
 
     def _on_unsubscribe(self, *args, **kwargs):
         pass
@@ -86,6 +87,5 @@ class BrokerDeviceBridge:
 
     def send_message(self, topic: str, payload: bytearray):
         with self._l:
-            l.debug("Sending message %s to Meross Remote Broker on topic %s", str(payload), str(topic))
+            l.debug("Device Bridge (%s) -> Meross MQTT, topic: %s, message %s", self._uuid, str(topic), str(payload))
             r = self._c.publish(topic=topic, payload=payload)
-            l.debug("Publish res: %s", r)

@@ -1,8 +1,10 @@
 import argparse
 import logging
+import uuid
 from datetime import datetime
 
 from meross_iot.model.enums import OnlineStatus
+from expiringdict import ExpiringDict
 
 from logger import get_logger, set_logger_level
 import ssl
@@ -31,7 +33,7 @@ l = get_logger(__name__)
 APPLIANCE_PUBLISH_TOPIC_RE = re.compile("/appliance/([a-zA-Z0-9]+)/publish")
 APPLIANCE_SUBSCRIBE_TOPIC_RE = re.compile("/appliance/([a-zA-Z0-9]+)/subscribe")
 DISCONNECTION_TOPIC_RE = re.compile("^\$SYS/client-disconnections$")
-_NAT_RE = re.compile("/_nat_/([a-zA-Z0-9]+)(/.*)")
+_NAT_RE = re.compile("/_nat_/([a-zA-Z0-9\-]+)")
 _CLIENTID_RE = re.compile('^fmware:([a-zA-Z0-9]+)_[a-zA-Z0-9]+$')
 _DEVICE_UPDATE_CACHE_INTERVAL_SECONDS = 60
 
@@ -75,6 +77,8 @@ class Broker:
         self._devices_sys_info_timestamp = {}
         self._bridges = {}
 
+        self._nat_table = ExpiringDict(max_age_seconds=30, max_len=50000)
+
     def setup(self):
         l.debug("Connecting as %s : %s", self.username, self.password)
         self.c.connect(host=self.hostname, port=self.port)
@@ -87,7 +91,7 @@ class Broker:
         l.debug("Subscribed to relevant topics")
 
     def _on_message(self, client, userdata, msg):
-        l.debug(f"Received message from topic {msg.topic}: {str(msg.payload)}")
+        l.debug(f"Local MQTT: received message on topic {msg.topic}: {str(msg.payload)}")
         self._handle_message(topic=msg.topic, payload=msg.payload)
 
     def _on_unsubscribe(self, *args, **kwargs):
@@ -135,7 +139,7 @@ class Broker:
             self._issue_device_channel_discovery(device_uuid)
 
         # Forward the device push notification to the app channel
-        l.debug("Forwarding message for device %s to user %s on local broker", device_uuid, user)
+        l.debug("Local MQTT -> Local MQTT: forwarding push notification received from device %s to user %s", device_uuid, user)
         self.c.publish(topic=f"/app/{user.user_id}/subscribe", payload=json.dumps(payload))
 
         # In case there is a bridged remote connection, forward the event to the remote broker as well
@@ -239,6 +243,23 @@ class Broker:
                 self._handle_device_disconnected(payload=p)
                 return
 
+            # Handling NATTED messages
+            match = _NAT_RE.fullmatch(topic)
+            if match is not None:
+                nat_table_index = match.group(1)
+                nat_entry = self._nat_table.get(nat_table_index)
+                if nat_entry is None:
+                    l.error("Invalid _NAT_ address received. Message will be discarded.")
+                    return
+                original_topic = nat_entry.get("original_from_attribute")
+                originating_bridge_uuid = nat_entry.get("originating_bridge_uuid")
+                p = json.loads(payload)
+                p['header']['from'] = original_topic
+                original_payload = json.dumps(p).encode('utf8')
+                self._forward_message_to_remote(topic=original_topic, payload=original_payload,
+                                                bridge_uuid=originating_bridge_uuid)
+                return
+
             # Handling messages pushed to APPLIANCE publication topics
             match = APPLIANCE_PUBLISH_TOPIC_RE.fullmatch(topic)
             if match is not None:
@@ -253,17 +274,6 @@ class Broker:
                 self._handle_message_to_agent(topic=topic, payload=p)
                 return
 
-            # Handling messages pushed to /_nat_/ topic
-            match = _NAT_RE.fullmatch(topic)
-            if match is not None:
-                originating_bridge_uuid = match.group(1)
-                original_topic = match.group(2)
-                p = json.loads(payload)
-                p['header']['from']=original_topic
-                original_payload = json.dumps(p).encode('utf8')
-                self._forward_message_to_remote(topic=original_topic, payload=original_payload, bridge_uuid=originating_bridge_uuid)
-                return
-
         except Exception as ex:
             l.exception("An error occurred while handling message %s received on topic %s", str(payload), str(topic))
 
@@ -275,6 +285,7 @@ class Broker:
             device = dbhelper.get_device_by_uuid(device_uuid=device_uuid)
             # FIXME: pass Meross info
             bridge = BrokerDeviceBridge(broker=self,
+                                        device_uuid=device_uuid,
                                         device_client_id=device.client_id,
                                         meross_device_mac=device.mac,
                                         meross_user_id=str(device.user_id),
@@ -285,20 +296,28 @@ class Broker:
 
     def forward_device_command_locally(self, topic: str, payload: bytes, originating_bridge_uuid: str):
         # When a device receives a command from Meross Cloud, we need to forward it to the local broker.
-        # In order to send back the ACK to that command, we apply stateless NAT 1:1, so that we can later
-        # intercept the reponses to such messages and forward them to the remote broker
+        # In order to send back the ACK to that command, we apply masquerading NAT, so that we can later
+        # intercept the responses to such messages and forward them to the remote broker
         with self._lock:
             message_data = json.loads(payload)
             from_attribute = message_data.get('header', {}).get('from', None)
-            natted_from = f"/_nat_/{originating_bridge_uuid}{from_attribute}"
-            message_data['header']['from'] = natted_from
+
+            # Generate nat entry and store the original "address" into the nat table
+            rand_uuid = str(uuid.uuid4())
+            nat_entry = f"/_nat_/{rand_uuid}"
+            self._nat_table[rand_uuid] = {
+                "original_from_attribute": from_attribute,
+                "originating_bridge_uuid": originating_bridge_uuid
+            }
+
+            # Replace the original address with the natted one and submit the message locally
+            message_data['header']['from'] = nat_entry
             newdata = json.dumps(message_data).encode('utf8')
             self.c.publish(topic=topic, payload=newdata)
 
     def _forward_message_to_remote(self, topic: str, payload: bytearray, bridge_uuid: str):
         bridge = self._get_or_create_bridge(device_uuid=bridge_uuid)
         if bridge is not None:
-            l.debug("Forwarding message %s on topic %s to remote meross broker", str(payload), topic)
             bridge.send_message(topic=topic, payload=payload)
         else:
             l.debug("Bridge creation failed for device %s", bridge_uuid)
