@@ -46,7 +46,9 @@ def parse_args():
     parser.add_argument('--password', type=str, required=True, help='MQTT password')
     parser.add_argument('--debug', dest='debug', action='store_true', help='When set, prints debug messages')
     parser.add_argument('--cert-ca', required=True, type=str, help='Path to the root CA certificate path')
+    parser.add_argument('--enable-bridging', action="store_true", help='When set, enabled Meross Broker bridging')
     parser.set_defaults(debug=False)
+    parser.set_defaults(enable_bridging=False)
     return parser.parse_args()
 
 
@@ -56,12 +58,14 @@ class Broker:
                  port: int,
                  username: str,
                  password: str,
-                 cert_ca: str):
+                 cert_ca: str,
+                 enable_bridging: bool):
         self.hostname = hostname
         self.port = port
         self.username = username
         self.password = password
         self.cert_ca = cert_ca
+        self.bridging_enabled = enable_bridging
         self.c = mqtt.Client(client_id="broker", clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
         self.c.username_pw_set(username=self.username, password=self.password)
 
@@ -73,6 +77,7 @@ class Broker:
         self.c.on_connect = self._on_connect
         self.c.on_disconnect = self._on_disconnect
         self.c.on_message = self._on_message
+        self.c.on_subscribe = self._on_subscribe
         self._lock = RLock()
         self._devices_sys_info_timestamp = {}
         self._bridges = {}
@@ -89,17 +94,15 @@ class Broker:
 
     def _on_subscribe(self, client, userdata, mid, granted_qos):
         l.debug("Subscribed to relevant topics")
+        l.info("Re-loading connected device status.")
+        self._issue_devices_discovery()
 
     def _on_message(self, client, userdata, msg):
         l.debug(f"Local MQTT: received message on topic {msg.topic}: {str(msg.payload)}")
         self._handle_message(topic=msg.topic, payload=msg.payload)
 
-    def _on_unsubscribe(self, *args, **kwargs):
-        l.debug("Unsubscribed")
-
     def _on_disconnect(self, client, userdata, rc):
         l.debug("Disconnection detected. Reason: %s" % str(rc))
-
         # If the client disconnected explicitly
         if rc == mqtt.MQTT_ERR_SUCCESS:
             pass
@@ -113,6 +116,11 @@ class Broker:
         l.debug("Stopping the MQTT looper.")
         self.c.loop_stop(True)
         l.info("MQTT Client has fully disconnected.")
+
+    def _issue_devices_discovery(self) -> None:
+        devices = dbhelper.get_all_devices()
+        for d in devices:
+            self._issue_device_channel_discovery(device_uuid=d.uuid)
 
     def _issue_device_channel_discovery(self, device_uuid: str) -> None:
         device = dbhelper.get_device_by_uuid(device_uuid=device_uuid)
@@ -143,7 +151,8 @@ class Broker:
         self.c.publish(topic=f"/app/{user.user_id}/subscribe", payload=json.dumps(payload))
 
         # In case there is a bridged remote connection, forward the event to the remote broker as well
-        self._forward_message_to_remote(bridge_uuid=device_uuid, topic=topic, payload=json.dumps(payload).encode("utf8"))
+        if self.bridging_enabled:
+            self._forward_message_to_remote(bridge_uuid=device_uuid, topic=topic, payload=json.dumps(payload).encode("utf8"))
 
     def _handle_message_to_agent(self, topic: str, payload: dict) -> None:
         # Try to guess the channels from the system_all payload
@@ -209,6 +218,9 @@ class Broker:
             l.info("Setting last update timestamp to %s for device %s", ts, appliance_uuid)
             self._devices_sys_info_timestamp[device.uuid] = ts
 
+            if self.bridging_enabled:
+                self._get_or_create_bridge(device_uuid=device.uuid)
+
     def _handle_device_disconnected(self, payload: dict) -> None:
         if payload.get("event") != "disconnect":
             l.warning("Invalid or unhandled event received: %s", payload.get("event"))
@@ -231,6 +243,15 @@ class Broker:
             # Clear last timestamp update
             del self._devices_sys_info_timestamp[uuid]
 
+            # Stop the corresponding bridge
+            bridge = self._bridges.get(uuid)
+            if bridge is not None:
+                l.debug("Stopping and Removing device MQTT-Bridge: %s", uuid)
+                bridge.stop()
+                del self._bridges[uuid]
+            else:
+                l.debug("No MQTT Bridge found for device %s, nothing to stop.", uuid)
+
     def _handle_message(self, topic: str, payload: bytes):
         try:
             # TODO: Implement message signature checks.
@@ -243,22 +264,23 @@ class Broker:
                 self._handle_device_disconnected(payload=p)
                 return
 
-            # Handling NATTED messages
-            match = _NAT_RE.fullmatch(topic)
-            if match is not None:
-                nat_table_index = match.group(1)
-                nat_entry = self._nat_table.get(nat_table_index)
-                if nat_entry is None:
-                    l.error("Invalid _NAT_ address received. Message will be discarded.")
+            # Handling NATTED messages if bridging is enabled
+            if self.bridging_enabled:
+                match = _NAT_RE.fullmatch(topic)
+                if match is not None:
+                    nat_table_index = match.group(1)
+                    nat_entry = self._nat_table.get(nat_table_index)
+                    if nat_entry is None:
+                        l.error("Invalid _NAT_ address received. Message will be discarded.")
+                        return
+                    original_topic = nat_entry.get("original_from_attribute")
+                    originating_bridge_uuid = nat_entry.get("originating_bridge_uuid")
+                    p = json.loads(payload)
+                    p['header']['from'] = original_topic
+                    original_payload = json.dumps(p).encode('utf8')
+                    self._forward_message_to_remote(topic=original_topic, payload=original_payload,
+                                                    bridge_uuid=originating_bridge_uuid)
                     return
-                original_topic = nat_entry.get("original_from_attribute")
-                originating_bridge_uuid = nat_entry.get("originating_bridge_uuid")
-                p = json.loads(payload)
-                p['header']['from'] = original_topic
-                original_payload = json.dumps(p).encode('utf8')
-                self._forward_message_to_remote(topic=original_topic, payload=original_payload,
-                                                bridge_uuid=originating_bridge_uuid)
-                return
 
             # Handling messages pushed to APPLIANCE publication topics
             match = APPLIANCE_PUBLISH_TOPIC_RE.fullmatch(topic)
@@ -291,7 +313,7 @@ class Broker:
                                         meross_user_id=str(device.user_id),
                                         meross_key=device.owner_user.mqtt_key)
             bridge.start()
-            self._bridges[device_uuid]=bridge
+            self._bridges[device_uuid] = bridge
         return bridge
 
     def forward_device_command_locally(self, topic: str, payload: bytes, originating_bridge_uuid: str):
@@ -335,13 +357,22 @@ def main():
     # Set all devices to unknown online status
     dbhelper.reset_device_online_status()
 
-    b = Broker(hostname=args.host, port=args.port, username=args.username, password=args.password, cert_ca=args.cert_ca)
+    b = Broker(hostname=args.host,
+               port=args.port,
+               username=args.username,
+               password=args.password,
+               cert_ca=args.cert_ca,
+               enable_bridging=args.enable_bridging)
 
     reconnect_interval = 10  # [seconds]
     while True:
         try:
             b.setup()
-            b.c.loop_forever()
+
+            while True:
+                # Every 10 seconds, issue a full device discovery
+                b.c.loop(timeout=10, max_packets=-1)
+                b.c.loop_forever()
 
         except KeyboardInterrupt as ex:
             l.warning("Keyboard interrupt received, exiting.")

@@ -5,7 +5,7 @@ import time
 from _md5 import md5
 
 
-def _build_mqtt_message(method: str, namespace: str, payload: dict, dev_key: str):
+def _build_mqtt_message(method: str, namespace: str, payload: dict, dev_key: str, header_from: str = '/_agent'):
     # Generate a random 16 byte string
     randomstring = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16))
 
@@ -24,7 +24,7 @@ def _build_mqtt_message(method: str, namespace: str, payload: dict, dev_key: str
     data = {
         "header":
             {
-                "from": "/_agent",
+                "from": header_from,
                 "messageId": messageId,  # Example: "122e3e47835fefcd8aaf22d13ce21859"
                 "method": method,  # Example: "GET",
                 "namespace": namespace,  # Example: "Appliance.System.All",

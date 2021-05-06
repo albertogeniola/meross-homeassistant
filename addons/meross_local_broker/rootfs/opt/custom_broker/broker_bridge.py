@@ -55,9 +55,11 @@ class BrokerDeviceBridge:
 
     def start(self):
         self._c.connect(host=self._hostname, port=self._port)
+        l.info("Starting bridged connection for uuid %s", self._uuid)
         self._c.loop_start()
 
     def stop(self):
+        l.info("Terminating bridged connection for uuid %s", self._uuid)
         self._c.loop_stop(force=True)
 
     def _on_connect(self, client, userdata, rc, other):
@@ -82,8 +84,14 @@ class BrokerDeviceBridge:
     def _on_disconnect(self, client, userdata, rc):
         l.debug("Disconnected result code " + str(rc))
         self._connected = False
-        # TODO: intercept wrong password?
-        # client.loop_stop()
+
+        # If the client disconnected explicitly
+        if rc == mqtt.MQTT_ERR_SUCCESS:
+            pass
+        else:
+            # Otherwise, if the disconnection was not intentional, we probably had a connection drop.
+            l.warning("Client has been disconnected. Connection will be re-attempted.")
+            # TODO: intercept wrong password and abort re-connection?
 
     def send_message(self, topic: str, payload: bytearray):
         with self._l:

@@ -5,12 +5,19 @@ CONFIG_PATH=/data/options.json
 pushd /opt/custom_broker >/dev/null
 
 debug=$(bashio::config 'debug_mode')
-
 if [[ $debug == true ]]; then
   bashio::log.info "Starting broker agent with debug flag"
   debug="--debug"
 else
   debug=""
+fi
+
+bridging=$(bashio::config 'federate_with_meross')
+if [[ $bridging == true ]]; then
+  bashio::log.info "Enabling Meross bridging"
+  bridging="--enable-bridging"
+else
+  bridging=""
 fi
 
 # Generate a random password for agent user
@@ -36,6 +43,6 @@ echo -e "user $ADMIN_USERNAME\ntopic readwrite #">>/etc/mosquitto/auth.acl
 bashio::log.info "Waiting MQTT server..."
 bashio::net.wait_for 2001
 
-python3 broker_agent.py --port 2001 --host localhost --username "$AGENT_USERNAME" --password "$AGENT_PASSWORD" --cert-ca "/data/mqtt/certs/ca.crt" $debug
+python3 broker_agent.py --port 2001 --host localhost --username "$AGENT_USERNAME" --password "$AGENT_PASSWORD" --cert-ca "/data/mqtt/certs/ca.crt" $debug $bridging
 
 popd >/dev/null
