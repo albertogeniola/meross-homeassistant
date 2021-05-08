@@ -106,6 +106,7 @@ class Device(Base, Serializer):
 
     user_id = Column(String, ForeignKey('users.user_id'))
     owner_user = relationship("User", back_populates="owned_devices")
+    child_subdevices = relationship("SubDevice", back_populates="parent_device")
 
     # Technical fields
     last_seen_time = Column(DateTime)
@@ -119,4 +120,19 @@ class Device(Base, Serializer):
         d['online_status'] = self.online_status.value
         d['user_email'] = self.owner_user.email
         d['channels'] = DeviceChannel.serialize_list(self.channels)
+        d['child_subdevices'] = SubDevice.serialize_list(self.subdevices)
         return d
+
+
+class SubDevice(Base, Serializer):
+    __tablename__ = 'subdevices'
+
+    sub_device_id = Column(String(16), primary_key=True)
+    true_id = Column(String(8))
+    sub_device_type = Column(String(16))
+    sub_device_vendor = Column(String(16))
+    sub_device_name = Column(String(255))
+    sub_device_icon_id = Column(String(16))
+
+    hub_uuid = Column(String, ForeignKey('devices.uuid'))
+    parent_device = relationship("Device", back_populates="child_subdevices")

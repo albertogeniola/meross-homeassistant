@@ -4,9 +4,8 @@ from logger import get_logger
 from typing import Optional, List
 
 from database import db_session
-from model.db_models import UserToken, Device, User, DeviceChannel
+from model.db_models import UserToken, Device, User, DeviceChannel, SubDevice
 from datetime import datetime
-
 
 l = get_logger(__name__)
 
@@ -88,7 +87,8 @@ class DbHelper:
         channel = None
         for c in dev.channels:
             if c.channel_id == channel_id:
-                l.debug("Channel %d already attached to device uuid %s: channel__id %s", channel_id, device_uuid, c.device_channel_id)
+                l.debug("Channel %d already attached to device uuid %s: channel__id %s", channel_id, device_uuid,
+                        c.device_channel_id)
                 channel = c
                 break
 
@@ -104,6 +104,31 @@ class DbHelper:
             self._s.commit()
 
         return channel
+
+    def bind_subdevice(self, device_type: str, subdevice_id: str, hub_uuid: str) -> SubDevice:
+        l.info("Binding subdevice %s to hub id %s", subdevice_id, hub_uuid)
+        # Check if the subdevice exists. If so, update the existing one
+        subdevice = self._s.query(SubDevice).filter(SubDevice.sub_device_id == subdevice_id).first()
+        if subdevice is None:
+            subdevice = SubDevice()
+            subdevice.sub_device_id = subdevice_id
+        subdevice.sub_device_type = device_type
+        subdevice.hub_uuid = hub_uuid
+        self._s.add(subdevice)
+        self._s.commit()
+        return subdevice
+
+    def unbind_subdevice(self, subdevice_id: str) -> None:
+        l.info("Unbinding subdevice %s", subdevice_id)
+        # Check if the subdevice exists. If so, update the existing one
+        subdevice = self._s.query(SubDevice).filter(SubDevice.sub_device_id == subdevice_id).first()
+        if subdevice is not None:
+            subdevice.delete()
+            self._s.add(subdevice)
+            self._s.commit()
+
+    def get_subdevice_by_id(self, subdevice_id: str) -> Optional[SubDevice]:
+        return self._s.query(SubDevice).filter(SubDevice.sub_device_id == subdevice_id).first()
 
     def reset_device_online_status(self) -> None:
         self._s.query(Device).update({Device.online_status: OnlineStatus.UNKNOWN})

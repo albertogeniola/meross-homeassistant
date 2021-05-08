@@ -1,23 +1,21 @@
 import argparse
+import json
 import logging
+import re
+import ssl
+import time
 import uuid
 from datetime import datetime
-
-from meross_iot.model.enums import OnlineStatus
-from expiringdict import ExpiringDict
-
-from logger import get_logger, set_logger_level
-import ssl
 from threading import RLock
 
 import paho.mqtt.client as mqtt
-import time
-import re
-import json
+from expiringdict import ExpiringDict
+from meross_iot.model.enums import OnlineStatus
 
 from broker_bridge import BrokerDeviceBridge
 from database import init_db
 from db_helper import dbhelper
+from logger import get_logger, set_logger_level
 from protocol import _build_mqtt_message
 
 CLIENT_ID = 'broker_agent'
@@ -28,7 +26,6 @@ DISCONNECTION_TOPIC = '$SYS/client-disconnections'
 AGENT_TOPIC = '/_agent'
 
 l = get_logger(__name__)
-
 
 APPLIANCE_PUBLISH_TOPIC_RE = re.compile("/appliance/([a-zA-Z0-9]+)/publish")
 APPLIANCE_SUBSCRIBE_TOPIC_RE = re.compile("/appliance/([a-zA-Z0-9]+)/subscribe")
@@ -90,7 +87,9 @@ class Broker:
 
     def _on_connect(self, client, userdata, rc, other):
         l.debug("Connected to broker, rc=%s", str(rc))
-        self.c.subscribe([(NAT_TOPIC, 2), (APPLIANCE_MESSAGE_TOPICS, 2), (DISCONNECTION_TOPIC, 2), (APPLIANCE_SUBSCRIBE_TOPIC, 2), (AGENT_TOPIC, 2)])
+        self.c.subscribe(
+            [(NAT_TOPIC, 2), (APPLIANCE_MESSAGE_TOPICS, 2), (DISCONNECTION_TOPIC, 2), (APPLIANCE_SUBSCRIBE_TOPIC, 2),
+             (AGENT_TOPIC, 2)])
 
     def _on_subscribe(self, client, userdata, mid, granted_qos):
         l.debug("Subscribed to relevant topics")
@@ -120,9 +119,9 @@ class Broker:
     def _issue_devices_discovery(self) -> None:
         devices = dbhelper.get_all_devices()
         for d in devices:
-            self._issue_device_channel_discovery(device_uuid=d.uuid)
+            self._issue_device_get_all(device_uuid=d.uuid)
 
-    def _issue_device_channel_discovery(self, device_uuid: str) -> None:
+    def _issue_device_get_all(self, device_uuid: str) -> None:
         device = dbhelper.get_device_by_uuid(device_uuid=device_uuid)
         msg, message_id = _build_mqtt_message(method="GET",
                                               namespace="Appliance.System.All",
@@ -144,15 +143,28 @@ class Broker:
         if last_update_ts is None or (datetime.now() - last_update_ts).seconds > _DEVICE_UPDATE_CACHE_INTERVAL_SECONDS:
             l.info("Update required for device %s Issuing SystemAll command to discover its channels "
                    "and supplementary data", device_uuid)
-            self._issue_device_channel_discovery(device_uuid)
+            self._issue_device_get_all(device_uuid)
+
+        # If the event is a Hub Bind/Unbind event, handle it accordingly
+        if payload.get('header', {}).get('namespace', {}) == 'Appliance.Hub.Bind':
+            for d in payload.get('payload').get('bind'):
+                dbhelper.bind_subdevice(device_type=d.get('deviceType'),
+                                        subdevice_id=d.get('id'),
+                                        hub_uuid=device_uuid)
+
+        if payload.get('header', {}).get('namespace', {}) == 'Appliance.Hub.Unbind':
+            for d in payload.get('payload').get('bind'):
+                dbhelper.unbind_subdevice(subdevice_id=d.get('id'))
 
         # Forward the device push notification to the app channel
-        l.debug("Local MQTT -> Local MQTT: forwarding push notification received from device %s to user %s", device_uuid, user)
+        l.debug("Local MQTT -> Local MQTT: forwarding push notification received from device %s to user %s",
+                device_uuid, user)
         self.c.publish(topic=f"/app/{user.user_id}/subscribe", payload=json.dumps(payload))
 
         # In case there is a bridged remote connection, forward the event to the remote broker as well
         if self.bridging_enabled:
-            self._forward_message_to_remote(bridge_uuid=device_uuid, topic=topic, payload=json.dumps(payload).encode("utf8"))
+            self._forward_message_to_remote(bridge_uuid=device_uuid, topic=topic,
+                                            payload=json.dumps(payload).encode("utf8"))
 
     def _handle_message_to_agent(self, topic: str, payload: dict) -> None:
         # Try to guess the channels from the system_all payload
@@ -370,8 +382,8 @@ def main():
             b.setup()
 
             while True:
-                # Every 10 seconds, issue a full device discovery
-                b.c.loop(timeout=10, max_packets=-1)
+                # Every 60 seconds, issue a full device discovery
+                b.c.loop(timeout=60, max_packets=-1)
                 b.c.loop_forever()
 
         except KeyboardInterrupt as ex:
