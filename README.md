@@ -13,8 +13,8 @@ and hours of procotol inspection sessions, reverse engineering and [hacking](htt
 
 Just to rise the hype, here there are some screens of the on-going development addon, which is 75% completed:
 <img src="https://user-images.githubusercontent.com/4648843/117581720-9d2bb080-b0fe-11eb-802e-1f360d7c3c04.png" alt="Log Screenshot" width=250/>
-<img src="https://user-images.githubusercontent.com/4648843/117581722-9dc44700-b0fe-11eb-95ca-9fe02f8d2536.png" alt="WebUi Screenshot" width=250/>
 <img src="https://user-images.githubusercontent.com/4648843/117581724-9e5cdd80-b0fe-11eb-9822-a1cc4363a929.png" alt="Info Screenshot" width=250/>
+<img src="https://user-images.githubusercontent.com/4648843/117581904-aa956a80-b0ff-11eb-926c-132614eb9bda.png" alt="WebUi Screenshot" width=250/>
 
 
 ### What is the local-addon?
