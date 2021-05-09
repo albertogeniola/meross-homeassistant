@@ -6,6 +6,18 @@ A full-featured Homeassistant component to drive Meross devices.
 This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
 
 ## :new: :rocket: Local-Only Addon under development :rocket:
+### :exclamation: Heads up: Update :exclamation: ###
+I had promised to the community that I would have focused my development efforts in the local-addon, and... so I am doing :)
+As already mentioned many times, the reason why it takes so much time is because everything done here is the result of hours 
+and hours of procotol inspection sessions, reverse engineering and [hacking](https://en.wikipedia.org/wiki/Hacker_culture). 
+
+Just to rise the hype, here there are some screens of the on-going development addon, which is 75% completed:
+<img src="https://user-images.githubusercontent.com/4648843/117581720-9d2bb080-b0fe-11eb-802e-1f360d7c3c04.png" alt="Log Screenshot" width=250/>
+<img src="https://user-images.githubusercontent.com/4648843/117581722-9dc44700-b0fe-11eb-95ca-9fe02f8d2536.png" alt="WebUi Screenshot" width=250/>
+<img src="https://user-images.githubusercontent.com/4648843/117581724-9e5cdd80-b0fe-11eb-9822-a1cc4363a929.png" alt="Info Screenshot" width=250/>
+
+
+### What is the local-addon?
 Meross Plugin has gained great success and popularity among the HomeAssistant users. However, the Meross engineers are imposing
 new limits on their MQTT broker system, which cause problems to the HA users who want to implement aggressive polling or have
 more than 10 devices connected to HA. For this reason, I am working on a new HomeAssistant addon, namely "Meross Local Addon", 
