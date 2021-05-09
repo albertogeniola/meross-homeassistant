@@ -120,7 +120,7 @@ class Device(Base, Serializer):
         d['online_status'] = self.online_status.value
         d['user_email'] = self.owner_user.email
         d['channels'] = DeviceChannel.serialize_list(self.channels)
-        d['child_subdevices'] = SubDevice.serialize_list(self.subdevices)
+        d['child_subdevices'] = SubDevice.serialize_list(self.child_subdevices)
         return d
 
 
@@ -136,3 +136,11 @@ class SubDevice(Base, Serializer):
 
     hub_uuid = Column(String, ForeignKey('devices.uuid'))
     parent_device = relationship("Device", back_populates="child_subdevices")
+
+    def __init__(self, subdevice_id: str, *args, **kwargs):
+        self.sub_device_id = subdevice_id
+
+    def serialize(self):
+        d = Serializer.serialize(self)
+        del d['parent_device']
+        return d

@@ -32,4 +32,4 @@ def get_subdevices(api_payload: Dict, *args, **kwargs):
         _LOGGER.error("Invalid UUID or device not enrolled")
         raise HttpApiError(error_code=ExtendedErrorCodes.CODE_GENERIC_ERROR)
 
-    return make_api_response(data=device.subdevices)
+    return make_api_response(data=device.child_subdevices)

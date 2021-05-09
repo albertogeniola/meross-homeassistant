@@ -105,14 +105,13 @@ class DbHelper:
 
         return channel
 
-    def bind_subdevice(self, device_type: str, subdevice_id: str, hub_uuid: str) -> SubDevice:
+    def bind_subdevice(self, subdevice_type: str, subdevice_id: str, hub_uuid: str) -> SubDevice:
         l.info("Binding subdevice %s to hub id %s", subdevice_id, hub_uuid)
         # Check if the subdevice exists. If so, update the existing one
         subdevice = self._s.query(SubDevice).filter(SubDevice.sub_device_id == subdevice_id).first()
         if subdevice is None:
-            subdevice = SubDevice()
-            subdevice.sub_device_id = subdevice_id
-        subdevice.sub_device_type = device_type
+            subdevice = SubDevice(subdevice_id=subdevice_id)
+        subdevice.sub_device_type = subdevice_type
         subdevice.hub_uuid = hub_uuid
         self._s.add(subdevice)
         self._s.commit()

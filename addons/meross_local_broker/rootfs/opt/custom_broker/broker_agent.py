@@ -7,6 +7,7 @@ import time
 import uuid
 from datetime import datetime
 from threading import RLock
+from typing import Dict, List
 
 import paho.mqtt.client as mqtt
 from expiringdict import ExpiringDict
@@ -16,6 +17,7 @@ from broker_bridge import BrokerDeviceBridge
 from database import init_db
 from db_helper import dbhelper
 from logger import get_logger, set_logger_level
+from model.db_models import Device
 from protocol import _build_mqtt_message
 
 CLIENT_ID = 'broker_agent'
@@ -47,6 +49,16 @@ def parse_args():
     parser.set_defaults(debug=False)
     parser.set_defaults(enable_bridging=False)
     return parser.parse_args()
+
+
+def guess_subdevice_type(subdevices_data: Dict):
+    if 'mts100v3' in subdevices_data:
+        return 'mts100v3'
+    elif 'ms100' in subdevices_data:
+        return 'ms100'
+    else:
+        l.warning('Could not identify subdevice type from subdevice data: %s', str(subdevices_data))
+        return 'unknown'
 
 
 class Broker:
@@ -145,16 +157,18 @@ class Broker:
                    "and supplementary data", device_uuid)
             self._issue_device_get_all(device_uuid)
 
-        # If the event is a Hub Bind/Unbind event, handle it accordingly
-        if payload.get('header', {}).get('namespace', {}) == 'Appliance.Hub.Bind':
-            for d in payload.get('payload').get('bind'):
-                dbhelper.bind_subdevice(device_type=d.get('deviceType'),
-                                        subdevice_id=d.get('id'),
-                                        hub_uuid=device_uuid)
-
-        if payload.get('header', {}).get('namespace', {}) == 'Appliance.Hub.Unbind':
-            for d in payload.get('payload').get('bind'):
-                dbhelper.unbind_subdevice(subdevice_id=d.get('id'))
+        # # For subdevices, we need to intercept BIND and UNBIND events as they are the only messages that carry the
+        # # subdevice_type information.
+        # # If the event is a Hub Bind/Unbind event, handle it accordingly
+        # if payload.get('header', {}).get('namespace', {}) == 'Appliance.Hub.Bind':
+        #     for d in payload.get('payload').get('bind'):
+        #         dbhelper.bind_subdevice(subdevice_type=d.get('deviceType'),
+        #                                 subdevice_id=d.get('id'),
+        #                                 hub_uuid=device_uuid)
+        #
+        # if payload.get('header', {}).get('namespace', {}) == 'Appliance.Hub.Unbind':
+        #     for d in payload.get('payload').get('bind'):
+        #         dbhelper.unbind_subdevice(subdevice_id=d.get('id'))
 
         # Forward the device push notification to the app channel
         l.debug("Local MQTT -> Local MQTT: forwarding push notification received from device %s to user %s",
@@ -202,6 +216,11 @@ class Broker:
             device.online_status = OnlineStatus(online.get('status'))
             device.local_ip = firmware.get('innerIp')
             dbhelper.update_device(device)
+
+            hub_data = digest.get("hub")
+            if hub_data is not None:
+                subdevices_data = hub_data.get('subdevice', [])
+                self._update_hub_subdevices(hub_device=device, subdevices_data=subdevices_data)
 
             # Guess channels and Store Appliance info on DB
             togglex_switches = digest.get('togglex')
@@ -317,7 +336,6 @@ class Broker:
             l.info("Creating MQTT bridge for device %s", device_uuid)
             # Retrieve device info
             device = dbhelper.get_device_by_uuid(device_uuid=device_uuid)
-            # FIXME: pass Meross info
             bridge = BrokerDeviceBridge(broker=self,
                                         device_uuid=device_uuid,
                                         device_client_id=device.client_id,
@@ -356,6 +374,26 @@ class Broker:
         else:
             l.debug("Bridge creation failed for device %s", bridge_uuid)
 
+    def _update_hub_subdevices(self, hub_device: Device, subdevices_data: List[Dict]) -> None:
+        l.debug("Updating subdevices for hub %s (%s)", hub_device.uuid, hub_device.dev_name)
+        # Add newly discovered subdevices
+        for d in subdevices_data:
+            subdevice_id = d.get('id')
+            subdevice_type = guess_subdevice_type(subdevices_data)
+            subdevice = dbhelper.get_subdevice_by_id(subdevice_id)
+            if subdevice is None:
+                l.info("Found new subdevice %s belonging to hub %s (%s)", subdevice_id, hub_device.uuid,
+                       hub_device.dev_name)
+                dbhelper.bind_subdevice(subdevice_type=subdevice_type, subdevice_id=subdevice_id,
+                                                    hub_uuid=hub_device.uuid)
+
+        # Remove old subdevices that were not listed any longer
+        current_devices_ids = {x.get('id') for x in subdevices_data}
+        for d in hub_device.child_subdevices:
+            if d.sub_device_id not in current_devices_ids:
+                l.warning("Removing subdevice %s from hub %s (%s)", d.sub_device_id, hub_device.uuid, hub_device.dev_name)
+                dbhelper.unbind_subdevice(subdevice_id=d.sub_device_id)
+                
 
 def main():
     # Parse Args
