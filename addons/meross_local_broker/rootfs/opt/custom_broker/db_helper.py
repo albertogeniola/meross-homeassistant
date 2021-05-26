@@ -126,6 +126,9 @@ class DbHelper:
             self._s.add(subdevice)
             self._s.commit()
 
+    def get_all_subdevices(self) -> List[SubDevice]:
+        return self._s.query(SubDevice).all()
+
     def get_subdevice_by_id(self, subdevice_id: str) -> Optional[SubDevice]:
         return self._s.query(SubDevice).filter(SubDevice.sub_device_id == subdevice_id).first()
 

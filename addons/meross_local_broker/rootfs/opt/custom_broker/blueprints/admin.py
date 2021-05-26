@@ -46,3 +46,10 @@ def update_device(uuid: str) -> Dict:
 
     return jsonify(Device.serialize(device))
 
+
+# TODO: check super-admin role...
+@admin_blueprint.route('/subdevices', methods=['GET'])
+def list_subdevices() -> List[Dict]:
+    """ List all subdevices """
+    subdevices = dbhelper.get_all_devices()
+    return jsonify(Device.serialize_list(subdevices))

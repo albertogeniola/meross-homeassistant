@@ -1,4 +1,5 @@
 <div class="container">
+  <!-- Device List -->
   <div class="max-800">
     <mat-toolbar color="primary">
       <span>Paired devices</span>
@@ -6,6 +7,78 @@
       <mat-slide-toggle class="small" [checked]="autoUpdate" (change)="onAutodeviceUpdate($event)"
         >Auto update</mat-slide-toggle
       >
+    </mat-toolbar>
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" matSort>
+      <!-- Device Name Column -->
+      <ng-container matColumnDef="deviceId">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Device Name</th>
+        <td mat-cell *matCellDef="let element">
+          <div style="flex-direction: row; display: flex">
+            <div>
+              <button mat-icon-button [matMenuTriggerFor]="deviceMenu" aria-label="Device menu">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #deviceMenu="matMenu">
+                <button mat-menu-item (click)="assignName(element)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Assign name</span>
+                </button>
+              </mat-menu>
+            </div>
+            <div>
+              <a *ngIf="element.dev_name === null" (click)="assignName(element)" class="grayout">(No name set)</a>
+              <span *ngIf="element.dev_name !== null">{{ element.dev_name }}</span>
+              <br />
+              <span class="mat-small">{{ element.uuid }}</span>
+            </div>
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="type">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Device Type</th>
+        <td mat-cell *matCellDef="let element">{{ element.device_type }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="network">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Network Info</th>
+        <td mat-cell *matCellDef="let element">
+          <span class="mat-small">{{ element.mac }}</span>
+          <span class="mat-small" *ngIf="element.local_ip"><br />({{ element.local_ip }})</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="userId">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>User Id</th>
+        <td mat-cell *matCellDef="let element">
+          {{ element.user_id }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+        <td mat-cell *matCellDef="let element" [matTooltip]="'Last message on ' + element.last_seen_time">
+          {{ element.online_status | onlineDeviceStatusName }}
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+
+      <!-- Row shown when there is no matching data. -->
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell" colspan="4">No data matching</td>
+      </tr>
+
+      <mat-paginator [pageSizeOptions]="[15, 30, 100]"></mat-paginator>
+    </table>
+  </div>
+
+  <!-- SubDevice List -->
+  <div class="max-800">
+    <mat-toolbar color="primary">
+      <span>Paired subdevices</span>
+      <span class="spacer"></span>
     </mat-toolbar>
     <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" matSort>
       <!-- Device Name Column -->
