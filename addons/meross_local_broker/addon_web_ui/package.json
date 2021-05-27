@@ -20,11 +20,11 @@
   },
   "dependencies": {
     "@angular/animations": "^11.0.8",
-    "@angular/cdk": "^11.0.3",
+    "@angular/cdk": "^12.0.2",
     "@angular/common": "^11.0.8",
     "@angular/compiler": "^11.0.8",
     "@angular/core": "^11.0.8",
-    "@angular/flex-layout": "^11.0.0-beta.33",
+    "@angular/flex-layout": "^12.0.0-beta.34",
     "@angular/forms": "^11.0.8",
     "@angular/localize": "^11.0.8",
     "@angular/material": "^11.0.3",

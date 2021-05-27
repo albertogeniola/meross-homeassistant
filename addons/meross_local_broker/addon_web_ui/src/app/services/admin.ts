@@ -1,6 +1,8 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Device, DeviceOnlineStatus } from '@app/model/device';
+import { SubdeviceStore } from '@app/providers/subdevice';
+import { Subdevice } from '@app/model/subdevice';
 import { environment } from '@env/environment';
 import { Observable, of } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
@@ -56,5 +58,13 @@ export class AdminService {
         ),
         catchError(this.handleError<Device[]>('listDevices', []))
       );
+  }
+
+  listSubdevices(): Observable<Subdevice[]> {
+    var headers = new HttpHeaders();
+    headers.append('Content-Type', 'application/json; charset=utf-8');
+    return this.http
+      .get<Subdevice[]>(environment.backend + '/_admin_/subdevices', { headers })
+      .pipe(catchError(this.handleError<any[]>('listSubdevices', [])));
   }
 }

@@ -5,6 +5,8 @@ import { MatPaginator } from '@angular/material/paginator';
 import { finalize } from 'rxjs/operators';
 import { Device, DeviceOnlineStatus } from '@app/model/device';
 import { DeviceStore } from '@app/providers/device';
+import { Subdevice } from '@app/model/subdevice';
+import { SubdeviceStore } from '@app/providers/subdevice';
 import { AdminService } from '@app/services/admin';
 import { MatSlideToggleChange } from '@angular/material/slide-toggle';
 import { Observable, Subscription } from 'rxjs';
@@ -20,34 +22,25 @@ export interface SetNameDialogData {
   styleUrls: ['./home.component.scss'],
 })
 export class HomeComponent implements AfterViewInit, OnInit {
-  displayedColumns: string[] = ['deviceId', 'network', 'status', 'userId', 'type'];
-  dataSource = new MatTableDataSource<Device>([]);
+  devicesColumns: string[] = ['deviceId', 'network', 'status', 'userId', 'type'];
+  subdevicesColumns: string[] = ['subdeviceId', 'type', 'hubId'];
+  deviceSource = new MatTableDataSource<Device>([]);
+  subdeviceSource = new MatTableDataSource<Subdevice>([]);
   autoUpdate = true;
-  private _autoUpdateSubscription: Subscription = null;
 
   @ViewChild(MatPaginator) paginator: MatPaginator;
   @ViewChild(MatSort) sort: MatSort;
 
-  constructor(private deviceStore: DeviceStore, public dialog: MatDialog) {}
+  constructor(private deviceStore: DeviceStore, private subdeviceStore: SubdeviceStore, public dialog: MatDialog) {}
   ngOnInit(): void {
-    // Update the device list once
-    this.deviceStore.devices.subscribe((devices) => (this.dataSource.data = devices));
-  }
-
-  onAutodeviceUpdate(e: MatSlideToggleChange) {
-    if (e.checked === true) {
-      if (this._autoUpdateSubscription !== null) this._autoUpdateSubscription.unsubscribe();
-      this._autoUpdateSubscription = this.deviceStore.deviceUpdates.subscribe(
-        (devices) => (this.dataSource.data = devices)
-      );
-    } else {
-      if (this._autoUpdateSubscription !== null) this._autoUpdateSubscription.unsubscribe();
-    }
+    // Update the device and subdevice lists once
+    this.deviceStore.devices.subscribe((devices) => (this.deviceSource.data = devices));
+    this.subdeviceStore.devices.subscribe((devices) => (this.subdeviceSource.data = devices));
   }
 
   ngAfterViewInit() {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
+    this.deviceSource.paginator = this.paginator;
+    this.deviceSource.sort = this.sort;
   }
 
   assignName(device: Device) {

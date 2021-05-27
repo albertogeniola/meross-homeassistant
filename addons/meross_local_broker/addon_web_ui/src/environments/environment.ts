@@ -20,5 +20,6 @@ interface Environment {
 
 declare var __env: Environment;
 __env.version = env.npm_package_version;
+__env.backend = 'http://localhost:2002';
 
 export const environment = __env;
