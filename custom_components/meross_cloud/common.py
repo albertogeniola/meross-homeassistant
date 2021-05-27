@@ -1,12 +1,8 @@
-import asyncio
 import logging
-from collections import Callable
-from typing import Any
+from typing import Dict
 
 from meross_iot.controller.device import BaseDevice
-
 from custom_components.meross_cloud.version import MEROSS_CLOUD_VERSION
-import time
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,8 +27,10 @@ CONF_RATE_LIMIT_PER_SECOND = 'rate_limit_per_second'
 CONF_RATE_LIMIT_MAX_TOKENS = 'rate_limit_max_tokens'
 
 
+# Constants
 RELAXED_SCAN_INTERVAL = 180.0
 SENSOR_POLL_INTERVAL_SECONDS = 15
+UNIT_PERCENTAGE = "%"
 
 
 def calculate_sensor_id(uuid: str, type: str, measurement_unit: str, channel: int = 0,):
@@ -108,54 +106,11 @@ def invoke_method_or_property(obj, method_or_property):
         return attr
 
 
-class RateLimiter:
-    """Rate limiter utility implementing token-bucket algorithm
-    This class is not thread-safe."""
+def extract_subdevice_notification_data(data: dict, filter_accessor: str, subdevice_id: str) -> Dict:
+    # Operate only on relative accessor
+    context = data.get(filter_accessor)
 
-    def __init__(self, rate: int = 1, max_tokens: int = 10):
-        self._rate = rate
-        self._max_tokens = max_tokens
-        self._tokens = self._max_tokens
-        self.updated_at = time.monotonic()
-        self._start = time.monotonic()
-
-    async def acquire(self, *args, **kwargs):
-        token_obtained = await self._wait_for_token()
-        return token_obtained
-
-    async def _wait_for_token(self, timeout: float = None):
-        wait_started_at = time.monotonic()
-        while self._tokens < 1:
-            self._add_new_tokens()
-            await asyncio.sleep(0.1)
-
-            if timeout is not None and (time.monotonic()-wait_started_at) > timeout:
-                return False
-
-        self._tokens -= 1
-        return True
-
-    def _add_new_tokens(self):
-        now = time.monotonic()
-        time_since_update = now - self.updated_at
-        new_tokens = time_since_update * self._rate
-        if self._tokens + new_tokens >= 1:
-            self._tokens = min(self._tokens + new_tokens, self._max_tokens)
-            self.updated_at = now
-
-
-class RateLimitedFunction(object):
-    def __init__(self, rate_limiter_instance: RateLimiter, callable_function: Callable, *async_function_args, **async_function_kwargs):
-        self._limiter = rate_limiter_instance
-        self._function = callable_function
-        self._args = async_function_args
-        self._kwargs = async_function_kwargs
-
-    async def __call__(self) -> Any:
-        r = await self._limiter.acquire()
-        if r:
-            result = await self._function(*self._args, **self._kwargs)
-            return result
-        else:
-            _LOGGER.warning("RATE LIMITER - Throttling...")
-            return None
+    for notification in context:
+        if notification.get('id') != subdevice_id:
+            continue
+        return notification

@@ -9,13 +9,14 @@ from homeassistant.components.climate.const import HVAC_MODE_AUTO, HVAC_MODE_COO
 from homeassistant.const import TEMP_CELSIUS
 from homeassistant.core import HomeAssistant
 from meross_iot.controller.device import BaseDevice
-from meross_iot.controller.subdevice import Mts100v3Valve
+from meross_iot.controller.known.subdevice import Mts100v3Valve
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace, ThermostatV3Mode
 from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, calculate_valve_id)
+from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, calculate_valve_id,
+                     extract_subdevice_notification_data)
 
 # Conditional import for switch device
 try:
@@ -58,7 +59,7 @@ class ValveEntityWrapper(ClimateEntity):
         self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
         self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].add(self.unique_id)
 
-    async def _async_push_notification_received(self, namespace: Namespace, data: dict):
+    async def _async_push_notification_received(self, namespace: Namespace, data: dict, device_internal_id: str):
         update_state = False
         full_update = False
 
@@ -70,10 +71,12 @@ class ValveEntityWrapper(ClimateEntity):
             online = OnlineStatus(int(data.get('online').get('status')))
             update_state = True
             full_update = online == OnlineStatus.ONLINE
-
         elif namespace == Namespace.HUB_ONLINE:
             _LOGGER.warning(f"Device {self.name} reported (HUB) online event.")
-            online = OnlineStatus(int(data.get('status')))
+            online_event_data = extract_subdevice_notification_data(data=data, 
+                                                                    filter_accessor='online', 
+                                                                    subdevice_id=self._device.subdevice_id)
+            online = OnlineStatus(int(online_event_data.get('status')))
             update_state = True
             full_update = online == OnlineStatus.ONLINE
         else:
@@ -131,7 +134,7 @@ class ValveEntityWrapper(ClimateEntity):
             await self._device.async_turn_on()
 
         if hvac_mode == HVAC_MODE_HEAT:
-            await self._device.async_set_mode(ThermostatV3Mode.CUSTOM)
+            await self._device.async_set_mode(ThermostatV3Mode.HEAT)
         elif hvac_mode == HVAC_MODE_AUTO:
             await self._device.async_set_mode(ThermostatV3Mode.AUTO)
         elif hvac_mode == HVAC_MODE_COOL:
@@ -184,6 +187,8 @@ class ValveEntityWrapper(ClimateEntity):
             return HVAC_MODE_HEAT
         elif self._device.mode == ThermostatV3Mode.COOL:
             return HVAC_MODE_COOL
+        elif self._device.mode == ThermostatV3Mode.ECONOMY:
+            return HVAC_MODE_AUTO
         elif self._device.mode == ThermostatV3Mode.CUSTOM:
             if self._device.last_sampled_temperature < self._device.target_temperature:
                 return HVAC_MODE_HEAT

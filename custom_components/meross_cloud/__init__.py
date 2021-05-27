@@ -10,7 +10,6 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.typing import HomeAssistantType
 from meross_iot.http_api import MerossHttpClient
-from meross_iot.logger import ROOT_MEROSS_LOGGER, h
 from meross_iot.manager import MerossManager
 from meross_iot.model.credentials import MerossCloudCreds
 from meross_iot.model.http.device import HttpDeviceInfo
@@ -19,11 +18,9 @@ from meross_iot.model.http.exception import TokenExpiredException, TooManyTokens
 from .common import (ATTR_CONFIG, CLOUD_HANDLER, PLATFORM, HA_CLIMATE, HA_COVER,
                      HA_FAN, HA_LIGHT, HA_SENSOR, HA_SWITCH, MANAGER,
                      MEROSS_COMPONENTS, SENSORS, dismiss_notification, notify_error, log_exception, CONF_STORED_CREDS,
-                     RateLimiter, LIMITER, CONF_RATE_LIMIT_PER_SECOND, CONF_RATE_LIMIT_MAX_TOKENS)
-# Unset the default stream handler for logger of the meross_iot library
+                     LIMITER, CONF_RATE_LIMIT_PER_SECOND, CONF_RATE_LIMIT_MAX_TOKENS)
 from .version import MEROSS_CLOUD_VERSION
 
-ROOT_MEROSS_LOGGER.removeHandler(h)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -124,14 +121,11 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
                 }
             })
 
-        manager = MerossManager(http_client=client, auto_reconnect=True)
-        # Setup the rate limiter
-        limiter = RateLimiter(rate=rate_limit_per_second, max_tokens=rate_limit_max_tokens)
+        manager = MerossManager(http_client=client, auto_reconnect=True, over_limit_threshold_percentage=1000)
 
         hass.data[PLATFORM] = {}
         hass.data[PLATFORM][MANAGER] = manager
         hass.data[PLATFORM]["ADDED_ENTITIES_IDS"] = set()
-        hass.data[PLATFORM][LIMITER] = limiter
 
         # Keep a registry of added sensors
         # TODO: Do the same for other platforms?
@@ -194,8 +188,9 @@ async def async_unload_entry(hass, entry):
 
     _LOGGER.info("Cleaning up memory...")
     for plat in MEROSS_COMPONENTS:
-        hass.data[PLATFORM][plat].clear()
-        del hass.data[PLATFORM][plat]
+        if plat in hass.data[PLATFORM]:
+            hass.data[PLATFORM][plat].clear()
+            del hass.data[PLATFORM][plat]
     del hass.data[PLATFORM][MANAGER]
     hass.data[PLATFORM].clear()
     del hass.data[PLATFORM]

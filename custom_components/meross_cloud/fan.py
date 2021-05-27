@@ -54,7 +54,7 @@ class HumidifierEntityWrapper(FanEntity):
                 log_exception(logger=_LOGGER, device=self._device)
                 pass
 
-    async def _async_push_notification_received(self, namespace: Namespace, data: dict):
+    async def _async_push_notification_received(self, namespace: Namespace, data: dict, device_internal_id: str):
         update_state = False
         full_update = False
 
