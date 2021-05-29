@@ -57,4 +57,4 @@ def handle_http_exception(e):
 
 
 if __name__ == '__main__':
-    app.run(port=2002, host="0.0.0.0")
+    app.run(port=2002, host="0.0.0.0", debug=True)

@@ -157,18 +157,18 @@ class Broker:
                    "and supplementary data", device_uuid)
             self._issue_device_get_all(device_uuid)
 
-        # # For subdevices, we need to intercept BIND and UNBIND events as they are the only messages that carry the
-        # # subdevice_type information.
-        # # If the event is a Hub Bind/Unbind event, handle it accordingly
-        # if payload.get('header', {}).get('namespace', {}) == 'Appliance.Hub.Bind':
-        #     for d in payload.get('payload').get('bind'):
-        #         dbhelper.bind_subdevice(subdevice_type=d.get('deviceType'),
-        #                                 subdevice_id=d.get('id'),
-        #                                 hub_uuid=device_uuid)
-        #
-        # if payload.get('header', {}).get('namespace', {}) == 'Appliance.Hub.Unbind':
-        #     for d in payload.get('payload').get('bind'):
-        #         dbhelper.unbind_subdevice(subdevice_id=d.get('id'))
+        # For subdevices, we need to intercept BIND and UNBIND events as they are the only messages that carry the
+        # subdevice_type information.
+        # If the event is a Hub Bind/Unbind event, handle it accordingly
+        if payload.get('header', {}).get('namespace', {}) == 'Appliance.Hub.Bind':
+            for d in payload.get('payload').get('bind'):
+                dbhelper.bind_subdevice(subdevice_type=d.get('deviceType'),
+                                        subdevice_id=d.get('id'),
+                                        hub_uuid=device_uuid)
+
+        if payload.get('header', {}).get('namespace', {}) == 'Appliance.Hub.Unbind':
+            for d in payload.get('payload').get('bind'):
+                dbhelper.unbind_subdevice(subdevice_id=d.get('id'))
 
         # Forward the device push notification to the app channel
         l.debug("Local MQTT -> Local MQTT: forwarding push notification received from device %s to user %s",
@@ -242,7 +242,7 @@ class Broker:
             # elif spray_switches is not None:
             #     pass
             else:
-                l.error("Could not guess the channels for device uuid %s", appliance_uuid)
+                l.warning("Could not guess the channels for device uuid %s", appliance_uuid)
 
             # Update the last update timestamp
             ts = datetime.now()
@@ -306,10 +306,10 @@ class Broker:
                         return
                     original_topic = nat_entry.get("original_from_attribute")
                     originating_bridge_uuid = nat_entry.get("originating_bridge_uuid")
-                    p = json.loads(payload)
-                    p['header']['from'] = original_topic
-                    original_payload = json.dumps(p).encode('utf8')
-                    self._forward_message_to_remote(topic=original_topic, payload=original_payload,
+                    #p = json.loads(payload)
+                    #p['header']['from'] = original_topic
+                    #original_payload = json.dumps(p).encode('utf8')
+                    self._forward_message_to_remote(topic=original_topic, payload=payload,
                                                     bridge_uuid=originating_bridge_uuid)
                     return
 
@@ -365,6 +365,8 @@ class Broker:
             # Replace the original address with the natted one and submit the message locally
             message_data['header']['from'] = nat_entry
             newdata = json.dumps(message_data).encode('utf8')
+            l.debug("Device Bridge (%s) -> Local MQTT, topic: %s, message: %s", originating_bridge_uuid, str(topic),
+                    str(newdata))
             self.c.publish(topic=topic, payload=newdata)
 
     def _forward_message_to_remote(self, topic: str, payload: bytearray, bridge_uuid: str):
@@ -385,15 +387,16 @@ class Broker:
                 l.info("Found new subdevice %s belonging to hub %s (%s)", subdevice_id, hub_device.uuid,
                        hub_device.dev_name)
                 dbhelper.bind_subdevice(subdevice_type=subdevice_type, subdevice_id=subdevice_id,
-                                                    hub_uuid=hub_device.uuid)
+                                        hub_uuid=hub_device.uuid)
 
         # Remove old subdevices that were not listed any longer
         current_devices_ids = {x.get('id') for x in subdevices_data}
         for d in hub_device.child_subdevices:
             if d.sub_device_id not in current_devices_ids:
-                l.warning("Removing subdevice %s from hub %s (%s)", d.sub_device_id, hub_device.uuid, hub_device.dev_name)
+                l.warning("Removing subdevice %s from hub %s (%s)", d.sub_device_id, hub_device.uuid,
+                          hub_device.dev_name)
                 dbhelper.unbind_subdevice(subdevice_id=d.sub_device_id)
-                
+
 
 def main():
     # Parse Args
