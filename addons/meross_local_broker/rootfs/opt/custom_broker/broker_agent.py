@@ -381,13 +381,19 @@ class Broker:
         # Add newly discovered subdevices
         for d in subdevices_data:
             subdevice_id = d.get('id')
-            subdevice_type = guess_subdevice_type(subdevices_data)
+            subdevice_type = guess_subdevice_type(d)
             subdevice = dbhelper.get_subdevice_by_id(subdevice_id)
             if subdevice is None:
                 l.info("Found new subdevice %s belonging to hub %s (%s)", subdevice_id, hub_device.uuid,
                        hub_device.dev_name)
-                dbhelper.bind_subdevice(subdevice_type=subdevice_type, subdevice_id=subdevice_id,
-                                        hub_uuid=hub_device.uuid)
+                subdevice = dbhelper.bind_subdevice(subdevice_type=subdevice_type, subdevice_id=subdevice_id,
+                                                    hub_uuid=hub_device.uuid)
+            if (subdevice.sub_device_type is None or subdevice.sub_device_type == 'unknown') and subdevice_type is not None:
+                l.warning("Subdevice %s was of unknown, but from update data looks like an %s."
+                          "From now on, this subdevice is treated as an %s.", subdevice_id,
+                          subdevice_type, subdevice_type)
+                subdevice.sub_device_type = subdevice_type
+                dbhelper.update_subdevice(subdevice)
 
         # Remove old subdevices that were not listed any longer
         current_devices_ids = {x.get('id') for x in subdevices_data}

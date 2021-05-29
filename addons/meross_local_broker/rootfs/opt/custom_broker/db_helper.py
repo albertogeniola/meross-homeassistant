@@ -131,6 +131,11 @@ class DbHelper:
     def get_subdevice_by_id(self, subdevice_id: str) -> Optional[SubDevice]:
         return self._s.query(SubDevice).filter(SubDevice.sub_device_id == subdevice_id).first()
 
+    def update_subdevice(self, subdevice: SubDevice) -> SubDevice:
+        self._s.add(subdevice)
+        self._s.commit()
+        return subdevice
+
     def reset_device_online_status(self) -> None:
         self._s.query(Device).update({Device.online_status: OnlineStatus.UNKNOWN})
         self._s.commit()
