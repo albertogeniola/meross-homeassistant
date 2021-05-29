@@ -48,12 +48,12 @@ function setup_certs() {
   MQTT_SERVER_CONFIG_PATH=./server.conf
 
   # Generate mosquitto certificates
-  bashio::log.info "Checking for RSA keys..."
+  echo "Checking for RSA keys..."
   if [[ ! -d $MQTT_CERTS_FOLDER_PATH ]]; then
     mkdir -p $MQTT_CERTS_FOLDER_PATH
   fi
   if [[ ! -f $MQTT_CA_KEY_PATH ]] || [[ ! -f $MQTT_CA_CRT_PATH ]] || [[ ! -f $MQTT_SERVER_KEY_PATH ]] || [[ ! -f $MQTT_SERVER_CRT_PATH ]]; then
-    bashio::log.warning "One or more certificate files are not present on the system. Generating certificates from scratch..."
+    echo "One or more certificate files are not present on the system. Generating certificates from scratch..."
     rm -R $MQTT_CERTS_FOLDER_PATH
     mkdir -p $MQTT_CERTS_FOLDER_PATH
 
@@ -63,11 +63,11 @@ function setup_certs() {
     openssl req -new -out /tmp/server.csr -key $MQTT_SERVER_KEY_PATH -config $MQTT_SERVER_CONFIG_PATH
     openssl x509 -req -in /tmp/server.csr -CA $MQTT_CA_CRT_PATH -CAkey $MQTT_CA_KEY_PATH -CAcreateserial -out $MQTT_SERVER_CRT_PATH -days 3600 -passin pass:$MQTT_CA_KEY_SECRET
   else
-    bashio::log.info "All certificate files seems present."
+    echo "All certificate files seems present."
   fi
 
   # Align permissions
-  bashio::log.info "Aligning permissions for certificates"
+  echo "Aligning permissions for certificates"
   chown -vR mosquitto:mosquitto ./
 }
 
@@ -77,12 +77,6 @@ if [[ ! -f go-auth.so ]]; then
   build_auth_plugin
 fi
 
-# Generate keys
-openssl genrsa -out ca.key 2048
-openssl req -new -x509 -days 3600 -batch -nodes -key ca.key -out ca.crt
-openssl genrsa -out server.key 2048
-openssl req -new -batch -out server.csr -key server.key
-openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 360
 
 # Create auth files
 AGENT_USERNAME="admin"

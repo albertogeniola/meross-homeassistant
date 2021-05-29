@@ -122,8 +122,7 @@ class DbHelper:
         # Check if the subdevice exists. If so, update the existing one
         subdevice = self._s.query(SubDevice).filter(SubDevice.sub_device_id == subdevice_id).first()
         if subdevice is not None:
-            subdevice.delete()
-            self._s.add(subdevice)
+            self._s.delete(subdevice)
             self._s.commit()
 
     def get_all_subdevices(self) -> List[SubDevice]:
