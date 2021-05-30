@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from meross_iot.model.enums import OnlineStatus
 from sqlalchemy import Column, String, BigInteger, Integer, DateTime
@@ -6,6 +6,8 @@ from sqlalchemy import ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from database import Base
 from sqlalchemy.inspection import inspect
+
+from model.enums import BridgeStatus
 
 
 class Serializer(object):
@@ -22,18 +24,19 @@ class User(Base, Serializer):
     __tablename__ = 'users'
     __table_args__ = {'sqlite_autoincrement': True}
 
-    email = Column(String(64), primary_key=True, unique=True)
-    user_id = Column(Integer, unique=True)
+    user_id = Column(Integer, primary_key=True)
+    email = Column(String(64), unique=True, autoincrement=True)
     salt = Column(String(64))
     password = Column(String(64))
     mqtt_key = Column(String(64))
     owned_devices = relationship("Device", back_populates="owner_user")
 
-    def __init__(self, email: str, salt: str, password: str, mqtt_key: str, *args, **kwargs):
+    def __init__(self, email: str, salt: str, password: str, mqtt_key: str, user_id: Optional[int], *args, **kwargs):
         self.email = email
         self.salt = salt
         self.password = password
         self.mqtt_key = mqtt_key
+        self.user_id = user_id
 
     def __repr__(self):
         return '<User %r (%r)>' % (self.user_id, self.email)
@@ -110,6 +113,7 @@ class Device(Base, Serializer):
 
     # Technical fields
     last_seen_time = Column(DateTime)
+    bridge_status = Column(Enum(BridgeStatus), default=BridgeStatus.DISCONNECTED)
 
     def __init__(self, mac: str, *args, **kwargs):
         self.mac = mac
@@ -121,6 +125,7 @@ class Device(Base, Serializer):
         d['user_email'] = self.owner_user.email
         d['channels'] = DeviceChannel.serialize_list(self.channels)
         d['child_subdevices'] = SubDevice.serialize_list(self.child_subdevices)
+        d['bridge_status'] = self.bridge_status.name
         return d
 
 

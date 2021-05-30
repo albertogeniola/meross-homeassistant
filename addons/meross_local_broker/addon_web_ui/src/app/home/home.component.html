@@ -1,7 +1,12 @@
 <div class="container" fxLayout="row wrap" fxLayoutGap="12px">
-  Please remove all the Meross Devices from your Meross Account (via the APP) and then
-  pair them via the Custom Pairer App. Notice: your smartphone must be connected to the
-  same Local Network where this Addon is executing.
+ <p>Please remove all the Meross Devices from your Meross Account (via the APP) and then
+  pair them via the Custom Pairer App.
+  This plugin supports Meross Bridging:
+  that means you might run local MQTT broker and propagate states/commands to the official
+  Meross Cloud. That allows you to use both the Officila Meross app while connecting devices
+  to the local MQTT broker. Cool uh?
+  Please notice that your smartphone must be connected to the same Local Network where this Addon is executing.
+</p>
 </div>
 <div class="container" fxLayout="row wrap" fxLayoutGap="12px">
   <!-- Device List -->
@@ -13,8 +18,8 @@
     <table mat-table [dataSource]="deviceSource" class="mat-elevation-z8" matSort>
       <!-- Device Name Column -->
       <ng-container matColumnDef="deviceId">
-        <th class="p5" mat-header-cell *matHeaderCellDef mat-sort-header>Device Name</th>
-        <td class="p5" mat-cell *matCellDef="let element">
+        <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>Device Name</th>
+        <td class="p10" mat-cell *matCellDef="let element">
           <div style="flex-direction: row; display: flex">
             <div>
               <button mat-icon-button [matMenuTriggerFor]="deviceMenu" aria-label="Device menu">
@@ -38,29 +43,30 @@
       </ng-container>
 
       <ng-container matColumnDef="type">
-        <th class="p5" mat-header-cell *matHeaderCellDef mat-sort-header>Device Type</th>
-        <td class="p5" mat-cell *matCellDef="let element">{{ element.device_type }}</td>
+        <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>Device Type</th>
+        <td class="p10" mat-cell *matCellDef="let element">{{ element.device_type }}</td>
       </ng-container>
 
       <ng-container matColumnDef="network">
-        <th class="p5" mat-header-cell *matHeaderCellDef mat-sort-header>Network Info</th>
-        <td class="p5" mat-cell *matCellDef="let element">
+        <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>Network Info</th>
+        <td class="p10" mat-cell *matCellDef="let element">
           <span class="mat-small">{{ element.mac }}</span>
           <span class="mat-small" *ngIf="element.local_ip"><br />({{ element.local_ip }})</span>
         </td>
       </ng-container>
 
       <ng-container matColumnDef="userId">
-        <th class="p5" mat-header-cell *matHeaderCellDef mat-sort-header>User Id</th>
-        <td class="p5" mat-cell *matCellDef="let element">
+        <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>User Id</th>
+        <td class="p10" mat-cell *matCellDef="let element">
           {{ element.user_id }}
         </td>
       </ng-container>
 
       <ng-container matColumnDef="status">
-        <th class="p5" mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
-        <td class="p5" mat-cell *matCellDef="let element" [matTooltip]="'Last message on ' + element.last_seen_time">
-          {{ element.online_status | onlineDeviceStatusName }}
+        <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+        <td class="p10" mat-cell *matCellDef="let element" [matTooltip]="'Last message on ' + element.last_seen_time">
+          <span>{{ element.online_status | onlineDeviceStatusName }}</span><br/>
+          <span class="small">Bridge: {{ element.bridge_status | bridgeStatusName }}</span>
         </td>
       </ng-container>
 

@@ -7,6 +7,8 @@ from database import db_session
 from model.db_models import UserToken, Device, User, DeviceChannel, SubDevice
 from datetime import datetime
 
+from model.enums import BridgeStatus
+
 l = get_logger(__name__)
 
 
@@ -104,6 +106,14 @@ class DbHelper:
             self._s.commit()
 
         return channel
+
+    def update_device_bridge_status(self, device_uuid: str, status: BridgeStatus):
+        device = self.get_device_by_uuid(device_uuid=device_uuid)
+        if device is None:
+            raise Exception("Invalid device uuid")
+        device.bridge_status = status
+        self._s.add(device)
+        self._s.commit()
 
     def bind_subdevice(self, subdevice_type: str, subdevice_id: str, hub_uuid: str) -> SubDevice:
         l.info("Binding subdevice %s to hub id %s", subdevice_id, hub_uuid)
