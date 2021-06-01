@@ -7,6 +7,8 @@ from database import db_session
 from model.db_models import UserToken, Device, User, DeviceChannel, SubDevice
 from datetime import datetime
 
+from model.enums import BridgeStatus
+
 l = get_logger(__name__)
 
 
@@ -105,6 +107,14 @@ class DbHelper:
 
         return channel
 
+    def update_device_bridge_status(self, device_uuid: str, status: BridgeStatus):
+        device = self.get_device_by_uuid(device_uuid=device_uuid)
+        if device is None:
+            raise Exception("Invalid device uuid")
+        device.bridge_status = status
+        self._s.add(device)
+        self._s.commit()
+
     def bind_subdevice(self, subdevice_type: str, subdevice_id: str, hub_uuid: str) -> SubDevice:
         l.info("Binding subdevice %s to hub id %s", subdevice_id, hub_uuid)
         # Check if the subdevice exists. If so, update the existing one
@@ -122,8 +132,7 @@ class DbHelper:
         # Check if the subdevice exists. If so, update the existing one
         subdevice = self._s.query(SubDevice).filter(SubDevice.sub_device_id == subdevice_id).first()
         if subdevice is not None:
-            subdevice.delete()
-            self._s.add(subdevice)
+            self._s.delete(subdevice)
             self._s.commit()
 
     def get_all_subdevices(self) -> List[SubDevice]:
@@ -131,6 +140,11 @@ class DbHelper:
 
     def get_subdevice_by_id(self, subdevice_id: str) -> Optional[SubDevice]:
         return self._s.query(SubDevice).filter(SubDevice.sub_device_id == subdevice_id).first()
+
+    def update_subdevice(self, subdevice: SubDevice) -> SubDevice:
+        self._s.add(subdevice)
+        self._s.commit()
+        return subdevice
 
     def reset_device_online_status(self) -> None:
         self._s.query(Device).update({Device.online_status: OnlineStatus.UNKNOWN})

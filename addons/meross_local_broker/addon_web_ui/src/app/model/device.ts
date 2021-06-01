@@ -6,6 +6,12 @@ export enum DeviceOnlineStatus {
   UPGRADING = 3,
 }
 
+export enum BridgeStatus {
+  DISCONNECTED = "Disconnected",
+  CONNECTED = "Connected",
+  ERROR = "Error"
+}
+
 export interface DeviceChannel {
   // TODO: define this interface
 }
@@ -25,4 +31,5 @@ export interface Device {
   dev_name: string;
   domain: string;
   reserved_domain: string;
+  bridge_status: BridgeStatus;
 }

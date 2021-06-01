@@ -51,5 +51,5 @@ def update_device(uuid: str) -> Dict:
 @admin_blueprint.route('/subdevices', methods=['GET'])
 def list_subdevices() -> List[Dict]:
     """ List all subdevices """
-    subdevices = dbhelper.get_all_devices()
+    subdevices = dbhelper.get_all_subdevices()
     return jsonify(Device.serialize_list(subdevices))

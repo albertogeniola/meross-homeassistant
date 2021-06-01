@@ -16,7 +16,6 @@ _CLIENTID_RE = re.compile('^fmware:([a-zA-Z0-9]+)_[a-zA-Z0-9]+$')
 @devs_blueprint.route('/acl', methods=['POST'])
 def device_acl():
     content = request.json
-    _LOGGER.debug("LOGIN_CHECK=%s", str(content))
 
     username = request.json.get('username')
     topic = request.json.get('topic')

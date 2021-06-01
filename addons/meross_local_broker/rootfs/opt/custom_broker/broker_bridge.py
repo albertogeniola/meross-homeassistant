@@ -6,7 +6,8 @@ import ssl
 from _md5 import md5
 import paho.mqtt.client as mqtt
 from threading import RLock
-
+from db_helper import dbhelper
+from model.enums import BridgeStatus
 from protocol import _build_mqtt_message
 
 APPLIANCE_SUBSCRIBE_TOPIC_PATTERN = '/appliance/%s/subscribe'
@@ -53,6 +54,8 @@ class BrokerDeviceBridge:
         self._c.on_disconnect = self._on_disconnect
         self._c.on_unsubscribe = self._on_unsubscribe
 
+        self._errors_count = 0
+
     def start(self):
         self._c.connect(host=self._hostname, port=self._port)
         l.info("Starting bridged connection for uuid %s", self._uuid)
@@ -60,6 +63,7 @@ class BrokerDeviceBridge:
 
     def stop(self):
         l.info("Terminating bridged connection for uuid %s", self._uuid)
+        self._c.unsubscribe(topic=APPLIANCE_SUBSCRIBE_TOPIC_PATTERN % self._uuid)
         self._c.loop_stop(force=True)
 
     def _on_connect(self, client, userdata, rc, other):
@@ -71,6 +75,11 @@ class BrokerDeviceBridge:
 
     def _on_subscribe(self, client, userdata, mid, granted_qos):
         l.debug("Subscribed to Meross MQTT topics.")
+        dbhelper.update_device_bridge_status(device_uuid=self._uuid, status=BridgeStatus.CONNECTED)
+
+        # Reset error counts as we finally established a successful connection
+        self._errors_count = 0
+
         # TODO: Handle binding (re-issue binding message at every reconnection?)
 
     def _on_message(self, client, userdata, msg):
@@ -84,13 +93,16 @@ class BrokerDeviceBridge:
     def _on_disconnect(self, client, userdata, rc):
         l.debug("Disconnected result code " + str(rc))
         self._connected = False
+        dbhelper.update_device_bridge_status(device_uuid=self._uuid, status=BridgeStatus.DISCONNECTED)
 
         # If the client disconnected explicitly
         if rc == mqtt.MQTT_ERR_SUCCESS:
             pass
         else:
             # Otherwise, if the disconnection was not intentional, we probably had a connection drop.
-            l.warning("Client has been disconnected. Connection will be re-attempted.")
+            l.warning("Client has been disconnected. Connection will be re-attempted. Error code: %s", str(rc))
+            self._errors_count += 1
+            dbhelper.update_device_bridge_status(device_uuid=self._uuid, status=BridgeStatus.ERROR)
             # TODO: intercept wrong password and abort re-connection?
 
     def send_message(self, topic: str, payload: bytearray):
