@@ -1,0 +1,13 @@
+/var/log/mosquitto.log {
+    daily
+    size 1M
+    create 0666 mosquitto:mosquitto
+    rotate 1
+}
+
+/var/log/mosquitto-auth.log {
+    daily
+    size 1M
+    create 0666 mosquitto:mosquitto
+    rotate 1
+}

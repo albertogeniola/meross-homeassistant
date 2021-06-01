@@ -2,7 +2,7 @@ ARG BUILD_FROM=homeassistant/amd64-base-debian
 FROM ${BUILD_FROM}
 
 # Build arguments
-ARG BUILD_ARCH=amd64
+ARG BUILD_ARCH
 ARG BUILD_DATE
 ARG BUILD_REF
 ARG BUILD_VERSION
@@ -26,14 +26,16 @@ COPY rootfs/opt/custom_broker/requirements.txt requirements.txt
 # Setup base
 # hadolint ignore=DL3003
 RUN apt-get update \
+  && apt-get install --no-install-recommends -y gnupg gpg-agent \
   && apt-get --no-install-recommends install -y \
     avahi-utils \
     build-essential \
     git \
     cmake \
     libssl-dev \
+    libffi-dev \
     python3-dev \
-    libavahi-client-dev \  
+    libavahi-client-dev \
     libavahi-compat-libdnssd-dev \
     avahi-daemon \
     dbus \
@@ -49,9 +51,25 @@ RUN apt-get update \
     software-properties-common \
     xsltproc \
     logrotate \
+  \
   && mkdir -p /tmp/go \
-  && curl https://dl.google.com/go/go1.16.3.linux-${BUILD_ARCH}.tar.gz --output go.tar.gz \
-  && tar -C /usr/local -xzf go.tar.gz \
+  && \
+    if [ "${BUILD_ARCH}" = "armhf" ]; then \
+    export GOOS=linux ; export GOARCH=arm ; \
+    elif [ "${BUILD_ARCH}" = "armv7" ]; then \
+    elif [ "${BUILD_ARCH}" = "armv7" ]; then \
+    export GOOS=linux ; export GOARM=7 ; export GOARCH=arm ; \
+    elif [ "${BUILD_ARCH}" = "aarch64" ]; then \
+    export GOOS=linux ; export GOARCH=arm64 ; \
+    elif [ "${BUILD_ARCH}" = "i386" ]; then \
+    export GOOS=linux ; export GOARCH=386 ; \
+    elif [ "${BUILD_ARCH}" = "amd64" ]; then \
+    export GOOS=linux ; export GOARCH=amd64 ; \
+    else \
+    echo 'NOT VALID BUILD'; exit 1; \
+    fi \
+  && curl https://dl.google.com/go/go1.16.3.${GOOS}-${GOARCH}.tar.gz --output /tmp/go/go.tar.gz \
+  && tar -C /usr/local -xzf /tmp/go/go.tar.gz \
   && export PATH=$PATH:/usr/local/go/bin \
   \
   && pip3 install -r requirements.txt \
