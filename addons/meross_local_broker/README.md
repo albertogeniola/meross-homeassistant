@@ -15,8 +15,25 @@ change their internals and break the logic within this addon.
 
 ## Features
 
+Before installing this addon, it is important to understand **what this addon does** and **what it does not**.
+
+To get there, know that Meross devices rely on a 3 tiers distributed architecture:
+
+- Physical hardware devices (smart plugs/bulbs/power-strip/valves/...)
+- Remote HTTP Api server
+- Remote MQTT Api server
+
+Each physical device connects to the MQTT server and sends/receives updates/commands to/from certain topics.
+Users, via the Meross App, talks to the Meross HTTP server to register, login and enroll their Meross devices.
+The Meross app, in turn, is also capable to talk to the physical devices via the MQTT server.
+
+This addon re-implements both the MQTT and the HTTP API parts of the Meross ecosystem, allowing your Meross physical devices
+to talk locally on the LAN to such components. This enables you to get rid of Meross limits as this local addon does not enforce any.
+
+## Tested environments
+
 TBD
 
-## Donate
+## Donate!
 
 TBD
