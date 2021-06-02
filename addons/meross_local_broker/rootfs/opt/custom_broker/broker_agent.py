@@ -272,7 +272,8 @@ class Broker:
             l.info("Device %s has disconnected from broker", uuid)
 
             # Clear last timestamp update
-            del self._devices_sys_info_timestamp[uuid]
+            if uuid in self._devices_sys_info_timestamp:
+                del self._devices_sys_info_timestamp[uuid]
 
             # Stop the corresponding bridge
             bridge = self._bridges.get(uuid)
