@@ -22,7 +22,7 @@ class BrokerDeviceBridge:
                  meross_device_mac: str,
                  meross_user_id: str,
                  meross_key: str,
-                 meross_mqtt_server: str = "iot.meross.com",
+                 meross_mqtt_server: str = "mqtt.meross.com",
                  meross_mqtt_port: int = 2001):
 
         self._l = RLock()
@@ -97,10 +97,11 @@ class BrokerDeviceBridge:
 
         # If the client disconnected explicitly
         if rc == mqtt.MQTT_ERR_SUCCESS:
+            l.info("Client has been disconnected successfully, RC: %s", str(rc))
             pass
         else:
             # Otherwise, if the disconnection was not intentional, we probably had a connection drop.
-            l.warning("Client has been disconnected. Connection will be re-attempted. Error code: %s", str(rc))
+            l.error("Client has been disconnected. Connection will be re-attempted. Error code: %s", str(rc))
             self._errors_count += 1
             dbhelper.update_device_bridge_status(device_uuid=self._uuid, status=BridgeStatus.ERROR)
             # TODO: intercept wrong password and abort re-connection?
