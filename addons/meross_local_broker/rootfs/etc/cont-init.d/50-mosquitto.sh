@@ -13,6 +13,7 @@ MQTT_CA_KEY_SECRET=notasecret
 MQTT_CA_CONFIG_PATH=/etc/mosquitto/certs/ca.conf
 MQTT_SERVER_CONFIG_PATH=/etc/mosquitto/certs/server.conf
 MQTT_MOSQUITTO_CONF_PATH=/etc/mosquitto/mosquitto.conf
+MQTT_MOSQUITTO_LOG_DIR_PATH=/var/log/mosquitto
 
 # Generate mosquitto certificates
 bashio::log.info "Checking for RSA keys..."
@@ -33,6 +34,11 @@ else
   bashio::log.info "All certificate files seems present."
 fi
 
+if [[ ! -d $MQTT_MOSQUITTO_LOG_DIR_PATH ]]; then
+  mkdir -p $MQTT_MOSQUITTO_LOG_DIR_PATH
+fi
+
 # Align permissions
 bashio::log.info "Aligning permissions for certificates"
-chown -vR mosquitto:mosquitto /data/mqtt/certs 
+chown -vR mosquitto:mosquitto $MQTT_CERTS_FOLDER_PATH
+chown -vR mosquitto:mosquitto $MQTT_MOSQUITTO_LOG_DIR_PATH

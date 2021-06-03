@@ -192,11 +192,6 @@ class Broker:
             appliance_uuid = match.group(1)
 
             # Retrieve system_all info
-            digest = payload.get('payload', {}).get('all', {}).get('digest', None)
-            if digest is None:
-                l.warning("Missing or invalid payload Appliance.System.All payload: could not find digest attribute")
-                return
-
             system = payload.get('payload', {}).get('all', {}).get('system', None)
             if system is None:
                 l.warning("Missing or invalid payload Appliance.System.All payload: could not find system attribute")
@@ -217,32 +212,36 @@ class Broker:
             device.local_ip = firmware.get('innerIp')
             dbhelper.update_device(device)
 
-            hub_data = digest.get("hub")
-            if hub_data is not None:
-                subdevices_data = hub_data.get('subdevice', [])
-                self._update_hub_subdevices(hub_device=device, subdevices_data=subdevices_data)
-
-            # Guess channels and Store Appliance info on DB
-            togglex_switches = digest.get('togglex')
-            # TODO: implement other channel guessing
-            # light_switches = digest.get('light')
-            # spray_switches = digest.get('spray')
-
-            # Guess by togglex
-            if togglex_switches is not None and len(togglex_switches) > 0:
-                l.debug("Guessing channels via togglex")
-                for d in togglex_switches:
-                    channel_id = d.get('channel')
-                    dbhelper.update_device_channel(device_uuid=appliance_uuid, channel_id=channel_id)
-            # Guess by "light"
-            # elif light_switches is not None:
-            #     pass
-            #
-            # # Guess by "spray"
-            # elif spray_switches is not None:
-            #     pass
+            digest = payload.get('payload', {}).get('all', {}).get('digest', None)
+            if digest is None:
+                l.warning("Missing or invalid payload Appliance.System.All payload: could not find digest attribute")
             else:
-                l.warning("Could not guess the channels for device uuid %s", appliance_uuid)
+                hub_data = digest.get("hub")
+                if hub_data is not None:
+                    subdevices_data = hub_data.get('subdevice', [])
+                    self._update_hub_subdevices(hub_device=device, subdevices_data=subdevices_data)
+
+                # Guess channels and Store Appliance info on DB
+                togglex_switches = digest.get('togglex')
+                # TODO: implement other channel guessing
+                # light_switches = digest.get('light')
+                # spray_switches = digest.get('spray')
+
+                # Guess by togglex
+                if togglex_switches is not None and len(togglex_switches) > 0:
+                    l.debug("Guessing channels via togglex")
+                    for d in togglex_switches:
+                        channel_id = d.get('channel')
+                        dbhelper.update_device_channel(device_uuid=appliance_uuid, channel_id=channel_id)
+                # Guess by "light"
+                # elif light_switches is not None:
+                #     pass
+                #
+                # # Guess by "spray"
+                # elif spray_switches is not None:
+                #     pass
+                else:
+                    l.warning("Could not guess the channels for device uuid %s", appliance_uuid)
 
             # Update the last update timestamp
             ts = datetime.now()
@@ -272,7 +271,8 @@ class Broker:
             l.info("Device %s has disconnected from broker", uuid)
 
             # Clear last timestamp update
-            del self._devices_sys_info_timestamp[uuid]
+            if uuid in self._devices_sys_info_timestamp:
+                del self._devices_sys_info_timestamp[uuid]
 
             # Stop the corresponding bridge
             bridge = self._bridges.get(uuid)
