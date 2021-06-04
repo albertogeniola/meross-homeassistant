@@ -1,2 +1,9 @@
-*.sh eol=lf
-*.conf eol=lf
+*.sh text eol=lf
+*.conf text eol=lf
+*.acl text eol=lf
+*.pw text eol=lf
+*.types text eol=lf
+/addons/meross_local_broker/rootfs/etc/cont-init.d/** text eol=lf
+/addons/meross_local_broker/rootfs/etc/fix-attrs.d/** text eol=lf
+/addons/meross_local_broker/rootfs/etc/services.d/** text eol=lf
+/addons/meross_local_broker/rootfs/usr/local/bin/** text eol=lf
