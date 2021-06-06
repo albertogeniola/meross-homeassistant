@@ -1,0 +1,8 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Start avahi service
+# ==============================================================================
+name="HTTP Local Broker"
+bashio::log.info "Starting the AVAHI daemon for ${name}..."
+
+exec avahi-publish-service -v -f -s "$name" _meross-local-api._tcp $(bashio::addon.port 2002)
