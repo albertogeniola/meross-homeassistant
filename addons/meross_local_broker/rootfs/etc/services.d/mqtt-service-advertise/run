@@ -5,4 +5,4 @@
 name="MQTT Local Broker"
 bashio::log.info "Starting the AVAHI daemon for ${name}..."
 
-exec avahi-publish-service -v -f -s "$name" _meross-local-mqtt._tcp $(bashio::addon.port 2001)
+exec avahi-publish-service -v -f -s "$name" _meross-mqtt._tcp $(bashio::addon.port 2001)
