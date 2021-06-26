@@ -57,7 +57,6 @@ RUN apt-get update \
     if [ "${BUILD_ARCH}" = "armhf" ]; then \
     export GOOS=linux ; export GOARCH=arm ; \
     elif [ "${BUILD_ARCH}" = "armv7" ]; then \
-    elif [ "${BUILD_ARCH}" = "armv7" ]; then \
     export GOOS=linux ; export GOARM=7 ; export GOARCH=arm ; \
     elif [ "${BUILD_ARCH}" = "aarch64" ]; then \
     export GOOS=linux ; export GOARCH=arm64 ; \
