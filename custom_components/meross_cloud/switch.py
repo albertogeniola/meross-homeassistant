@@ -8,6 +8,7 @@ from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.consumption import ConsumptionXMixin
 from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.controller.mixins.garage import GarageOpenerMixin
+from meross_iot.controller.mixins.light import LightMixin
 from meross_iot.controller.mixins.toggle import ToggleXMixin, ToggleMixin
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
@@ -155,7 +156,11 @@ class SwitchEntityWrapper(SwitchEntity):
     def today_energy_kwh(self) -> Optional[float]:
         if self._daily_consumtpion is not None:
             today = datetime.today()
-            date, total = max(self._daily_consumtpion, key=lambda x: x.get('date'))
+            total = 0
+            daystart = datetime(year=today.year, month=today.month, day=today.day, hour=0, second=0)
+            for x in self._daily_consumtpion:
+              if x['date'] == daystart:
+                total = x['total_consumption_kwh']
             return total
 
 
@@ -165,8 +170,8 @@ async def _add_entities(hass: HomeAssistant, devices: Iterable[BaseDevice], asyn
     # Identify all the devices that expose the Toggle or ToggleX capabilities
     devs = filter(lambda d: isinstance(d, ToggleXMixin) or isinstance(d, ToggleMixin), devices)
 
-    # Exclude garage openers.
-    devs = filter(lambda d: not isinstance(d, GarageOpenerMixin), devs)
+    # Exclude garage openers and lights.
+    devs = filter(lambda d: not (isinstance(d, GarageOpenerMixin) or isinstance(d, LightMixin)), devs)
 
     for d in devs:
         for channel_index, channel in enumerate(d.channels):
