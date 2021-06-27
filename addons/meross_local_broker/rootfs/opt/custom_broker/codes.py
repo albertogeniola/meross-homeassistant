@@ -33,8 +33,11 @@ class ExtendedErrorCodes(Enum):
     CODE_TOKEN_EXPIRED = 1200
     """Token has expired"""
 
+    CODE_TOKEN_ERROR = 1022
+    """Token error"""
+
     CODE_TOO_MANY_TOKENS = 1301
     """Too many tokens have been issued"""
 
-    CODE_GENERIC_ERROR = -1
+    CODE_GENERIC_ERROR = 5000
     """Unknown or generic error"""

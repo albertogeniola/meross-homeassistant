@@ -52,6 +52,7 @@ RUN apt-get update \
     xsltproc \
     logrotate \
   \
+  && pip3 install wheel \
   && mkdir -p /tmp/go \
   && \
     if [ "${BUILD_ARCH}" = "armhf" ]; then \

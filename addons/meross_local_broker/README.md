@@ -30,9 +30,18 @@ The Meross app, in turn, is also capable to talk to the physical devices via the
 This addon re-implements both the MQTT and the HTTP API parts of the Meross ecosystem, allowing your Meross physical devices
 to talk locally on the LAN to such components. This enables you to get rid of Meross limits as this local addon does not enforce any.
 
-## Tested environments
+## Compatibility & tested environments
 
-TBD
+This addon has been tested on Homeassistant Docker environment, specifically on AMD64 VMWare virtual machine and on a
+Raspberry PI 3 B+ (ARM arch). While it is possible to run it on embedded Homeassistand devices (raspberry PI, ODROID),
+it is highly recommended to run it on X86/AMD64 CPU with at least 2 cores and 4Gb or RAM memory. Even though the
+absorbed resources at runtime are much lower, the build phase of the Docker container requires high memory and CPU
+power, as most of the software is compiled from scratch.
+
+To give you an idea of what that means, consider that the installation phase on a **Raspberry Pi 3 B+ takes about
+60 minutes** to complete, while only **3~5 minutes on a 4-cpu 4 Gb ram virtual machine**.
+
+Run this addon on Intel NUC / X86 / AMD64 platform powered Homeassistant installations.
 
 ## Donate!
 
