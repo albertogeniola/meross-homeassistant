@@ -22,10 +22,13 @@ HA_CLIMATE = 'climate'
 HA_FAN = 'fan'
 MEROSS_COMPONENTS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
 CONNECTION_TIMEOUT_THRESHOLD = 5
+
 CONF_STORED_CREDS = 'stored_credentials'
 CONF_RATE_LIMIT_PER_SECOND = 'rate_limit_per_second'
 CONF_RATE_LIMIT_MAX_TOKENS = 'rate_limit_max_tokens'
-
+CONF_HTTP_ENDPOINT = "http_api_endpoint"
+CONF_MQTT_HOST = "mqtt_hostname"
+CONF_MQTT_PORT = "mqtt_port"
 
 # Constants
 RELAXED_SCAN_INTERVAL = 180.0

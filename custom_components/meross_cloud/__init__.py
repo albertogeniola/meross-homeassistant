@@ -6,19 +6,21 @@ from typing import List, Tuple
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigEntry, SOURCE_REAUTH
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.typing import HomeAssistantType
-from meross_iot.http_api import MerossHttpClient
+from meross_iot.http_api import MerossHttpClient, ErrorCodes
 from meross_iot.manager import MerossManager
 from meross_iot.model.credentials import MerossCloudCreds
 from meross_iot.model.http.device import HttpDeviceInfo
-from meross_iot.model.http.exception import TokenExpiredException, TooManyTokensException, UnauthorizedException
+from meross_iot.model.http.exception import TokenExpiredException, TooManyTokensException, UnauthorizedException, \
+    HttpApiError
 
 from .common import (ATTR_CONFIG, CLOUD_HANDLER, PLATFORM, HA_CLIMATE, HA_COVER,
                      HA_FAN, HA_LIGHT, HA_SENSOR, HA_SWITCH, MANAGER,
                      MEROSS_COMPONENTS, SENSORS, dismiss_notification, notify_error, log_exception, CONF_STORED_CREDS,
-                     LIMITER, CONF_RATE_LIMIT_PER_SECOND, CONF_RATE_LIMIT_MAX_TOKENS)
+                     LIMITER, CONF_RATE_LIMIT_PER_SECOND, CONF_RATE_LIMIT_MAX_TOKENS, CONF_HTTP_ENDPOINT)
 from .version import MEROSS_CLOUD_VERSION
 
 
@@ -54,14 +56,16 @@ def print_startup_message(http_devices: List[HttpDeviceInfo]):
     _LOGGER.warning(start_message)
 
 
-async def get_or_renew_creds(email: str,
-                             password: str,
-                             stored_creds: MerossCloudCreds = None) -> Tuple[MerossHttpClient, List[HttpDeviceInfo], bool]:
+async def get_or_renew_creds(
+        email: str,
+        password: str,
+        stored_creds: MerossCloudCreds = None,
+        http_api_url: str = "https://iot.meross.com",) -> Tuple[MerossHttpClient, List[HttpDeviceInfo], bool]:
     try:
         if stored_creds is None:
-            http_client = await MerossHttpClient.async_from_user_password(email=email, password=password)
+            http_client = await MerossHttpClient.async_from_user_password(email=email, password=password, api_base_url=http_api_url)
         else:
-            http_client = MerossHttpClient(cloud_credentials=stored_creds)
+            http_client = MerossHttpClient(cloud_credentials=stored_creds, api_base_url=http_api_url)
 
         # Test device listing. If goes ok, return it immediately. There is no need to update the credentials
         http_devices = await http_client.async_list_devices()
@@ -73,13 +77,13 @@ async def get_or_renew_creds(email: str,
                           "stored user credentials...")
 
         # Build a new client with username/password rather than using stored credentials
-        http_client = await MerossHttpClient.async_from_user_password(email=email, password=password)
+        http_client = await MerossHttpClient.async_from_user_password(email=email, password=password, api_base_url=http_api_url)
         http_devices = await http_client.async_list_devices()
 
         return http_client, http_devices, True
 
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry):
+async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
     """
     This class is called by the HomeAssistant framework when a configuration entry is provided.
     For us, the configuration entry is the username-password credentials that the user
@@ -87,6 +91,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     """
 
     # Retrieve the stored credentials from config-flow
+    http_api_endpoint = config_entry.data.get(CONF_HTTP_ENDPOINT)
     email = config_entry.data.get(CONF_USERNAME)
     password = config_entry.data.get(CONF_PASSWORD)
     str_creds = config_entry.data.get(CONF_STORED_CREDS)
@@ -106,7 +111,12 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         _LOGGER.info(f"Found application token issued on {creds.issued_on} to {creds.user_email}. Using it.")
 
     try:
-        client, http_devices, creds_renewed = await get_or_renew_creds(email=email, password=password, stored_creds=creds)
+        client, http_devices, creds_renewed = await get_or_renew_creds(
+            http_api_url=http_api_endpoint,
+            email=email,
+            password=password,
+            stored_creds=creds)
+
         if creds_renewed:
             creds = client.cloud_credentials
             hass.config_entries.async_update_entry(entry=config_entry, data={
@@ -156,12 +166,23 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         log_exception(msg, logger=_LOGGER)
         raise ConfigEntryNotReady()
 
-    except UnauthorizedException:
-        msg = "Your Meross login credentials are invalid or the network could not be reached at the moment."
-        notify_error(hass, "http_connection", "Meross Cloud", "Could not connect to the Meross cloud. Please check"
-                                                              " your internet connection and your Meross credentials")
-        log_exception(msg, logger=_LOGGER)
-        return False
+    except (UnauthorizedException, HttpApiError) as ex:
+        # Do not retry setup: user must update its credentials
+        if ex is UnauthorizedException or ex.error_code in (ErrorCodes.CODE_TOKEN_INVALID, ErrorCodes.CODE_TOKEN_EXPIRED, ErrorCodes.CODE_TOKEN_ERROR):
+            hass.async_create_task(
+                hass.config_entries.flow.async_init(
+                    PLATFORM,
+                    context={"source": SOURCE_REAUTH},
+                    data=config_entry.data,
+                )
+            )
+            return False
+        else:
+            msg = "Your Meross login credentials are invalid or the network could not be reached at the moment."
+            notify_error(hass, "http_connection", "Meross Cloud", "Could not connect to the Meross cloud. Please check"
+                                                                  " your internet connection and your Meross credentials")
+            log_exception(msg, logger=_LOGGER)
+            raise ConfigEntryNotReady()
 
     except Exception as e:
         log_exception("An exception occurred while setting up the meross manager. Setup will be retried...", logger=_LOGGER)

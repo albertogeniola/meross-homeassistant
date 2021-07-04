@@ -8,7 +8,8 @@
       "invalid_credentials": "Credenziali non valide.",
       "invalid_http_endpoint": "Endpoint HTTP invalido",
       "api_invalid_ssl_code": "Il server ha riportato un errore SSL. Accertarsi che il server sia esposto in HTTPS o provare con HTTP. ",
-      "unknown_error": "Si è verificato un errore inatteso"
+      "unknown_error": "Si è verificato un errore inatteso",
+      "api_connection_refused": "Impossibile connettersi al server API. Controlla l'indirizzo del server."
     },
     "step": {
       "user": {
@@ -20,6 +21,10 @@
           "mqtt_port": "Porta Server MQTT"
         },
         "title": "Inserisci le credenziali del tuo account Meross"
+      },
+      "reauth_confirm": {
+        "title": "Rinnovo dell'autenticazione richiesto",
+        "description": "L'integrazione con Meross richiede la ri-autenticazione dell'account"
       }
     },
     "title": "Meross"
