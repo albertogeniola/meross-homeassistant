@@ -1,21 +1,27 @@
 {
-    "config": {
-        "abort": {
-            "single_instance_allowed": "Il plugin Meross risulta già installato e non può essere installato nuovamente."
+  "config": {
+    "abort": {
+      "single_instance_allowed": "Il plugin Meross risulta già installato e non può essere installato nuovamente."
+    },
+    "error": {
+      "connection_error": "Impossibile connettersi a Meross.",
+      "invalid_credentials": "Credenziali non valide.",
+      "invalid_http_endpoint": "Endpoint HTTP invalido",
+      "api_invalid_ssl_code": "Il server ha riportato un errore SSL. Accertarsi che il server sia esposto in HTTPS o provare con HTTP. ",
+      "unknown_error": "Si è verificato un errore inatteso"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "password": "Password",
+          "username": "Indirizzo Email",
+          "http_api_endpoint": "Endpoint HTTP",
+          "mqtt_hostname": "Hostname Server MQTT",
+          "mqtt_port": "Porta Server MQTT"
         },
-        "error": {
-            "connection_error": "Impossibile connettersi a Meross.",
-            "invalid_credentials": "Credenziali non valide."
-        },
-        "step": {
-            "user": {
-                "data": {
-                    "password": "Password",
-                    "username": "Indirizzo Email"
-                },
-                "title": "Inserisci le credenziali del tuo account Meross"
-            }
-        },
-        "title": "Meross"
-    }
+        "title": "Inserisci le credenziali del tuo account Meross"
+      }
+    },
+    "title": "Meross"
+  }
 }

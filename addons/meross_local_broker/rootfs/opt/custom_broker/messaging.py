@@ -2,11 +2,12 @@ from hashlib import md5
 from typing import Optional
 
 from flask import jsonify
-from codes import ExtendedErrorCodes
+from meross_iot.http_api import ErrorCodes
+
 from constants import _SECRET
 
 
-def make_api_response(data: Optional[dict], api_status: ExtendedErrorCodes = ExtendedErrorCodes.CODE_NO_ERROR, info: str = None, status_code: int = 200):
+def make_api_response(data: Optional[dict], api_status: ErrorCodes = ErrorCodes.CODE_NO_ERROR, info: str = None, status_code: int = 200):
     return jsonify({
         "apiStatus": api_status.value,
         "info": info,

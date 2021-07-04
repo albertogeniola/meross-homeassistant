@@ -1,4 +1,5 @@
-from codes import ExtendedErrorCodes
+from meross_iot.http_api import ErrorCodes
+
 from logger import get_logger
 
 from flask import Flask
@@ -41,13 +42,13 @@ def shutdown_session(exception=None):
 @app.errorhandler(Exception)
 def handle_exception(e):
     _LOGGER.exception("Uncaught exception: %s", str(e))
-    return make_api_response(data=None, info=str(e), api_status=ExtendedErrorCodes.CODE_GENERIC_ERROR, status_code=500)
+    return make_api_response(data=None, info=str(e), api_status=ErrorCodes.CODE_GENERIC_ERROR, status_code=500)
 
 
 @app.errorhandler(BadRequestError)
 def handle_bad_exception(e):
     _LOGGER.exception("BadRequest error: %s", e.msg)
-    return make_api_response(data=None, info=e.msg, api_status=ExtendedErrorCodes.CODE_GENERIC_ERROR, status_code=400)
+    return make_api_response(data=None, info=e.msg, api_status=ErrorCodes.CODE_GENERIC_ERROR, status_code=400)
 
 
 @app.errorhandler(HttpApiError)

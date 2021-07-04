@@ -6,13 +6,18 @@
         "title": "Fill in your Meross login information",
         "data": {
           "username": "Email Address",
-          "password": "Password"
+          "password": "Password",
+          "http_api_endpoint": "HTTP API Endpoint",
+          "mqtt_hostname": "MQTT Hostname",
+          "mqtt_port": "MQTT Port"
         }
       }
     },
     "error": {
       "invalid_credentials": "Invalid credentials.",
-      "connection_error": "Unable to connect to Meross."
+      "connection_error": "Unable to connect to Meross.",
+      "invalid_http_endpoint": "Invalid Meross HTTTP api endpoint",
+      "api_invalid_ssl_code": "Invalid SSL response received by the server. Are you sure the server is exposed in HTTPS? Try plain http and see if this happens again."
     },
     "abort": {
       "single_instance_allowed": "Only a single configuration of Meross is allowed."

@@ -1,8 +1,8 @@
 from typing import Dict
 
 from flask import Blueprint, g
+from meross_iot.http_api import ErrorCodes
 
-from codes import ExtendedErrorCodes
 from db_helper import dbhelper
 from decorator import meross_http_api
 from logger import get_logger
@@ -23,13 +23,13 @@ def get_subdevices(api_payload: Dict, *args, **kwargs):
     parent_uuid = api_payload.get('uuid')
     if parent_uuid is None:
         _LOGGER.error("Missing uuid parameter.")
-        raise HttpApiError(error_code=ExtendedErrorCodes.CODE_GENERIC_ERROR)
+        raise HttpApiError(error_code=ErrorCodes.CODE_GENERIC_ERROR)
 
     device = dbhelper.get_device_by_uuid(parent_uuid)
 
     # Make sure the user owns the device for which he's retrieving subdevs
     if device is None or device.owner_user.email != user.email:
         _LOGGER.error("Invalid UUID or device not enrolled")
-        raise HttpApiError(error_code=ExtendedErrorCodes.CODE_GENERIC_ERROR)
+        raise HttpApiError(error_code=ErrorCodes.CODE_GENERIC_ERROR)
 
     return make_api_response(data=device.child_subdevices)
