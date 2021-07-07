@@ -1,4 +1,5 @@
 from meross_iot.http_api import ErrorCodes
+from meross_iot.model.http.exception import HttpApiError
 
 from logger import get_logger
 
@@ -13,7 +14,7 @@ from blueprints.device import device_blueprint
 from blueprints.hub import hub_blueprint
 from database import db_session, init_db
 from messaging import make_api_response
-from model.exception import HttpApiError, BadRequestError
+from model.exception import BadRequestError
 
 # _LOGOUT_URL = "/v1/Profile/logout"
 

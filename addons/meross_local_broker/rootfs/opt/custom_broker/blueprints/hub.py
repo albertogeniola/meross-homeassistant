@@ -2,12 +2,12 @@ from typing import Dict
 
 from flask import Blueprint, g
 from meross_iot.http_api import ErrorCodes
+from meross_iot.model.http.exception import HttpApiError
 
 from db_helper import dbhelper
 from decorator import meross_http_api
 from logger import get_logger
 from messaging import make_api_response
-from model.exception import HttpApiError
 
 hub_blueprint = Blueprint('hub', __name__)
 _LOGGER = get_logger(__name__)

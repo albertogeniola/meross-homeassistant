@@ -3,10 +3,10 @@ from _sha256 import sha256
 from typing import Tuple, Optional
 
 from meross_iot.http_api import ErrorCodes
+from meross_iot.model.http.exception import HttpApiError
 
 from db_helper import dbhelper
 from model.db_models import User, UserToken
-from model.exception import HttpApiError
 
 
 def verify_token(token) -> Optional[User]:

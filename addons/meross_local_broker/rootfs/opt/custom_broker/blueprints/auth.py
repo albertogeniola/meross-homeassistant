@@ -1,3 +1,5 @@
+from meross_iot.model.http.exception import HttpApiError
+
 from logger import get_logger
 from typing import Dict
 
@@ -6,7 +8,7 @@ from flask import Blueprint
 from authentication import _user_login
 from decorator import meross_http_api
 from messaging import make_api_response
-from model.exception import HttpApiError
+
 
 auth_blueprint = Blueprint('auth', __name__)
 _LOGGER = get_logger(__name__)

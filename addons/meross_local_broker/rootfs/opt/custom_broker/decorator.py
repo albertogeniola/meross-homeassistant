@@ -2,6 +2,7 @@ import base64
 import json
 
 from meross_iot.http_api import ErrorCodes
+from meross_iot.model.http.exception import HttpApiError
 
 from logger import get_logger
 import re
@@ -11,7 +12,7 @@ from flask import request, g
 
 from authentication import verify_token
 from messaging import verify_message_signature
-from model.exception import BadRequestError, HttpApiError
+from model.exception import BadRequestError
 
 TOKEN_EXTRACTOR = re.compile("^Basic ([a-zA-Z0-9]+)")
 l = get_logger(__name__)
