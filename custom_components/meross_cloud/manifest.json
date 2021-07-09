@@ -7,6 +7,6 @@
   "requirements": ["meross-iot==0.4.2.0rc1"],
   "config_flow": true,
   "quality_scale": "platinum",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "zeroconf": ["_meross-api._tcp.local."]
 }
