@@ -4,7 +4,7 @@ from urllib.error import HTTPError
 
 import voluptuous as vol
 from aiohttp import ClientConnectorSSLError, ClientConnectorError
-from homeassistant import config_entries, data_entry_flow
+from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
 from homeassistant.helpers.typing import DiscoveryInfoType

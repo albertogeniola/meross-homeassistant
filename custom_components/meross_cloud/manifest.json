@@ -2,11 +2,13 @@
   "domain": "meross_cloud",
   "name": "Meross Cloud IoT",
   "documentation": "https://www.home-assistant.io/components/meross_cloud",
+  "issue_tracker": "https://github.com/albertogeniola/meross-homeassistant",
   "dependencies": ["persistent_notification"],
   "codeowners": ["@albertogeniola"],
-  "requirements": ["meross-iot==0.4.2.0rc1"],
+  "requirements": ["meross-iot==0.4.2.1"],
   "config_flow": true,
   "quality_scale": "platinum",
-  "version": "1.0.7",
+  "iot_class": "cloud_push",
+  "version": "1.1.0",
   "zeroconf": ["_meross-api._tcp.local."]
 }

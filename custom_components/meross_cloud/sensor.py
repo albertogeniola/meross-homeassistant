@@ -73,7 +73,9 @@ class ApiMonitoringSensor(Entity):
     @property
     def state(self) -> Union[None, str, int, float]:
         """Return the state of the entity."""
-        self._limiter.global_rate_limiter._add_tokens()
+        if self._limiter is None or self._limiter.global_rate_limiter is None:
+            return None
+        self._limiter.global_rate_limiter.update_tokens()
         return self._limiter.global_rate_limiter.current_window_hitrate
 
     @property
