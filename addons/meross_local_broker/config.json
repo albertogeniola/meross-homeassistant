@@ -1,34 +1,13 @@
 {
-  "name": "Meross Offline Broker",
-  "version": "1",
-  "slug": "meross-offline-broker",
-  "description": "Meross offline broker addon",
-  "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
-  "startup": "application",
-  "boot": "auto",
-  "options": {
-    "email": "meross_local@local",
-    "password": "Changeme!",
-    "debug_mode": false,
-    "federate_with_meross": false
-  },
-  "schema": {
-    "resetdb": "int(0,1)?",
-    "email": "str",
-    "password": "str",
-    "debug_mode": "bool",
-    "federate_with_meross": "bool"
-  },
-  "ports": {
-    "2001/tcp": 2001,
-    "2002/tcp": 2002
-  },
-  "ports_description": {
-    "2001/tcp": "Meross LAN-LOCAL MQTT endpoint",
-    "2002/tcp": "Meross LAN-LOCAL HTTP API endpoint"
-  },
-  "host_network": true,
-  "ingress": true,
-  "ingress_port": 8099,
-  "map": ["ssl"]
+  "version": "2021.08.dev0501",
+  "wait_boot": 5,
+  "logging": "debug",
+  "debug": true,
+  "debug_block": false,
+  "addons_custom_list": [
+    "https://github.com/hassio-addons/repository"
+  ],
+  "diagnostics": false,
+  "timezone": "Europe/Rome",
+  "last_boot": "2021-08-09T10:51:41"
 }
