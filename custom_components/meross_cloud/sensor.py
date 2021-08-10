@@ -5,10 +5,8 @@ from typing import Optional, Iterable, Union, List
 
 from homeassistant.const import DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_HUMIDITY, \
     DEVICE_CLASS_POWER, POWER_WATT
-try:
-    from homeassistant.const import PERCENTAGE
-except ImportError:
-    from homeassistant.const import UNIT_PERCENTAGE as PERCENTAGE
+
+from homeassistant.const import PERCENTAGE
 
 from homeassistant.helpers.entity import Entity
 from meross_iot.controller.device import BaseDevice

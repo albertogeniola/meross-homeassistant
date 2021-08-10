@@ -17,10 +17,7 @@ from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL,
                      calculate_light_id)
 
 # Conditional Light import with backwards compatibility
-try:
-    from homeassistant.components.light import LightEntity
-except ImportError:
-    from homeassistant.components.light import Light as LightEntity
+from homeassistant.components.light import LightEntity
 
 
 _LOGGER = logging.getLogger(__name__)

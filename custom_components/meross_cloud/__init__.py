@@ -191,7 +191,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
             http_client=client,
             auto_reconnect=True,
             over_limit_threshold_percentage=1000,
-            burst_requests_per_second_limit=1,
+            burst_requests_per_second_limit=5,
             mqtt_skip_cert_validation=mqtt_skip_cert_validation,
         )
 
@@ -267,6 +267,7 @@ async def async_unload_entry(hass, entry):
     # Unload entities first
     _LOGGER.info("Removing Meross Cloud integration.")
     _LOGGER.info("Cleaning up resources...")
+
     for platform in MEROSS_COMPONENTS:
         _LOGGER.info(f"Cleaning up platform {platform}")
         await hass.config_entries.async_forward_entry_unload(entry, platform)

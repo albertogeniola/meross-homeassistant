@@ -19,11 +19,7 @@ from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, ca
                      extract_subdevice_notification_data)
 
 # Conditional import for switch device
-try:
-    from homeassistant.components.climate import ClimateEntity
-except ImportError:
-    from homeassistant.components.climate import ClimateDevice as ClimateEntity
-
+from homeassistant.components.climate import ClimateEntity
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1

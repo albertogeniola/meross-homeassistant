@@ -9,7 +9,8 @@
       "invalid_http_endpoint": "Endpoint HTTP invalido",
       "api_invalid_ssl_code": "Il server ha riportato un errore SSL. Accertarsi che il server sia esposto in HTTPS o provare con HTTP. ",
       "unknown_error": "Si è verificato un errore inatteso",
-      "api_connection_refused": "Impossibile connettersi al server API. Controlla l'indirizzo del server."
+      "api_connection_refused": "Impossibile connettersi al server API. Controlla l'indirizzo del server.",
+      "client_connection_error": "Si è verificato un errore durante la connessione alle API HTTP"
     },
     "step": {
       "user": {

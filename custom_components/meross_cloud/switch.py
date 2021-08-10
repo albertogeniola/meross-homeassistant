@@ -18,10 +18,7 @@ from meross_iot.model.push.generic import GenericPushNotification
 from .common import (PLATFORM, MANAGER, calculate_switch_id, log_exception, SENSOR_POLL_INTERVAL_SECONDS)
 
 # Conditional import for switch device
-try:
-    from homeassistant.components.switch import SwitchEntity
-except ImportError:
-    from homeassistant.components.switch import SwitchDevice as SwitchEntity
+from homeassistant.components.switch import SwitchEntity
 
 
 _LOGGER = logging.getLogger(__name__)

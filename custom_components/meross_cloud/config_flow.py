@@ -6,7 +6,6 @@ import voluptuous as vol
 from aiohttp import ClientConnectorSSLError, ClientConnectorError
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import callback
 from homeassistant.helpers.typing import DiscoveryInfoType
 from meross_iot.http_api import MerossHttpClient
 from meross_iot.model.credentials import MerossCloudCreds
@@ -26,10 +25,6 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
 
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_PUSH
-
-    def __init__(self):
-        """Initialize the meross configuration flow."""
-        pass
 
     def _build_prefilled_schema(
         self,
@@ -68,10 +63,18 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
         _LOGGER.info("Discovery info: %s", discovery_info)
 
     async def async_step_user(self, user_input=None) -> Dict[str, Any]:
+        _LOGGER.debug("Starting ASYNC_STEP_USER")
+
         """Handle a flow initialized by the user interface"""
         if not user_input:
-            return self._show_form(schema=self._build_prefilled_schema())
+            _LOGGER.debug("Empty user_input, showing default prefilled form")
+            return self.async_show_form(
+                step_id="user",
+                data_schema=self._build_prefilled_schema(),
+                errors={},
+            )
 
+        _LOGGER.debug("UserInput was provided: form data will be populated with that")
         username = user_input[CONF_USERNAME]
         password = user_input[CONF_PASSWORD]
         http_api_endpoint = user_input[CONF_HTTP_ENDPOINT]  # type:str
@@ -90,10 +93,14 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
         )
 
         if match is None:
-            _LOGGER.error("Invalid Meross HTTTP api endpoint: %s", http_api_endpoint)
-            return self._show_form(
-                schema=data_schema, errors={"base": "invalid_http_endpoint"}
+            _LOGGER.error("Invalid Meross HTTTP API endpoint: %s", http_api_endpoint)
+            return self.async_show_form(
+                step_id="user",
+                data_schema=data_schema,
+                errors={"base": "invalid_http_endpoint"}
             )
+        else:
+            _LOGGER.debug("Meross HTTP API endpoint looks good: %s.", http_api_endpoint)
 
         schema, domain, colonport, port = match.groups()
         if schema is None:
@@ -105,30 +112,49 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
             creds = await self._test_authorization(
                 api_base_url=http_api_endpoint, username=username, password=password
             )
+            _LOGGER.info("HTTP API successful tested against %s.", http_api_endpoint)
         except (BadLoginException, UnauthorizedException) as ex:
             _LOGGER.error("Unable to connect to Meross HTTP api: %s", str(ex))
-            return self._show_form(
-                schema=data_schema, errors={"base": "invalid_credentials"}
+            return self.async_show_form(
+                step_id="user",
+                data_schema=data_schema,
+                errors={"base": "invalid_credentials"}
             )
         except (UnauthorizedException, ConnectTimeout, HTTPError) as ex:
             _LOGGER.error("Unable to connect to Meross HTTP api: %s", str(ex))
-            return self._show_form(
-                schema=data_schema, errors={"base": "connection_error"}
+            return self.async_show_form(
+                step_id="user",
+                data_schema=data_schema,
+                errors={"base": "connection_error"}
             )
         except ClientConnectorSSLError as ex:
             _LOGGER.error("Unable to connect to Meross HTTP api: %s", str(ex))
-            return self._show_form(
-                schema=data_schema, errors={"base": "api_invalid_ssl_code"}
+            return self.async_show_form(
+                step_id="user",
+                data_schema=data_schema,
+                errors={"base": "api_invalid_ssl_code"}
             )
         except ClientConnectorError as ex:
             _LOGGER.error("Connection ERROR to HTTP api: %s", str(ex))
             if isinstance(ex.os_error, ConnectionRefusedError):
-                return self._show_form(
-                    schema=data_schema, errors={"base": "api_connection_refused"}
+                return self.async_show_form(
+                    step_id="user",
+                    data_schema=data_schema,
+                    errors={"base": "api_connection_refused"}
+                )
+            else:
+                return self.async_show_form(
+                    step_id="user",
+                    data_schema=data_schema,
+                    errors={"base": "client_connection_error"}
                 )
         except Exception as ex:
             _LOGGER.exception("Unable to connect to Meross HTTP api, ex: %s", str(ex))
-            return self._show_form(schema=data_schema, errors={"base": "unknown_error"})
+            return self.async_show_form(
+                step_id="user",
+                data_schema=data_schema,
+                errors={"base": "unknown_error"}
+            )
 
         # TODO: Test MQTT connection?
 
@@ -162,14 +188,6 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
         )
         return client.cloud_credentials
 
-    @callback
-    def _show_form(self, schema, errors=None):
-        """Show the form to the user."""
-        return self.async_show_form(
-            step_id="user",
-            data_schema=schema,
-            errors=errors if errors else {},
-        )
 
     async def async_step_import(self, import_config):
         """Import a config entry from configuration.yaml."""
