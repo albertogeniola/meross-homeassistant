@@ -10,7 +10,8 @@
       "api_invalid_ssl_code": "Il server ha riportato un errore SSL. Accertarsi che il server sia esposto in HTTPS o provare con HTTP. ",
       "unknown_error": "Si è verificato un errore inatteso",
       "api_connection_refused": "Impossibile connettersi al server API. Controlla l'indirizzo del server.",
-      "client_connection_error": "Si è verificato un errore durante la connessione alle API HTTP"
+      "client_connection_error": "Si è verificato un errore durante la connessione alle API HTTP",
+      "missing_credentials": "Per favore inserire le credenziali di accesso"
     },
     "step": {
       "user": {

@@ -38,8 +38,6 @@ from .common import (
     notify_error,
     log_exception,
     CONF_STORED_CREDS,
-    CONF_MQTT_HOST,
-    CONF_MQTT_PORT,
     LIMITER,
     CONF_RATE_LIMIT_PER_SECOND,
     CONF_RATE_LIMIT_MAX_TOKENS,
@@ -134,8 +132,6 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
 
     # Retrieve the stored credentials from config-flow
     http_api_endpoint = config_entry.data.get(CONF_HTTP_ENDPOINT)
-    mqtt_host = config_entry.data.get(CONF_MQTT_HOST)
-    mqtt_port = config_entry.data.get(CONF_MQTT_PORT)
     email = config_entry.data.get(CONF_USERNAME)
     password = config_entry.data.get(CONF_PASSWORD)
     str_creds = config_entry.data.get(CONF_STORED_CREDS)
@@ -186,8 +182,6 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
             )
 
         manager = MerossManager(
-            mqtt_host=mqtt_host,
-            mqtt_port=mqtt_port,
             http_client=client,
             auto_reconnect=True,
             over_limit_threshold_percentage=1000,

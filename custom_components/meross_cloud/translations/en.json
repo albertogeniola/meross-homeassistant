@@ -10,7 +10,8 @@
       "api_invalid_ssl_code": "Invalid SSL response received by the server. Are you sure the server is exposed in HTTPS? Try plain http and see if this happens again.",
       "unknown_error": "An unexpected error occurred",
       "api_connection_refused": "Cannot connect to HTTP(S) API server. Make sure the address is valid",
-      "client_connection_error": "An error occurred while connecting to the HTTP API"
+      "client_connection_error": "An error occurred while connecting to the HTTP API",
+      "missing_credentials": "Please provide missing credentials"
     },
     "step": {
       "user": {

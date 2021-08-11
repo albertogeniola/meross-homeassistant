@@ -5,7 +5,8 @@ from urllib.error import HTTPError
 import voluptuous as vol
 from aiohttp import ClientConnectorSSLError, ClientConnectorError
 from homeassistant import config_entries
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_HOST, CONF_PORT
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.typing import DiscoveryInfoType
 from meross_iot.http_api import MerossHttpClient
 from meross_iot.model.credentials import MerossCloudCreds
@@ -13,7 +14,7 @@ from meross_iot.model.http.exception import UnauthorizedException, BadLoginExcep
 from requests.exceptions import ConnectTimeout
 import re
 
-from .common import PLATFORM, CONF_STORED_CREDS, CONF_HTTP_ENDPOINT, CONF_MQTT_HOST, CONF_MQTT_PORT
+from .common import PLATFORM, CONF_STORED_CREDS, CONF_HTTP_ENDPOINT
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
@@ -26,19 +27,24 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_PUSH
 
+    def __init__(self) -> None:
+        """Initialize flow."""
+        self._http_api: str = "https://iot.meross.com"
+        self._username: str = None
+        self._password: str = None
+
     def _build_prefilled_schema(
         self,
-        http_endpoint_default: str = "https://iot.meross.com",
-        mqtt_host_default: str = "iot.meross.com",
-        mqtt_host_port_default: int = 2001,
-        username_default: str = "",
-        password_default: str = "",
+        http_endpoint: str = None,
+        username: str = None,
+        password: str = None,
     ):
+        http_endpoint_default = http_endpoint if http_endpoint is not None else self._http_api
+        username_default = username if username is not None else self._username
+        password_default = password if password is not None else self._password
         return vol.Schema(
             {
                 vol.Required(CONF_HTTP_ENDPOINT, default=http_endpoint_default): str,
-                vol.Required(CONF_MQTT_HOST, default=mqtt_host_default): str,
-                vol.Required(CONF_MQTT_PORT, default=mqtt_host_port_default): int,
                 vol.Required(CONF_USERNAME, default=username_default): str,
                 vol.Required(CONF_PASSWORD, password_default): str,
             }
@@ -57,15 +63,32 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
             )
         return await self.async_step_user()
 
-    async def async_step_zeroconf(self, discovery_info: DiscoveryInfoType):
+    async def async_step_zeroconf(self, discovery_info: DiscoveryInfoType) -> FlowResult:
         """Handle zeroconf discovery."""
-        # Hostname is format: livingroom.local.
         _LOGGER.info("Discovery info: %s", discovery_info)
+        # Returns something like the following
+        # {'host': '192.168.2.115', 'port': 2002, 'hostname': 'Meross Local Broker.local.', 'type': '_meross-api._tcp.local.', 'name': 'HTTP Local Broker._m...tcp.local.', 'properties': {'_raw': {}}}
+        api_host = discovery_info[CONF_HOST]
+        api_port = discovery_info[CONF_PORT]
+        api_url = f"http://{api_host}:{api_port}"
+        
+        # Check if already configured
+        await self.async_set_unique_id(api_url)
+        self._abort_if_unique_id_configured(
+            updates={CONF_HTTP_ENDPOINT: api_url}
+        )
+
+        for entry in self._async_current_entries():            
+            # Is this address or IP address already configured?
+            if CONF_HTTP_ENDPOINT in entry.data and entry.data[CONF_HTTP_ENDPOINT]==api_url:    
+                return self.async_abort(reason="already_configured")
+        
+        self._http_api = api_url
+        return await self.async_step_user()
 
     async def async_step_user(self, user_input=None) -> Dict[str, Any]:
-        _LOGGER.debug("Starting ASYNC_STEP_USER")
-
         """Handle a flow initialized by the user interface"""
+        _LOGGER.debug("Starting ASYNC_STEP_USER")
         if not user_input:
             _LOGGER.debug("Empty user_input, showing default prefilled form")
             return self.async_show_form(
@@ -73,23 +96,28 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
                 data_schema=self._build_prefilled_schema(),
                 errors={},
             )
-
+        
         _LOGGER.debug("UserInput was provided: form data will be populated with that")
-        username = user_input[CONF_USERNAME]
-        password = user_input[CONF_PASSWORD]
-        http_api_endpoint = user_input[CONF_HTTP_ENDPOINT]  # type:str
-        mqtt_host = user_input[CONF_MQTT_HOST]
-        mqtt_host_port = user_input[CONF_MQTT_PORT]
+        http_api_endpoint = user_input.get(CONF_HTTP_ENDPOINT)
+        username = user_input.get(CONF_USERNAME)
+        password = user_input.get(CONF_PASSWORD)
 
+        # Check if we have everything we need
+        if username is None or password is None or http_api_endpoint is None:
+            return self.async_show_form(
+                step_id="user",
+                data_schema=self._build_prefilled_schema(
+                    http_endpoint=http_api_endpoint),
+                errors={"base": "missing_credentials"},
+            )
+        
         # Check the base-url is valid
         match = HTTP_API_RE.fullmatch(http_api_endpoint)
 
         data_schema = self._build_prefilled_schema(
-            http_endpoint_default=http_api_endpoint,
-            mqtt_host_default=mqtt_host,
-            mqtt_host_port_default=mqtt_host_port,
-            username_default=username,
-            password_default=password,
+            http_endpoint=http_api_endpoint,
+            username=username,
+            password=password,
         )
 
         if match is None:
@@ -158,7 +186,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
 
         # TODO: Test MQTT connection?
 
-        await self.async_set_unique_id(username)
+        await self.async_set_unique_id(http_api_endpoint)
         self._abort_if_unique_id_configured()
 
         return self.async_create_entry(
@@ -167,8 +195,6 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
                 CONF_USERNAME: username,
                 CONF_PASSWORD: password,
                 CONF_HTTP_ENDPOINT: http_api_endpoint,
-                CONF_MQTT_HOST: mqtt_host,
-                CONF_MQTT_PORT: mqtt_host_port,
                 CONF_STORED_CREDS: {
                     "token": creds.token,
                     "key": creds.key,
