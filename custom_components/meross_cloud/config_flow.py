@@ -256,17 +256,21 @@ class MerossOptionsFlowHandler(config_entries.OptionsFlow):
                 title="",
                 data={k: v for k, v in user_input.items() if v not in (None, "")},
             )
+        
         if self.config_entry is not None:
             saved_options = self.config_entry.options
 
-        data_schema = self._build_options_schema(
-            enable_rate_limits=saved_options.get(CONF_OPT_ENABLE_RATE_LIMITS),
-            global_rate_limit_burst=saved_options.get(CONF_OPT_GLOBAL_RATE_LIMIT_MAX_TOKENS),
-            global_rate_limit_rate=saved_options.get(CONF_OPT_GLOBAL_RATE_LIMIT_PER_SECOND),
-            device_rate_limit_burst=saved_options.get(CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS),
-            device_rate_limit_rate=saved_options.get(CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND),
-            device_max_command_queue=saved_options.get(CONF_OPT_DEVICE_MAX_COMMAND_QUEUE)
-        )
+        if saved_options == {}:
+            data_schema = self._build_options_schema()    
+        else:
+            data_schema = self._build_options_schema(
+                enable_rate_limits=saved_options.get(CONF_OPT_ENABLE_RATE_LIMITS),
+                global_rate_limit_burst=saved_options.get(CONF_OPT_GLOBAL_RATE_LIMIT_MAX_TOKENS),
+                global_rate_limit_rate=saved_options.get(CONF_OPT_GLOBAL_RATE_LIMIT_PER_SECOND),
+                device_rate_limit_burst=saved_options.get(CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS),
+                device_rate_limit_rate=saved_options.get(CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND),
+                device_max_command_queue=saved_options.get(CONF_OPT_DEVICE_MAX_COMMAND_QUEUE)
+            )
 
         return self.async_show_form(
             step_id="init",

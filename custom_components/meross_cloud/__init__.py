@@ -140,7 +140,7 @@ async def update_listener(hass: HomeAssistantType, config_entry: ConfigEntry):
 
 def setup_manager_options(manager:MerossManager, hass: HomeAssistantType, options: Mapping[str, Any]):
     # Options reading
-    enable_api_rate_limits = options.get(CONF_OPT_ENABLE_RATE_LIMITS, True)
+    enable_api_rate_limits = options.get(CONF_OPT_ENABLE_RATE_LIMITS, False)
     limiter = None
     if manager is not None:
         _LOGGER.info("Meross manager is in place, updating its configuration")

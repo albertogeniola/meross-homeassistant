@@ -12,19 +12,27 @@ Based on pure-python library, this custom component enables full control on your
 ## Requirements
 Please note that the Meross devices are controlled via Meross Cloud. This means that homeassistant 
 *must have* internet access to accomplish such task. You also need an account for the Meross cloud: 
-you can reuse the one from your meross app.
+you should reuse the one from your meross app.
 
 ## Configuration
-Once installed, the Meross Cloud component needs to be configured in order to work.
-You can configure it either via the homeassistant Lovelace web interface: just navigate to 
-_settings -> Integrations -> Meross Cloud_. Then type your Meross credentials and you should
-be ready to go. 
+Once installed, you should set up the Meross Cloud component to connect to the Meross Cloud service.
+Just navigate to _settings -> Integrations, click "add" and then select "Meross Cloud IoT". 
+A pop-up will appear, asking for the Meross API endpoint to use and your Meross credentials.
 
+The official meross cloud server is __https://iot.meross.com__ (it is pre-filled by default).
 The following animation shows how to do that.
 
 <a href="https://raw.githubusercontent.com/albertogeniola/meross-homeassistant/master/docs/source/images/components/meross_cloud/install-via-webui.gif">
 <img src="https://raw.githubusercontent.com/albertogeniola/meross-homeassistant/master/docs/source/images/components/meross_cloud/install-via-webui.gif" alt="Installation via web-ui" width=400>
 </a>
+
+### API rate limit
+Meross does implement strict API rate limits. 
+When connecting an more than 5 Meross sensors/devices to HomeAssistant via this integration, 
+the Meross security team might request you to release/decrease the API calling frequency.
+Therefore, you should avoid using high-frequency polling scripts/automations with Meross devices. 
+As last resort, you can configure/tune the API rate limits via the CONFIGURATION section of this integration.
+Be advised that the API rate limiter might "delay" commands or abort them.
 
 ## Updating from old 0.3.X.X versions
 Before updting to version 1.X from older legacy versions, you need to take some steps to ensure everything will work.
