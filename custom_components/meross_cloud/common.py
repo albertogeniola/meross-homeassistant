@@ -27,12 +27,12 @@ CONF_STORED_CREDS = "stored_credentials"
 CONF_MQTT_SKIP_CERT_VALIDATION = "skip_mqtt_cert_validation"
 CONF_HTTP_ENDPOINT = "http_api_endpoint"
 
-CONF_ENABLE_RATE_LIMITS = "enable_rate_limits"
-CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS = "global_rate_limit_max_tokens"
-CONF_GLOBAL_RATE_LIMIT_PER_SECOND = "global_rate_limit_per_second"
-CONF_DEVICE_RATE_LIMIT_MAX_TOKENS = "device_rate_limit_max_tokens"
-CONF_DEVICE_RATE_LIMIT_PER_SECOND = "device_rate_limit_per_second"
-CONF_DEVICE_MAX_COMMAND_QUEUE = "device_max_command_queue"
+CONF_OPT_ENABLE_RATE_LIMITS = "enable_rate_limits"
+CONF_OPT_GLOBAL_RATE_LIMIT_MAX_TOKENS = "global_rate_limit_max_tokens"
+CONF_OPT_GLOBAL_RATE_LIMIT_PER_SECOND = "global_rate_limit_per_second"
+CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS = "device_rate_limit_max_tokens"
+CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND = "device_rate_limit_per_second"
+CONF_OPT_DEVICE_MAX_COMMAND_QUEUE = "device_max_command_queue"
 
 # Constants
 RELAXED_SCAN_INTERVAL = 180.0

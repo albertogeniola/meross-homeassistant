@@ -1,7 +1,7 @@
 """Meross devices platform loader"""
 import logging
 from datetime import datetime, timedelta
-from typing import List, Tuple
+from typing import List, Tuple, Mapping, Any
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -40,13 +40,13 @@ from .common import (
     log_exception,
     CONF_STORED_CREDS,
     LIMITER,
-    CONF_ENABLE_RATE_LIMITS,
-    CONF_ENABLE_RATE_LIMITS,
-    CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS,
-    CONF_GLOBAL_RATE_LIMIT_PER_SECOND,
-    CONF_DEVICE_RATE_LIMIT_MAX_TOKENS,
-    CONF_DEVICE_RATE_LIMIT_PER_SECOND,
-    CONF_DEVICE_MAX_COMMAND_QUEUE,
+    CONF_OPT_ENABLE_RATE_LIMITS,
+    CONF_OPT_ENABLE_RATE_LIMITS,
+    CONF_OPT_GLOBAL_RATE_LIMIT_MAX_TOKENS,
+    CONF_OPT_GLOBAL_RATE_LIMIT_PER_SECOND,
+    CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS,
+    CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND,
+    CONF_OPT_DEVICE_MAX_COMMAND_QUEUE,
     CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION
 )
 from .version import MEROSS_CLOUD_VERSION
@@ -129,6 +129,37 @@ async def get_or_renew_creds(
         return http_client, http_devices, True
 
 
+async def update_listener(hass: HomeAssistantType, config_entry: ConfigEntry):
+    """Handle options update."""
+    _LOGGER.warning("Reloading configuration")
+
+    # Retrieve the meross manager, if in place
+    setup_manager_options(hass=hass, options=config_entry.options)
+
+
+def setup_manager_options(hass: HomeAssistantType, options: Mapping[str, Any]):
+    # Options reading
+    enable_api_rate_limits = options.get(CONF_OPT_ENABLE_RATE_LIMITS, True)
+    manager : MerossManager = hass.data.get(PLATFORM,{}).get(MANAGER, None)
+    if manager is not None:
+        _LOGGER.info("Meross manager is in place, updating its configuration")
+        global_limit_burst = options.get(CONF_OPT_GLOBAL_RATE_LIMIT_MAX_TOKENS, None)
+        global_limit_per_second = options.get(CONF_OPT_GLOBAL_RATE_LIMIT_PER_SECOND, None)
+        device_limit_burst = options.get(CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS, None)
+        device_limit_per_second = options.get(CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND, None)
+        device_max_command_queue = options.get(CONF_OPT_DEVICE_MAX_COMMAND_QUEUE, None)
+        if enable_api_rate_limits:
+            _LOGGER.warning("Rate limits have been enabled. Setting rate limiter to MerossManager.")
+            limiter = RateLimitChecker(global_burst_rate=global_limit_burst,
+                                       global_time_window=timedelta(seconds=1.0),
+                                       global_tokens_per_interval=global_limit_per_second,
+                                       device_time_window=timedelta(seconds=1.0),
+                                       device_burst_rate=device_limit_burst,
+                                       device_tokens_per_interval=device_limit_per_second,
+                                       device_max_command_queue=device_max_command_queue)
+            manager.limiter = limiter
+
+
 async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
     """
     This class is called by the HomeAssistant framework when a configuration entry is provided.
@@ -141,7 +172,6 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
     email = config_entry.data.get(CONF_USERNAME)
     password = config_entry.data.get(CONF_PASSWORD)
     str_creds = config_entry.data.get(CONF_STORED_CREDS)
-
     mqtt_skip_cert_validation = config_entry.data.get(CONF_MQTT_SKIP_CERT_VALIDATION, True)
     _LOGGER.warning("Skip MQTT cert validation option set to: %s", mqtt_skip_cert_validation)
 
@@ -184,30 +214,13 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
                 },
             )
 
-        # Init rate limiter, if needed
-        enable_api_rate_limits = config_entry.data.get(CONF_ENABLE_RATE_LIMITS, True)
-        global_limit_burst = config_entry.data.get(CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS, None)
-        global_limit_per_second = config_entry.data.get(CONF_GLOBAL_RATE_LIMIT_PER_SECOND, None)
-        device_limit_burst = config_entry.data.get(CONF_DEVICE_RATE_LIMIT_MAX_TOKENS, None)
-        device_limit_per_second = config_entry.data.get(CONF_DEVICE_RATE_LIMIT_PER_SECOND, None)
-        device_max_command_queue = config_entry.data.get(CONF_DEVICE_MAX_COMMAND_QUEUE, None)
-
         manager = MerossManager(
             http_client=client,
             auto_reconnect=True,
             mqtt_skip_cert_validation=mqtt_skip_cert_validation,
         )
 
-        if enable_api_rate_limits:
-            _LOGGER.warning("Rate limits have been enabled. Setting rate limiter to MerossManager.")
-            limiter = RateLimitChecker(global_burst_rate=global_limit_burst,
-                                       global_time_window=timedelta(seconds=1.0),
-                                       global_tokens_per_interval=global_limit_per_second,
-                                       device_time_window=timedelta(seconds=1.0),
-                                       device_burst_rate=device_limit_burst,
-                                       device_tokens_per_interval=device_limit_per_second,
-                                       device_max_command_queue=device_max_command_queue)
-            manager.limiter = limiter
+        setup_manager_options(hass=hass, options=config_entry.options)
 
         hass.data[PLATFORM] = {}
         hass.data[PLATFORM][MANAGER] = manager
@@ -225,10 +238,14 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
         _LOGGER.info("Discovering Meross devices...")
         await manager.async_device_discovery()
 
+        # Start the configuration of other entity classes
         for platform in MEROSS_COMPONENTS:
             hass.async_create_task(
                 hass.config_entries.async_forward_entry_setup(config_entry, platform)
             )
+
+        # Register and handler to update the configuration
+        config_entry.async_on_unload(config_entry.add_update_listener(update_listener))
 
         return True
 

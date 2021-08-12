@@ -5,7 +5,9 @@ from urllib.error import HTTPError
 import voluptuous as vol
 from aiohttp import ClientConnectorSSLError, ClientConnectorError
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigEntry, OptionsFlow
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_HOST, CONF_PORT
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.typing import DiscoveryInfoType
 from meross_iot.http_api import MerossHttpClient
@@ -15,8 +17,8 @@ from requests.exceptions import ConnectTimeout
 import re
 
 from .common import PLATFORM, CONF_STORED_CREDS, CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, \
-    CONF_ENABLE_RATE_LIMITS, CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS, CONF_GLOBAL_RATE_LIMIT_PER_SECOND, \
-    CONF_DEVICE_RATE_LIMIT_MAX_TOKENS, CONF_DEVICE_RATE_LIMIT_PER_SECOND, CONF_DEVICE_MAX_COMMAND_QUEUE
+    CONF_OPT_ENABLE_RATE_LIMITS, CONF_OPT_GLOBAL_RATE_LIMIT_MAX_TOKENS, CONF_OPT_GLOBAL_RATE_LIMIT_PER_SECOND, \
+    CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS, CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND, CONF_OPT_DEVICE_MAX_COMMAND_QUEUE
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
@@ -35,19 +37,13 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
         self._username: Optional[str] = None
         self._password: Optional[str] = None
 
-    def _build_prefilled_schema(
+    def _build_setup_schema(
         self,
         http_endpoint: str = None,
         username: str = None,
         password: str = None,
-        skip_cert_validation: bool = True,
-        enable_rate_limits: bool = False,
-        global_rate_limit_burst: int = 10,
-        global_rate_limit_rate: int = 4,
-        device_rate_limit_burst: int = 3,
-        device_rate_limit_rate: int = 2,
-        device_max_command_queue: int = 5
-    ):
+        skip_cert_validation: bool = True
+    ) -> vol.Schema:
         http_endpoint_default = http_endpoint if http_endpoint is not None else self._http_api
         username_default = username if username is not None else self._username
         password_default = password if password is not None else self._password
@@ -60,30 +56,6 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
                              msg="Set this flag if using you local MQTT broker",
                              default=skip_cert_validation,
                              description="When set, Meross Manager skips MQTT certificate validation."): bool,
-                vol.Required(CONF_ENABLE_RATE_LIMITS,
-                             msg="Set this flag to enable API rate limits",
-                             default=enable_rate_limits,
-                             description="When set, API rate limits are enabled."): bool,
-                vol.Required(CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS,
-                             msg="Limits the global API calls burst to at most # calls",
-                             default=global_rate_limit_burst,
-                             description="Maximum global API call burst limit"): int,
-                vol.Required(CONF_GLOBAL_RATE_LIMIT_PER_SECOND,
-                             msg="Limits the global API calls to at most # calls/second",
-                             default=global_rate_limit_rate,
-                             description="Maximum global API calls rate limit"): int,
-                vol.Required(CONF_DEVICE_RATE_LIMIT_MAX_TOKENS,
-                             msg="Limits maximum burst rate for single device API calls",
-                             default=device_rate_limit_burst,
-                             description="Maximum per-device API calls burst limit"): int,
-                vol.Required(CONF_DEVICE_RATE_LIMIT_PER_SECOND,
-                             msg="Limits single device API calls to at most # calls/second",
-                             default=device_rate_limit_rate,
-                             description="Maximum per-device API calls rate limit"): int,
-                vol.Required(CONF_DEVICE_MAX_COMMAND_QUEUE,
-                             msg="Maximum per-device command queue",
-                             default=device_max_command_queue,
-                             description="Maximum per-device command queue"): int
             }
         )
 
@@ -130,7 +102,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
             _LOGGER.debug("Empty user_input, showing default prefilled form")
             return self.async_show_form(
                 step_id="user",
-                data_schema=self._build_prefilled_schema(),
+                data_schema=self._build_setup_schema(),
                 errors={},
             )
         
@@ -139,18 +111,12 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
         username = user_input.get(CONF_USERNAME)
         password = user_input.get(CONF_PASSWORD)
         skip_cert_validation = user_input.get(CONF_MQTT_SKIP_CERT_VALIDATION)
-        enable_rate_limits = user_input.get(CONF_ENABLE_RATE_LIMITS)
-        global_limit_burst = user_input.get(CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS)
-        global_limit_per_second = user_input.get(CONF_GLOBAL_RATE_LIMIT_PER_SECOND)
-        device_limit_burst = user_input.get(CONF_DEVICE_RATE_LIMIT_MAX_TOKENS)
-        device_limit_per_second = user_input.get(CONF_DEVICE_RATE_LIMIT_PER_SECOND)
-        device_max_command_queue = user_input.get(CONF_DEVICE_MAX_COMMAND_QUEUE)
 
         # Check if we have everything we need
         if username is None or password is None or http_api_endpoint is None:
             return self.async_show_form(
                 step_id="user",
-                data_schema=self._build_prefilled_schema(
+                data_schema=self._build_setup_schema(
                     http_endpoint=http_api_endpoint),
                 errors={"base": "missing_credentials"},
             )
@@ -158,7 +124,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
         # Check the base-url is valid
         match = HTTP_API_RE.fullmatch(http_api_endpoint)
 
-        data_schema = self._build_prefilled_schema(
+        data_schema = self._build_setup_schema(
             http_endpoint=http_api_endpoint,
             username=username,
             password=password,
@@ -246,15 +212,14 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
                     "user_email": creds.user_email,
                     "issued_on": creds.issued_on.isoformat(),
                 },
-                CONF_MQTT_SKIP_CERT_VALIDATION: skip_cert_validation,
-                CONF_ENABLE_RATE_LIMITS: enable_rate_limits,
-                CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS: global_limit_burst,
-                CONF_GLOBAL_RATE_LIMIT_PER_SECOND: global_limit_per_second,
-                CONF_DEVICE_RATE_LIMIT_MAX_TOKENS: device_limit_burst,
-                CONF_DEVICE_RATE_LIMIT_PER_SECOND: device_limit_per_second,
-                CONF_DEVICE_MAX_COMMAND_QUEUE: device_max_command_queue
+                CONF_MQTT_SKIP_CERT_VALIDATION: skip_cert_validation
             },
         )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        return MerossOptionsFlowHandler(config_entry=config_entry)
 
     @staticmethod
     async def _test_authorization(
@@ -264,7 +229,6 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
             api_base_url=api_base_url, email=username, password=password
         )
         return client.cloud_credentials
-
 
     async def async_step_import(self, import_config):
         """Import a config entry from configuration.yaml."""
@@ -276,3 +240,70 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
             return self.async_abort(reason="single_instance_allowed")
 
         return await self.async_step_user(import_config)
+
+
+class MerossOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle an options flow for Meross Component."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize Meross options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        """Handle the initial step."""
+        if user_input is not None:
+            return self.async_create_entry(
+                title="",
+                data={k: v for k, v in user_input.items() if v not in (None, "")},
+            )
+        if self.config_entry is not None:
+            saved_options = self.config_entry.options
+
+        data_schema = self._build_options_schema(
+            enable_rate_limits=saved_options.get(CONF_OPT_ENABLE_RATE_LIMITS),
+            global_rate_limit_burst=saved_options.get(CONF_OPT_GLOBAL_RATE_LIMIT_MAX_TOKENS),
+            global_rate_limit_rate=saved_options.get(CONF_OPT_GLOBAL_RATE_LIMIT_PER_SECOND),
+            device_rate_limit_burst=saved_options.get(CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS),
+            device_rate_limit_rate=saved_options.get(CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND),
+            device_max_command_queue=saved_options.get(CONF_OPT_DEVICE_MAX_COMMAND_QUEUE)
+        )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=data_schema
+            )
+
+    def _build_options_schema(self,
+                              enable_rate_limits: bool = False,
+                              global_rate_limit_burst: int = 10,
+                              global_rate_limit_rate: int = 4,
+                              device_rate_limit_burst: int = 3,
+                              device_rate_limit_rate: int = 2,
+                              device_max_command_queue: int = 5
+                              ) -> vol.Schema:
+        return vol.Schema({
+            vol.Required(CONF_OPT_ENABLE_RATE_LIMITS,
+                         msg="Set this flag to enable API rate limits",
+                         default=enable_rate_limits,
+                         description="When set, API rate limits are enabled."): bool,
+            vol.Required(CONF_OPT_GLOBAL_RATE_LIMIT_MAX_TOKENS,
+                         msg="Limits the global API calls burst to at most # calls",
+                         default=global_rate_limit_burst,
+                         description="Maximum global API call burst limit"): int,
+            vol.Required(CONF_OPT_GLOBAL_RATE_LIMIT_PER_SECOND,
+                         msg="Limits the global API calls to at most # calls/second",
+                         default=global_rate_limit_rate,
+                         description="Maximum global API calls rate limit"): int,
+            vol.Required(CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS,
+                         msg="Limits maximum burst rate for single device API calls",
+                         default=device_rate_limit_burst,
+                         description="Maximum per-device API calls burst limit"): int,
+            vol.Required(CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND,
+                         msg="Limits single device API calls to at most # calls/second",
+                         default=device_rate_limit_rate,
+                         description="Maximum per-device API calls rate limit"): int,
+            vol.Required(CONF_OPT_DEVICE_MAX_COMMAND_QUEUE,
+                         msg="Maximum per-device command queue",
+                         default=device_max_command_queue,
+                         description="Maximum per-device command queue"): int
+        })

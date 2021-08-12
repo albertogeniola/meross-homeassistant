@@ -21,13 +21,7 @@
           "http_api_endpoint": "HTTP API Endpoint",
           "mqtt_hostname": "MQTT Hostname",
           "mqtt_port": "MQTT Port",
-          "skip_mqtt_cert_validation": "Skip MQTT certificate validation checks",
-          "enable_rate_limits": "Enable API rate limits",
-          "global_rate_limit_max_tokens": "Global API burst limit",
-          "global_rate_limit_per_second": "Global API rate limit (maximum api calls/second)",
-          "device_rate_limit_max_tokens": "Single device API burst limit",
-          "device_rate_limit_per_second": "Single device API rate limit (maximum api calls/second)",
-          "device_max_command_queue": "Single device Maximum command queue length"
+          "skip_mqtt_cert_validation": "Skip MQTT certificate validation checks"
         },
         "title": "Fill in your Meross login information"
       },
@@ -37,5 +31,21 @@
       }
     },
     "title": "Meross"
-  }
+  },
+  "options": {
+        "error": {},
+        "step": {
+            "init": {
+                "data": {
+                    "enable_rate_limits": "Enable API rate limits",
+                    "global_rate_limit_max_tokens": "Global API burst limit",
+                    "global_rate_limit_per_second": "Global API rate limit (maximum api calls/second)",
+                    "device_rate_limit_max_tokens": "Single device API burst limit",
+                    "device_rate_limit_per_second": "Single device API rate limit (maximum api calls/second)",
+                    "device_max_command_queue": "Single device Maximum command queue length"
+                },
+                "title": "Configure Manager"
+            }
+        }
+    }
 }
