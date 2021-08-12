@@ -7,6 +7,7 @@ Based on pure-python library, this custom component enables full control on your
 * Event driven: updates are based on push notification rather than polling when possible 
 * Auto discovery of new meross devices
 * Autoreconnect in case of connection drop
+* Configurable API rate limits
 
 ## Requirements
 Please note that the Meross devices are controlled via Meross Cloud. This means that homeassistant 
