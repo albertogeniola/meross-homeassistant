@@ -6,7 +6,7 @@ Based on pure-python library, this custom component enables full control on your
 * Fully async architecture that makes this integration run fast and lightweight 
 * Event driven: updates are based on push notification rather than polling when possible 
 * Auto discovery of new meross devices
-* Autoreconnect in case of connection drop
+* Auto-reconnect in case of connection drop
 * Configurable API rate limits
 
 ## Requirements

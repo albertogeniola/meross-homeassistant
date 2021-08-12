@@ -134,13 +134,14 @@ async def update_listener(hass: HomeAssistantType, config_entry: ConfigEntry):
     _LOGGER.warning("Reloading configuration")
 
     # Retrieve the meross manager, if in place
-    setup_manager_options(hass=hass, options=config_entry.options)
+    manager : MerossManager = hass.data.get(PLATFORM,{}).get(MANAGER, None)
+    setup_manager_options(manager=manager, hass=hass, options=config_entry.options)
 
 
-def setup_manager_options(hass: HomeAssistantType, options: Mapping[str, Any]):
+def setup_manager_options(manager:MerossManager, hass: HomeAssistantType, options: Mapping[str, Any]):
     # Options reading
     enable_api_rate_limits = options.get(CONF_OPT_ENABLE_RATE_LIMITS, True)
-    manager : MerossManager = hass.data.get(PLATFORM,{}).get(MANAGER, None)
+    limiter = None
     if manager is not None:
         _LOGGER.info("Meross manager is in place, updating its configuration")
         global_limit_burst = options.get(CONF_OPT_GLOBAL_RATE_LIMIT_MAX_TOKENS, None)
@@ -148,6 +149,7 @@ def setup_manager_options(hass: HomeAssistantType, options: Mapping[str, Any]):
         device_limit_burst = options.get(CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS, None)
         device_limit_per_second = options.get(CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND, None)
         device_max_command_queue = options.get(CONF_OPT_DEVICE_MAX_COMMAND_QUEUE, None)
+        
         if enable_api_rate_limits:
             _LOGGER.warning("Rate limits have been enabled. Setting rate limiter to MerossManager.")
             limiter = RateLimitChecker(global_burst_rate=global_limit_burst,
@@ -158,6 +160,9 @@ def setup_manager_options(hass: HomeAssistantType, options: Mapping[str, Any]):
                                        device_tokens_per_interval=device_limit_per_second,
                                        device_max_command_queue=device_max_command_queue)
             manager.limiter = limiter
+        else:
+            # Disable API limiting
+            manager.limiter = None
 
 
 async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
@@ -220,15 +225,15 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
             mqtt_skip_cert_validation=mqtt_skip_cert_validation,
         )
 
-        setup_manager_options(hass=hass, options=config_entry.options)
-
         hass.data[PLATFORM] = {}
         hass.data[PLATFORM][MANAGER] = manager
         hass.data[PLATFORM]["ADDED_ENTITIES_IDS"] = set()
-
         # Keep a registry of added sensors
         # TODO: Do the same for other platforms?
         hass.data[PLATFORM][HA_SENSOR] = dict()
+        
+        # Configure the manager with user options
+        setup_manager_options(manager=manager, hass=hass, options=config_entry.options)
 
         print_startup_message(http_devices=http_devices)
         _LOGGER.info("Starting meross manager")

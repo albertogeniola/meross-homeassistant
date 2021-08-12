@@ -27,23 +27,24 @@ PARALLEL_UPDATES = 1
 SCAN_INTERVAL = timedelta(seconds=SENSOR_POLL_INTERVAL_SECONDS)
 
 
-class ApiMonitoringSensor(Entity):
-    def __init__(self, limiter: RateLimitChecker):
-        self._limiter = limiter
+class ManagerMonitoringSensor(Entity):
+    def __init__(self, manager: MerossManager):
+        self._manager = manager
 
     async def async_added_to_hass(self) -> None:
-        pass
+        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].add(self.unique_id)
 
     async def async_will_remove_from_hass(self) -> None:
-        pass
+        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
+        del self.hass.data[PLATFORM][HA_SENSOR][self.unique_id]
 
     @property
     def unique_id(self) -> str:
-        return "manager#API"
+        return "manager#sensor"
 
     @property
     def name(self) -> str:
-        return "Meross Manager API Stats"
+        return "Meross Manager Stats"
 
     @property
     def device_info(self):
@@ -57,7 +58,7 @@ class ApiMonitoringSensor(Entity):
 
     @property
     def available(self) -> bool:
-        return True
+        return self._manager is not None
 
     @property
     def should_poll(self) -> bool:
@@ -70,10 +71,10 @@ class ApiMonitoringSensor(Entity):
     @property
     def state(self) -> Union[None, str, int, float]:
         """Return the state of the entity."""
-        if self._limiter is None or self._limiter.global_rate_limiter is None:
+        if self._manager is None or self._manager.limiter is None or self._manager.limiter.global_rate_limiter is None:
             return None
-        self._limiter.global_rate_limiter.update_tokens()
-        return self._limiter.global_rate_limiter.current_window_hitrate
+        self._manager.limiter.global_rate_limiter.update_tokens()
+        return self._manager.limiter.global_rate_limiter.current_window_hitrate
 
     @property
     def unit_of_measurement(self) -> Optional[str]:
@@ -252,7 +253,7 @@ class Mts100TemperatureSensorWrapper(GenericSensorWrapper):
                     await self._device.async_get_temperature()
                 else:
                     # Use the cached value
-                    _LOGGER.info(f"Skipping data refresh for {self.name} as its value is recent enough")
+                    _LOGGER.debug(f"Skipping data refresh for {self.name} as its value is recent enough")
 
             except CommandTimeoutError as e:
                 log_exception(logger=_LOGGER, device=self._device)
@@ -285,7 +286,7 @@ class PowerSensorWrapper(GenericSensorWrapper):
                     await self._device.async_get_instant_metrics(channel=self._channel_id)
                 else:
                     # Use the cached value
-                    _LOGGER.info(f"Skipping data refresh for {self.name} as its value is recent enough")
+                    _LOGGER.debug(f"Skipping data refresh for {self.name} as its value is recent enough")
 
             except CommandTimeoutError as e:
                 log_exception(logger=_LOGGER, device=self._device)
@@ -319,7 +320,7 @@ class CurrentSensorWrapper(GenericSensorWrapper):
                     await self._device.async_get_instant_metrics(channel=self._channel_id)
                 else:
                     # Use the cached value
-                    _LOGGER.info(f"Skipping data refresh for {self.name} as its value is recent enough")
+                    _LOGGER.debug(f"Skipping data refresh for {self.name} as its value is recent enough")
 
             except CommandTimeoutError as e:
                 log_exception(logger=_LOGGER, device=self._device)
@@ -354,7 +355,7 @@ class VoltageSensorWrapper(GenericSensorWrapper):
                     await self._device.async_get_instant_metrics(channel=self._channel_id)
                 else:
                     # Use the cached value
-                    _LOGGER.info(f"Skipping data refresh for {self.name} as its value is recent enough")
+                    _LOGGER.debug(f"Skipping data refresh for {self.name} as its value is recent enough")
 
             except CommandTimeoutError as e:
                 log_exception(logger=_LOGGER, device=self._device)
@@ -413,6 +414,10 @@ async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities)
             _add_and_register_sensor(hass, clazz=VoltageSensorWrapper, args={"device": d, "channel": channel_index},
                                      entities=new_entities)
 
+    # Add Meross API rate limiter sensor
+    manager = hass.data[PLATFORM][MANAGER]
+    _add_and_register_sensor(hass, clazz=ManagerMonitoringSensor, args={"manager": manager}, entities=new_entities)
+
     async_add_entities(new_entities, True)
 
 
@@ -421,8 +426,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     devices = manager.find_devices()
     await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
-
-    async_add_entities((ApiMonitoringSensor(limiter=manager.limiter),), True)
 
     # Register a listener for the Bind push notification so that we can add new entities at runtime
     async def platform_async_add_entities(push_notification: GenericPushNotification, target_devices: List[BaseDevice]):
