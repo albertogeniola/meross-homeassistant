@@ -210,7 +210,9 @@ class ValveEntityWrapper(ClimateEntity):
 
     @property
     def preset_mode(self) -> str:
-        return self._device.mode.name
+        if self._device.mode is not None:
+            return self._device.mode.name
+        return None
 
     @property
     def preset_modes(self) -> List[str]:

@@ -25,7 +25,6 @@ from .common import (PLATFORM, MANAGER, log_exception, HA_SENSOR, calculate_sens
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
 SCAN_INTERVAL = timedelta(seconds=SENSOR_POLL_INTERVAL_SECONDS)
-#SCAN_INTERVAL = timedelta(milliseconds=100)
 
 
 class ApiMonitoringSensor(Entity):

@@ -24,10 +24,15 @@ MEROSS_COMPONENTS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FA
 CONNECTION_TIMEOUT_THRESHOLD = 5
 
 CONF_STORED_CREDS = "stored_credentials"
-CONF_RATE_LIMIT_PER_SECOND = "rate_limit_per_second"
-CONF_RATE_LIMIT_MAX_TOKENS = "rate_limit_max_tokens"
+CONF_MQTT_SKIP_CERT_VALIDATION = "skip_mqtt_cert_validation"
 CONF_HTTP_ENDPOINT = "http_api_endpoint"
 
+CONF_ENABLE_RATE_LIMITS = "enable_rate_limits"
+CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS = "global_rate_limit_max_tokens"
+CONF_GLOBAL_RATE_LIMIT_PER_SECOND = "global_rate_limit_per_second"
+CONF_DEVICE_RATE_LIMIT_MAX_TOKENS = "device_rate_limit_max_tokens"
+CONF_DEVICE_RATE_LIMIT_PER_SECOND = "device_rate_limit_per_second"
+CONF_DEVICE_MAX_COMMAND_QUEUE = "device_max_command_queue"
 
 # Constants
 RELAXED_SCAN_INTERVAL = 180.0

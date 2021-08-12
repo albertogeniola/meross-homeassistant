@@ -1,6 +1,6 @@
 """Meross devices platform loader"""
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Tuple
 
 import homeassistant.helpers.config_validation as cv
@@ -20,6 +20,7 @@ from meross_iot.model.http.exception import (
     UnauthorizedException,
     HttpApiError,
 )
+from meross_iot.utilities.limiter import RateLimitChecker
 
 from .common import (
     ATTR_CONFIG,
@@ -39,9 +40,14 @@ from .common import (
     log_exception,
     CONF_STORED_CREDS,
     LIMITER,
-    CONF_RATE_LIMIT_PER_SECOND,
-    CONF_RATE_LIMIT_MAX_TOKENS,
-    CONF_HTTP_ENDPOINT,
+    CONF_ENABLE_RATE_LIMITS,
+    CONF_ENABLE_RATE_LIMITS,
+    CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS,
+    CONF_GLOBAL_RATE_LIMIT_PER_SECOND,
+    CONF_DEVICE_RATE_LIMIT_MAX_TOKENS,
+    CONF_DEVICE_RATE_LIMIT_PER_SECOND,
+    CONF_DEVICE_MAX_COMMAND_QUEUE,
+    CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION
 )
 from .version import MEROSS_CLOUD_VERSION
 
@@ -136,11 +142,8 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
     password = config_entry.data.get(CONF_PASSWORD)
     str_creds = config_entry.data.get(CONF_STORED_CREDS)
 
-    # TODO: parametrize this option -> Allow unsafe cert
-    mqtt_skip_cert_validation = True
-
-    rate_limit_per_second = config_entry.data.get(CONF_RATE_LIMIT_PER_SECOND, 2)
-    rate_limit_max_tokens = config_entry.data.get(CONF_RATE_LIMIT_MAX_TOKENS, 10)
+    mqtt_skip_cert_validation = config_entry.data.get(CONF_MQTT_SKIP_CERT_VALIDATION, True)
+    _LOGGER.warning("Skip MQTT cert validation option set to: %s", mqtt_skip_cert_validation)
 
     creds = None
     if str_creds is not None:
@@ -181,13 +184,30 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
                 },
             )
 
+        # Init rate limiter, if needed
+        enable_api_rate_limits = config_entry.data.get(CONF_ENABLE_RATE_LIMITS, True)
+        global_limit_burst = config_entry.data.get(CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS, None)
+        global_limit_per_second = config_entry.data.get(CONF_GLOBAL_RATE_LIMIT_PER_SECOND, None)
+        device_limit_burst = config_entry.data.get(CONF_DEVICE_RATE_LIMIT_MAX_TOKENS, None)
+        device_limit_per_second = config_entry.data.get(CONF_DEVICE_RATE_LIMIT_PER_SECOND, None)
+        device_max_command_queue = config_entry.data.get(CONF_DEVICE_MAX_COMMAND_QUEUE, None)
+
         manager = MerossManager(
             http_client=client,
             auto_reconnect=True,
-            over_limit_threshold_percentage=1000,
-            burst_requests_per_second_limit=5,
             mqtt_skip_cert_validation=mqtt_skip_cert_validation,
         )
+
+        if enable_api_rate_limits:
+            _LOGGER.warning("Rate limits have been enabled. Setting rate limiter to MerossManager.")
+            limiter = RateLimitChecker(global_burst_rate=global_limit_burst,
+                                       global_time_window=timedelta(seconds=1.0),
+                                       global_tokens_per_interval=global_limit_per_second,
+                                       device_time_window=timedelta(seconds=1.0),
+                                       device_burst_rate=device_limit_burst,
+                                       device_tokens_per_interval=device_limit_per_second,
+                                       device_max_command_queue=device_max_command_queue)
+            manager.limiter = limiter
 
         hass.data[PLATFORM] = {}
         hass.data[PLATFORM][MANAGER] = manager

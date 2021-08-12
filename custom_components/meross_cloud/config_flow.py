@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from urllib.error import HTTPError
 
 import voluptuous as vol
@@ -14,7 +14,9 @@ from meross_iot.model.http.exception import UnauthorizedException, BadLoginExcep
 from requests.exceptions import ConnectTimeout
 import re
 
-from .common import PLATFORM, CONF_STORED_CREDS, CONF_HTTP_ENDPOINT
+from .common import PLATFORM, CONF_STORED_CREDS, CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, \
+    CONF_ENABLE_RATE_LIMITS, CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS, CONF_GLOBAL_RATE_LIMIT_PER_SECOND, \
+    CONF_DEVICE_RATE_LIMIT_MAX_TOKENS, CONF_DEVICE_RATE_LIMIT_PER_SECOND, CONF_DEVICE_MAX_COMMAND_QUEUE
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
@@ -30,14 +32,21 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
     def __init__(self) -> None:
         """Initialize flow."""
         self._http_api: str = "https://iot.meross.com"
-        self._username: str = None
-        self._password: str = None
+        self._username: Optional[str] = None
+        self._password: Optional[str] = None
 
     def _build_prefilled_schema(
         self,
         http_endpoint: str = None,
         username: str = None,
         password: str = None,
+        skip_cert_validation: bool = True,
+        enable_rate_limits: bool = False,
+        global_rate_limit_burst: int = 10,
+        global_rate_limit_rate: int = 4,
+        device_rate_limit_burst: int = 3,
+        device_rate_limit_rate: int = 2,
+        device_max_command_queue: int = 5
     ):
         http_endpoint_default = http_endpoint if http_endpoint is not None else self._http_api
         username_default = username if username is not None else self._username
@@ -46,7 +55,35 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
             {
                 vol.Required(CONF_HTTP_ENDPOINT, default=http_endpoint_default): str,
                 vol.Required(CONF_USERNAME, default=username_default): str,
-                vol.Required(CONF_PASSWORD, password_default): str,
+                vol.Required(CONF_PASSWORD, default=password_default): str,
+                vol.Required(CONF_MQTT_SKIP_CERT_VALIDATION,
+                             msg="Set this flag if using you local MQTT broker",
+                             default=skip_cert_validation,
+                             description="When set, Meross Manager skips MQTT certificate validation."): bool,
+                vol.Required(CONF_ENABLE_RATE_LIMITS,
+                             msg="Set this flag to enable API rate limits",
+                             default=enable_rate_limits,
+                             description="When set, API rate limits are enabled."): bool,
+                vol.Required(CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS,
+                             msg="Limits the global API calls burst to at most # calls",
+                             default=global_rate_limit_burst,
+                             description="Maximum global API call burst limit"): int,
+                vol.Required(CONF_GLOBAL_RATE_LIMIT_PER_SECOND,
+                             msg="Limits the global API calls to at most # calls/second",
+                             default=global_rate_limit_rate,
+                             description="Maximum global API calls rate limit"): int,
+                vol.Required(CONF_DEVICE_RATE_LIMIT_MAX_TOKENS,
+                             msg="Limits maximum burst rate for single device API calls",
+                             default=device_rate_limit_burst,
+                             description="Maximum per-device API calls burst limit"): int,
+                vol.Required(CONF_DEVICE_RATE_LIMIT_PER_SECOND,
+                             msg="Limits single device API calls to at most # calls/second",
+                             default=device_rate_limit_rate,
+                             description="Maximum per-device API calls rate limit"): int,
+                vol.Required(CONF_DEVICE_MAX_COMMAND_QUEUE,
+                             msg="Maximum per-device command queue",
+                             default=device_max_command_queue,
+                             description="Maximum per-device command queue"): int
             }
         )
 
@@ -101,6 +138,13 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
         http_api_endpoint = user_input.get(CONF_HTTP_ENDPOINT)
         username = user_input.get(CONF_USERNAME)
         password = user_input.get(CONF_PASSWORD)
+        skip_cert_validation = user_input.get(CONF_MQTT_SKIP_CERT_VALIDATION)
+        enable_rate_limits = user_input.get(CONF_ENABLE_RATE_LIMITS)
+        global_limit_burst = user_input.get(CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS)
+        global_limit_per_second = user_input.get(CONF_GLOBAL_RATE_LIMIT_PER_SECOND)
+        device_limit_burst = user_input.get(CONF_DEVICE_RATE_LIMIT_MAX_TOKENS)
+        device_limit_per_second = user_input.get(CONF_DEVICE_RATE_LIMIT_PER_SECOND)
+        device_max_command_queue = user_input.get(CONF_DEVICE_MAX_COMMAND_QUEUE)
 
         # Check if we have everything we need
         if username is None or password is None or http_api_endpoint is None:
@@ -190,7 +234,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
         self._abort_if_unique_id_configured()
 
         return self.async_create_entry(
-            title=user_input[CONF_USERNAME],
+            title=user_input[CONF_HTTP_ENDPOINT],
             data={
                 CONF_USERNAME: username,
                 CONF_PASSWORD: password,
@@ -202,6 +246,13 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
                     "user_email": creds.user_email,
                     "issued_on": creds.issued_on.isoformat(),
                 },
+                CONF_MQTT_SKIP_CERT_VALIDATION: skip_cert_validation,
+                CONF_ENABLE_RATE_LIMITS: enable_rate_limits,
+                CONF_GLOBAL_RATE_LIMIT_MAX_TOKENS: global_limit_burst,
+                CONF_GLOBAL_RATE_LIMIT_PER_SECOND: global_limit_per_second,
+                CONF_DEVICE_RATE_LIMIT_MAX_TOKENS: device_limit_burst,
+                CONF_DEVICE_RATE_LIMIT_PER_SECOND: device_limit_per_second,
+                CONF_DEVICE_MAX_COMMAND_QUEUE: device_max_command_queue
             },
         )
 
