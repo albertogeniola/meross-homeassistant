@@ -3,12 +3,14 @@ from datetime import datetime
 from datetime import timedelta
 from typing import Optional, Iterable, Union, List
 
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_HUMIDITY, \
     DEVICE_CLASS_POWER, POWER_WATT
 
 from homeassistant.const import PERCENTAGE
 
 from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.typing import StateType
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.controller.known.subdevice import Ms100Sensor, Mts100v3Valve
@@ -19,17 +21,24 @@ from meross_iot.model.push.generic import GenericPushNotification
 
 from . import MEROSS_CLOUD_VERSION
 from .common import (PLATFORM, MANAGER, log_exception, HA_SENSOR, calculate_sensor_id,
-                     SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property, LIMITER,
-                     extract_subdevice_notification_data)
+                     SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property,
+                     extract_subdevice_notification_data, ATTR_API_CALLS_PER_SECOND, ATTR_DELAYED_API_CALLS_PER_SECOND,
+                     ATTR_DROPPED_API_CALLS_PER_SECOND)
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
 SCAN_INTERVAL = timedelta(seconds=SENSOR_POLL_INTERVAL_SECONDS)
 
 
-class ManagerMonitoringSensor(Entity):
+class ManagerMonitoringSensor(SensorEntity):
     def __init__(self, manager: MerossManager):
         self._manager = manager
+        self._state = None
+        self._state_attrs = {
+            ATTR_API_CALLS_PER_SECOND: 0,
+            ATTR_DELAYED_API_CALLS_PER_SECOND: 0,
+            ATTR_DROPPED_API_CALLS_PER_SECOND: 0
+        }
 
     async def async_added_to_hass(self) -> None:
         self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].add(self.unique_id)
@@ -69,16 +78,40 @@ class ManagerMonitoringSensor(Entity):
         return None  # Generic sensor
 
     @property
-    def state(self) -> Union[None, str, int, float]:
+    def state(self) -> StateType:
         """Return the state of the entity."""
-        if self._manager is None or self._manager.limiter is None or self._manager.limiter.global_rate_limiter is None:
-            return None
-        self._manager.limiter.global_rate_limiter.update_tokens()
-        return self._manager.limiter.global_rate_limiter.current_window_hitrate
+        return self._state
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes of the device."""
+        return self._state_attrs
 
     @property
     def unit_of_measurement(self) -> Optional[str]:
+        """Return the unit of measurement of this entity, if any."""
         return "API/s"
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend."""
+        return "mdi:cloud"
+
+    async def async_update(self):
+        """Fetch API state from manager"""
+        interval = timedelta(seconds=SENSOR_POLL_INTERVAL_SECONDS)
+        call_stats = self._manager.mqtt_call_stats.get_api_stats(time_window=interval)
+        self._state = call_stats.global_stats.total_calls
+
+        delayed_stats = self._manager.mqtt_call_stats.get_delayed_api_stats(time_window=interval)
+        dropped_stats = self._manager.mqtt_call_stats.get_dropped_api_stats(time_window=interval)
+        self._state_attrs.update(
+            {
+                ATTR_API_CALLS_PER_SECOND: call_stats.global_stats.total_calls,
+                ATTR_DELAYED_API_CALLS_PER_SECOND: delayed_stats.global_stats.total_calls,
+                ATTR_DROPPED_API_CALLS_PER_SECOND: dropped_stats.global_stats.total_calls,
+            }
+        )
 
 
 class GenericSensorWrapper(Entity):

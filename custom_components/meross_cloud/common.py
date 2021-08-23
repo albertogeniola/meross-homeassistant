@@ -39,12 +39,16 @@ RELAXED_SCAN_INTERVAL = 180.0
 SENSOR_POLL_INTERVAL_SECONDS = 1
 UNIT_PERCENTAGE = "%"
 
+ATTR_API_CALLS_PER_SECOND = "api_calls_per_second"
+ATTR_DELAYED_API_CALLS_PER_SECOND = "delayed_api_calls_per_second"
+ATTR_DROPPED_API_CALLS_PER_SECOND = "dropped_api_calls_per_second"
+
 
 def calculate_sensor_id(
-    uuid: str,
-    type: str,
-    measurement_unit: str,
-    channel: int = 0,
+        uuid: str,
+        type: str,
+        measurement_unit: str,
+        channel: int = 0,
 ):
     return "%s:%s:%s:%s:%d" % (HA_SENSOR, uuid, type, measurement_unit, channel)
 
@@ -94,7 +98,7 @@ def notify_error(hass, notification_id, title, message):
 
 
 def log_exception(
-    message: str = None, logger: logging = None, device: BaseDevice = None
+        message: str = None, logger: logging = None, device: BaseDevice = None
 ):
     if logger is None:
         logger = logging.getLogger(__name__)
@@ -133,7 +137,7 @@ def invoke_method_or_property(obj, method_or_property):
 
 
 def extract_subdevice_notification_data(
-    data: dict, filter_accessor: str, subdevice_id: str
+        data: dict, filter_accessor: str, subdevice_id: str
 ) -> Dict:
     # Operate only on relative accessor
     context = data.get(filter_accessor)
