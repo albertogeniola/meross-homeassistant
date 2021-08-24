@@ -101,15 +101,15 @@ class ManagerMonitoringSensor(SensorEntity):
         """Fetch API state from manager"""
         interval = timedelta(seconds=HA_SENSOR_POLL_INTERVAL_SECONDS)
         call_stats = self._manager.mqtt_call_stats.get_api_stats(time_window=interval)
-        self._state = call_stats.global_stats.total_calls
+        self._state = round(call_stats.global_stats.total_calls/HA_SENSOR_POLL_INTERVAL_SECONDS, 4)
 
         delayed_stats = self._manager.mqtt_call_stats.get_delayed_api_stats(time_window=interval)
         dropped_stats = self._manager.mqtt_call_stats.get_dropped_api_stats(time_window=interval)
         self._state_attrs.update(
             {
-                ATTR_API_CALLS_PER_SECOND: call_stats.global_stats.total_calls,
-                ATTR_DELAYED_API_CALLS_PER_SECOND: delayed_stats.global_stats.total_calls,
-                ATTR_DROPPED_API_CALLS_PER_SECOND: dropped_stats.global_stats.total_calls,
+                ATTR_API_CALLS_PER_SECOND: round(call_stats.global_stats.total_calls/HA_SENSOR_POLL_INTERVAL_SECONDS, 4),
+                ATTR_DELAYED_API_CALLS_PER_SECOND: round(delayed_stats.global_stats.total_calls/HA_SENSOR_POLL_INTERVAL_SECONDS, 4),
+                ATTR_DROPPED_API_CALLS_PER_SECOND: round(dropped_stats.global_stats.total_calls/HA_SENSOR_POLL_INTERVAL_SECONDS, 4),
             }
         )
 
