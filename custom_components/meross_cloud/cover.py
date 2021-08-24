@@ -11,15 +11,13 @@ from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, calculate_cover_id)
+from .common import (PLATFORM, MANAGER, log_exception, calculate_cover_id)
 
 # Conditional Light import with backwards compatibility
 from homeassistant.components.cover import CoverEntity
 
 
 _LOGGER = logging.getLogger(__name__)
-PARALLEL_UPDATES = 1
-SCAN_INTERVAL = timedelta(seconds=RELAXED_SCAN_INTERVAL)
 
 
 class MerossCoverWrapper(GarageOpenerMixin, BaseDevice):

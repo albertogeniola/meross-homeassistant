@@ -15,15 +15,13 @@ from meross_iot.model.enums import OnlineStatus, Namespace, ThermostatV3Mode
 from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL, calculate_valve_id,
+from .common import (PLATFORM, MANAGER, log_exception, calculate_valve_id,
                      extract_subdevice_notification_data)
 
 # Conditional import for switch device
 from homeassistant.components.climate import ClimateEntity
 
 _LOGGER = logging.getLogger(__name__)
-PARALLEL_UPDATES = 1
-SCAN_INTERVAL = timedelta(seconds=RELAXED_SCAN_INTERVAL)
 
 
 class ValveEntityWrapper(ClimateEntity):

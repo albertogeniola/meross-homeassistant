@@ -35,8 +35,8 @@ CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND = "device_rate_limit_per_second"
 CONF_OPT_DEVICE_MAX_COMMAND_QUEUE = "device_max_command_queue"
 
 # Constants
-RELAXED_SCAN_INTERVAL = 180.0
-SENSOR_POLL_INTERVAL_SECONDS = 1
+HA_SENSOR_POLL_INTERVAL_SECONDS = 15             # HA sensor polling interval
+SENSOR_SAMPLE_CACHE_INTERVAL_SECONDS = 30       # Sensors data caching interval in seconds
 UNIT_PERCENTAGE = "%"
 
 ATTR_API_CALLS_PER_SECOND = "api_calls_per_second"

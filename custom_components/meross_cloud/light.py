@@ -13,16 +13,13 @@ from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (PLATFORM, MANAGER, log_exception, RELAXED_SCAN_INTERVAL,
-                     calculate_light_id)
+from .common import (PLATFORM, MANAGER, log_exception, calculate_light_id)
 
 # Conditional Light import with backwards compatibility
 from homeassistant.components.light import LightEntity
 
 
 _LOGGER = logging.getLogger(__name__)
-PARALLEL_UPDATES = 1
-SCAN_INTERVAL = timedelta(seconds=RELAXED_SCAN_INTERVAL)
 
 
 class MerossLightDevice(LightMixin, BaseDevice):

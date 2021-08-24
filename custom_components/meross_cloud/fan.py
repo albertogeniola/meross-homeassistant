@@ -10,12 +10,10 @@ from meross_iot.model.enums import OnlineStatus, Namespace, SprayMode
 from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (PLATFORM, MANAGER, calculate_humidifier_id, log_exception, SENSOR_POLL_INTERVAL_SECONDS)
-from homeassistant.components.fan import FanEntity, SUPPORT_SET_SPEED, SUPPORT_PRESET_MODE
+from .common import (PLATFORM, MANAGER, calculate_humidifier_id, log_exception)
+from homeassistant.components.fan import FanEntity, SUPPORT_PRESET_MODE
 
 _LOGGER = logging.getLogger(__name__)
-PARALLEL_UPDATES = 1
-SCAN_INTERVAL = timedelta(seconds=SENSOR_POLL_INTERVAL_SECONDS)
 
 
 class MerossHumidifierDevice(SprayMixin, BaseDevice):

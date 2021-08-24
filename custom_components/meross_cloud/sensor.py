@@ -21,13 +21,13 @@ from meross_iot.model.push.generic import GenericPushNotification
 
 from . import MEROSS_CLOUD_VERSION
 from .common import (PLATFORM, MANAGER, log_exception, HA_SENSOR, calculate_sensor_id,
-                     SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property,
+                     HA_SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property,
                      extract_subdevice_notification_data, ATTR_API_CALLS_PER_SECOND, ATTR_DELAYED_API_CALLS_PER_SECOND,
-                     ATTR_DROPPED_API_CALLS_PER_SECOND)
+                     ATTR_DROPPED_API_CALLS_PER_SECOND, SENSOR_SAMPLE_CACHE_INTERVAL_SECONDS)
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
-SCAN_INTERVAL = timedelta(seconds=SENSOR_POLL_INTERVAL_SECONDS)
+SCAN_INTERVAL = timedelta(seconds=HA_SENSOR_POLL_INTERVAL_SECONDS)
 
 
 class ManagerMonitoringSensor(SensorEntity):
@@ -99,7 +99,7 @@ class ManagerMonitoringSensor(SensorEntity):
 
     async def async_update(self):
         """Fetch API state from manager"""
-        interval = timedelta(seconds=SENSOR_POLL_INTERVAL_SECONDS)
+        interval = timedelta(seconds=HA_SENSOR_POLL_INTERVAL_SECONDS)
         call_stats = self._manager.mqtt_call_stats.get_api_stats(time_window=interval)
         self._state = call_stats.global_stats.total_calls
 
@@ -280,7 +280,7 @@ class Mts100TemperatureSensorWrapper(GenericSensorWrapper):
                 last_sampled_temp = self._device.last_sampled_temperature
                 last_sampled_time = self._device.last_sampled_time
                 now = datetime.utcnow()
-                if last_sampled_temp is None or last_sampled_time is None or (now - self._device.last_sampled_time).total_seconds() > SENSOR_POLL_INTERVAL_SECONDS:
+                if last_sampled_temp is None or last_sampled_time is None or (now - self._device.last_sampled_time).total_seconds() > SENSOR_SAMPLE_CACHE_INTERVAL_SECONDS:
                     # Force device refresh
                     _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
                     await self._device.async_get_temperature()
