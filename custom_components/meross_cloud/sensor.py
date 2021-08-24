@@ -90,7 +90,7 @@ class ManagerMonitoringSensor(SensorEntity):
     @property
     def unit_of_measurement(self) -> Optional[str]:
         """Return the unit of measurement of this entity, if any."""
-        return "API/s"
+        return "msg/s"
 
     @property
     def icon(self):
