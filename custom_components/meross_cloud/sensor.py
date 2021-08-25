@@ -12,6 +12,7 @@ from homeassistant.const import PERCENTAGE
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import StateType
 from meross_iot.controller.device import BaseDevice
+from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT
 from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.controller.known.subdevice import Ms100Sensor, Mts100v3Valve
 from meross_iot.manager import MerossManager, RateLimitChecker
@@ -53,7 +54,7 @@ class ManagerMonitoringSensor(SensorEntity):
 
     @property
     def name(self) -> str:
-        return "Meross Manager Stats"
+        return "Manager MQTT messages/s"
 
     @property
     def device_info(self):
@@ -114,13 +115,14 @@ class ManagerMonitoringSensor(SensorEntity):
         )
 
 
-class GenericSensorWrapper(Entity):
+class GenericSensorWrapper(SensorEntity):
     """Wrapper class to adapt the Meross MSS100 sensor hardware into the Homeassistant platform"""
 
     def __init__(self,
                  sensor_class: str,
                  measurement_unit: str,
                  device_method_or_property: str,
+                 state_class: str,
                  device: BaseDevice,
                  channel: int = 0):
         # Make sure the given device supports exposes the device_method_or_property passed as arg
@@ -133,9 +135,14 @@ class GenericSensorWrapper(Entity):
         self._sensor_class = sensor_class
         self._device_method_or_property = device_method_or_property
         self._measurement_unit = measurement_unit
+        self._state_class = state_class
 
         self._id = calculate_sensor_id(uuid=device.internal_id, type=sensor_class, measurement_unit=measurement_unit, channel=channel)
         self._entity_name = "{} ({}) - {} ({}, {})".format(device.name, device.type, f"{sensor_class} sensor", measurement_unit, channel)
+
+    @property
+    def state_class(self) -> str:
+        return self._state_class
 
     # region Device wrapper common methods
     async def async_update(self):
@@ -241,6 +248,7 @@ class Ms100TemperatureSensorWrapper(GenericSensorWrapper):
         super().__init__(sensor_class=DEVICE_CLASS_TEMPERATURE,
                          measurement_unit=TEMP_CELSIUS,
                          device_method_or_property='last_sampled_temperature',
+                         state_class=STATE_CLASS_MEASUREMENT,
                          device=device,
                          channel=channel)
 
@@ -256,6 +264,7 @@ class Ms100HumiditySensorWrapper(GenericSensorWrapper):
         super().__init__(sensor_class=DEVICE_CLASS_HUMIDITY,
                          measurement_unit=PERCENTAGE,
                          device_method_or_property='last_sampled_humidity',
+                         state_class=STATE_CLASS_MEASUREMENT,
                          device=device,
                          channel=channel)
 
@@ -271,6 +280,7 @@ class Mts100TemperatureSensorWrapper(GenericSensorWrapper):
         super().__init__(sensor_class=DEVICE_CLASS_TEMPERATURE,
                          measurement_unit=TEMP_CELSIUS,
                          device_method_or_property='last_sampled_temperature',
+                         state_class=STATE_CLASS_MEASUREMENT,
                          device=device)
 
     async def async_update(self):
@@ -303,6 +313,7 @@ class PowerSensorWrapper(GenericSensorWrapper):
         super().__init__(sensor_class=DEVICE_CLASS_POWER,
                          measurement_unit=POWER_WATT,
                          device_method_or_property='get_last_sample',
+                         state_class=STATE_CLASS_MEASUREMENT,
                          device=device,
                          channel=channel)
 
@@ -337,6 +348,7 @@ class CurrentSensorWrapper(GenericSensorWrapper):
         super().__init__(sensor_class=DEVICE_CLASS_POWER,
                          measurement_unit="A",
                          device_method_or_property='get_last_sample',
+                         state_class=STATE_CLASS_MEASUREMENT,
                          device=device,
                          channel=channel)
 
@@ -372,6 +384,7 @@ class VoltageSensorWrapper(GenericSensorWrapper):
         super().__init__(sensor_class=DEVICE_CLASS_POWER,
                          measurement_unit="V",
                          device_method_or_property='get_last_sample',
+                         state_class=STATE_CLASS_MEASUREMENT,
                          device=device,
                          channel=channel)
 
