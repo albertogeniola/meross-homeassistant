@@ -8,7 +8,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry, SOURCE_REAUTH
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryNotReady, ConfigEntryAuthFailed
 from homeassistant.helpers.typing import HomeAssistantType
 from meross_iot.http_api import MerossHttpClient, ErrorCodes
 from meross_iot.manager import MerossManager
@@ -180,6 +180,14 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
     mqtt_skip_cert_validation = config_entry.data.get(CONF_MQTT_SKIP_CERT_VALIDATION, True)
     _LOGGER.warning("Skip MQTT cert validation option set to: %s", mqtt_skip_cert_validation)
 
+    # Make sure we have all the needed requirements
+    if http_api_endpoint is None:
+        raise ConfigEntryAuthFailed("Missing HTTP_API_ENDPOINT")
+    if email is None:
+        raise ConfigEntryAuthFailed("Missing USERNAME/EMAIL parameter from configuration")
+    if password is None:
+        raise ConfigEntryAuthFailed("Missing PASSWORD parameter from configuration")
+
     creds = None
     if str_creds is not None:
         issued_on = datetime.fromisoformat(str_creds.get("issued_on"))
@@ -261,7 +269,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
         )
         notify_error(hass, "http_connection", "Meross Cloud", msg)
         log_exception(msg, logger=_LOGGER)
-        raise ConfigEntryNotReady()
+        raise ConfigEntryAuthFailed("Too many tokens have been issued")
 
     except (UnauthorizedException, HttpApiError) as ex:
         # Do not retry setup: user must update its credentials
@@ -270,14 +278,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
             ErrorCodes.CODE_TOKEN_EXPIRED,
             ErrorCodes.CODE_TOKEN_ERROR,
         ):
-            hass.async_create_task(
-                hass.config_entries.flow.async_init(
-                    PLATFORM,
-                    context={"source": SOURCE_REAUTH},
-                    data=config_entry.data,
-                )
-            )
-            return False
+            raise ConfigEntryAuthFailed("Invalid token or credentials")
         else:
             msg = "Your Meross login credentials are invalid or the network could not be reached at the moment."
             notify_error(
