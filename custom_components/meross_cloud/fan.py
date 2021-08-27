@@ -179,7 +179,7 @@ class HumidifierEntityWrapper(FanEntity):
             return None
 
     @property
-    def preset_modes(self) -> list[str]:
+    def preset_modes(self) -> List[str]:
         return [x.name for x in SprayMode]
 
     # endregion
