@@ -39,15 +39,6 @@ cached devices/entities from your HomeAssistant installation. This is necessary 
 the device/entity naming system and is unable to remove previous entities installed by old versions of the component.
 Sorry about that. 
 
-## Towards Homeassistant official integration
-My personal goal is to make this component fully compliant with Homeassistant, so 
-that it may be added as the official library to handle Meross devices. 
-However, before pushing a PullRequest to the official Homeassistant repository, I would like to share with to some users.
-In this way we can test it massively, check it for any bug and make it **robust enough** to be seamlessly integrated 
-with Homeassistant.
-
-For now, the component has been integrated as a custom component into [HACS](https://custom-components.github.io/hacs/).
-
 ## Installation & configuration
 You can install this component in two ways: via HACS or manually.
 HACS is a nice community-maintained components manager, which allows you to install git-hub hosted components in a few clicks.
@@ -55,11 +46,13 @@ If you have already HACS installed on your HomeAssistant, it's better to go with
 On the other hand, if you don't have HACS installed or if you don't plan to install it, then you can use manual installation.
 
 ### Option A: Installing via HACS
-If you have HACS, well, it's a piece of cake! Just search for "Meross" (Full name is Meross Cloud IoT) in the default repository of HACS and it'll show up!
-Click on Install: when done, proceed with component setup.
+If you have HACS, well, it's piece of cake! 
+Just search for "Meross" (Full name is Meross Cloud IoT) in the default repository of HACS and it'll show up.
+Click on Install. When the installation completes, **you must restart homeassistant** in order to make it work.
+As soon as HomeAssistant is restarted, you can proceed with __component setup__.
 
 ### Option B: Classic installation (custom_component)
-1. Download the latest zip release archive from [here](https://github.com/albertogeniola/meross-homeassistant/releases/latest) (or clone the git master branch)
+1. Download the latest zip release archive from [here](https://github.com/albertogeniola/meross-homeassistant/releases/latest)
 1. Unzip/copy the meross_cloud directory within the `custom_components` directory of your homeassistant installation.
 The `custom_components` directory resides within your homeassistant configuration directory.
 Usually, the configuration directory is within your home (`~/.homeassistant/`).
@@ -79,12 +72,45 @@ After a correct installation, your configuration directory should look like the 
 
     **Note**: if the custom_components directory does not exist, you need to create it.
 
+After copy-pasting the meross_cloud directory into the custom_components folder, you need to restart HomeAssistant.
+As soon as HomeAssistant is restarted, you can proceed with __component setup__.
+
 ### Component setup    
 Once the component has been installed, you need to configure it in order to make it work.
-To do so, simply add a new "integration" and look for Meross among the proposed ones.
-The following animation shows how to do that.
+To do so, navigate to "Configuration -> Integrations -> Add Integration" and look for "Meross Cloud IoT".
+As soon as you add it, you'll be asked to configure it. 
+The following table summarizes the fields that the wizard will require you to fill in:
 
+|  Field Name                      | Example Value           | Description                                             | 
+|----------------------------------|-------------------------|---------------------------------------------------------|
+| HTTP Api Endpoint                | https://iot.meross.com  | Is the HTTP(s) API endpoint used by the Meross Manager. This might vary in accordance with your country | 
+| Email Address                    | johndoe@gmail.com       | Your Meross account username/email. If connecting to the official Meross cloud, use the same from the Meross App |
+| Password                         | R4nd0mS3cret            | Your Meross account password. If connecting to the official Meross cloud, use the same from the Meross App |
+| Skip MQTT certificate validation | True (Checked)          | Configures MQTT certificate validation. When unchecked it requires a valid certificate to be exposed from the Meross Server. If checked, it skips the MQTT certificate validation. If connecting to the official Meross cloud, you can uncheck this. When connecting to local-lan or custom MQTT brokers, you might want to check this. |
+
+The following animation shows an example of component configuration
 [![Installation via web UI](https://raw.githubusercontent.com/albertogeniola/meross-homeassistant/master/docs/source/images/components/meross_cloud/install-via-webui.gif)](https://raw.githubusercontent.com/albertogeniola/meross-homeassistant/master/docs/source/images/components/meross_cloud/install-via-webui.gif)
+
+### API rate limiting
+
+Starting from version 1.1.0, this component has introduced the possibility to configure MQTT messaging rate limits.
+You can configure such feature via component options configuration. 
+
+The current version of this component implements a classic [Token Bucket](https://it.wikipedia.org/wiki/Token_bucket) 
+algorithm. More specifically, every device is subjected to its own token-bucket algorithm, driven by 
+`Single device MQTT burst limit` and `Single device MQTT rate limit` parameters. 
+On top of that, there is a global MQTT rate limiter (still implemented via Token Bucket), driven by 
+`Global MQTT burst limit` and `Global MQTT rate limit` parameters.
+
+|  Field Name                      | Example Value   | Description                                             | 
+|----------------------------------|-----------------|---------------------------------------------------------|
+| Enable MQTT Rate limits          | True (Checked)  | When checked, enables MQTT rate limiting. If unchecked, rate limiting is disabled. |
+| Global MQTT burst limit          | 10              | Maximum number of global MQTT messages that can be sent in a short time burst |
+| Global MQTT rate limit           | 4               | Global MQTT messages/second rate to allow |
+| Single device MQTT burst limit   | 3               | MQTT burst limit for a single device |
+| Single device MQTT rate limit    | 2               | MQTT rate limit for a single device |
+| Single device max command queue length  | 5        | Maximum commands that can be queued (delayed) for a single device. MQTT commands exceeding the queue length will be dropped by the limiter |
+
 
 ## Features
 ### Massive support
