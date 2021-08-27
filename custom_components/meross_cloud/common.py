@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Dict
 
 from meross_iot.controller.device import BaseDevice
@@ -42,6 +43,9 @@ UNIT_PERCENTAGE = "%"
 ATTR_API_CALLS_PER_SECOND = "api_calls_per_second"
 ATTR_DELAYED_API_CALLS_PER_SECOND = "delayed_api_calls_per_second"
 ATTR_DROPPED_API_CALLS_PER_SECOND = "dropped_api_calls_per_second"
+
+
+HTTP_API_RE = re.compile("(http:\/\/|https:\/\/)?([^:]+)(:([0-9]+))?")
 
 
 def calculate_sensor_id(

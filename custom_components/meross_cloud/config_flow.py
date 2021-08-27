@@ -18,11 +18,11 @@ import re
 
 from .common import PLATFORM, CONF_STORED_CREDS, CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, \
     CONF_OPT_ENABLE_RATE_LIMITS, CONF_OPT_GLOBAL_RATE_LIMIT_MAX_TOKENS, CONF_OPT_GLOBAL_RATE_LIMIT_PER_SECOND, \
-    CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS, CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND, CONF_OPT_DEVICE_MAX_COMMAND_QUEUE
+    CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS, CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND, CONF_OPT_DEVICE_MAX_COMMAND_QUEUE, \
+    HTTP_API_RE
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
-HTTP_API_RE = re.compile("(http:\/\/|https:\/\/)?([^:]+)(:([0-9]+))?")
 
 
 class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
@@ -256,7 +256,8 @@ class MerossOptionsFlowHandler(config_entries.OptionsFlow):
                 title="",
                 data={k: v for k, v in user_input.items() if v not in (None, "")},
             )
-        
+
+        saved_options = {}
         if self.config_entry is not None:
             saved_options = self.config_entry.options
 

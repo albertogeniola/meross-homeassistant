@@ -47,7 +47,7 @@ from .common import (
     CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS,
     CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND,
     CONF_OPT_DEVICE_MAX_COMMAND_QUEUE,
-    CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION
+    CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, HTTP_API_RE
 )
 from .version import MEROSS_CLOUD_VERSION
 
@@ -59,8 +59,11 @@ CONFIG_SCHEMA = vol.Schema(
     {
         PLATFORM: vol.Schema(
             {
+                vol.Required(CONF_HTTP_ENDPOINT): cv.string,
                 vol.Required(CONF_USERNAME): cv.string,
                 vol.Required(CONF_PASSWORD): cv.string,
+                vol.Required(CONF_MQTT_SKIP_CERT_VALIDATION): cv.boolean,
+                vol.Optional(CONF_STORED_CREDS): cv.string,
             }
         )
     },
@@ -174,15 +177,23 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
 
     # Retrieve the stored credentials from config-flow
     http_api_endpoint = config_entry.data.get(CONF_HTTP_ENDPOINT)
+    _LOGGER.info("Loaded %s: %s", CONF_HTTP_ENDPOINT, http_api_endpoint)
+
     email = config_entry.data.get(CONF_USERNAME)
+    _LOGGER.info("Loaded %s: %s", CONF_USERNAME, http_api_endpoint)
+
     password = config_entry.data.get(CONF_PASSWORD)
+    _LOGGER.info("Loaded %s: %s", CONF_PASSWORD, "******")
+
     str_creds = config_entry.data.get(CONF_STORED_CREDS)
+    _LOGGER.info("Loaded %s: %s", CONF_STORED_CREDS, "******")
+
     mqtt_skip_cert_validation = config_entry.data.get(CONF_MQTT_SKIP_CERT_VALIDATION, True)
     _LOGGER.warning("Skip MQTT cert validation option set to: %s", mqtt_skip_cert_validation)
 
     # Make sure we have all the needed requirements
-    if http_api_endpoint is None:
-        raise ConfigEntryAuthFailed("Missing HTTP_API_ENDPOINT")
+    if http_api_endpoint is None or HTTP_API_RE.fullmatch(http_api_endpoint) is None:
+        raise ConfigEntryAuthFailed("Missing or wrong HTTP_API_ENDPOINT")
     if email is None:
         raise ConfigEntryAuthFailed("Missing USERNAME/EMAIL parameter from configuration")
     if password is None:
