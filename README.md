@@ -5,8 +5,13 @@
 A full-featured Homeassistant component to drive Meross devices. 
 This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
 
+### :exclamation: Attention: Update to v1.1.4 or newer version:exclamation: ###
+Dear users, Meross I recently received a notice from Meross asking to take down versions up to 1.1.4, as they believe there is some sort of bug causing high traffic volumes on their servers. For this reason, all versions from v1.0.7 up to 1.1.4 (excluded) have been temporarely withdrawn from GitHub and HACS. 
+In order to avoid service denial from Meross, you are urged to upgrade to version v1.1.4 or downgrade to v1.0.7 (which was the previously stable version). 
+
+Even though this might sound as an ultimatum from Meross, we are finally given the opportunity to collaborate with their security team in order to agree on some MQTT/HTTP rate limits and make sure this HA component works flawlessly. For this reason, I'd really appreciate if you could comply with that request: it would be easier for us to establish a collaborative partnership.
+
 ## :new: :rocket: Local-Only Addon under development :rocket:
-### :exclamation: Heads up: Update :exclamation: ###
 I had promised to the community that I would have focused my development efforts in the local-addon, and... so I am doing :)
 As already mentioned many times, the reason why it takes so much time is because everything done here is the result of hours 
 and hours of procotol inspection sessions, reverse engineering and [hacking](https://en.wikipedia.org/wiki/Hacker_culture). 
