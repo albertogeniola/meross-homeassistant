@@ -15,7 +15,7 @@ from meross_iot.model.enums import OnlineStatus, Namespace, ThermostatV3Mode
 from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (PLATFORM, MANAGER, log_exception, calculate_valve_id,
+from .common import (DOMAIN, MANAGER, log_exception, calculate_valve_id,
                      extract_subdevice_notification_data)
 
 # Conditional import for switch device
@@ -51,7 +51,7 @@ class ValveEntityWrapper(ClimateEntity):
 
     async def async_added_to_hass(self) -> None:
         self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
-        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].add(self.unique_id)
+        self.hass.data[DOMAIN]["ADDED_ENTITIES_IDS"].add(self.unique_id)
 
     async def _async_push_notification_received(self, namespace: Namespace, data: dict, device_internal_id: str):
         update_state = False
@@ -83,7 +83,7 @@ class ValveEntityWrapper(ClimateEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
-        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
+        self.hass.data[DOMAIN]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
 
     # endregion
 
@@ -99,7 +99,7 @@ class ValveEntityWrapper(ClimateEntity):
     @property
     def device_info(self):
         return {
-            'identifiers': {(PLATFORM, self._device.internal_id)},
+            'identifiers': {(DOMAIN, self._device.internal_id)},
             'name': self._device.name,
             'manufacturer': 'Meross',
             'model': self._device.type + " " + self._device.hardware_version,
@@ -230,7 +230,7 @@ async def _add_entities(hass: HomeAssistant, devices: Iterable[BaseDevice], asyn
     devs = filter(lambda d: isinstance(d, Mts100v3Valve), devices)
     for d in devs:
         w = ValveEntityWrapper(device=d)
-        if w.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
+        if w.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:
             new_entities.append(w)
         else:
             _LOGGER.info(f"Skipping device {w} as it was already added to registry once.")
@@ -238,7 +238,7 @@ async def _add_entities(hass: HomeAssistant, devices: Iterable[BaseDevice], asyn
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
+    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
     devices = manager.find_devices()
     await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
 

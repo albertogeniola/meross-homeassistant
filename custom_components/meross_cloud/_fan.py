@@ -1,39 +1,36 @@
 import logging
 from datetime import timedelta
-from typing import Any, Iterable, List
+from typing import Any, Optional, Iterable, List
 
-from homeassistant.components.cover import DEVICE_CLASS_GARAGE, SUPPORT_OPEN, SUPPORT_CLOSE
+from homeassistant.core import HomeAssistant
 from meross_iot.controller.device import BaseDevice
-from meross_iot.controller.mixins.garage import GarageOpenerMixin
+from meross_iot.controller.mixins.spray import SprayMixin
 from meross_iot.manager import MerossManager
-from meross_iot.model.enums import OnlineStatus, Namespace
+from meross_iot.model.enums import OnlineStatus, Namespace, SprayMode
 from meross_iot.model.exception import CommandTimeoutError
-from meross_iot.model.push.bind import BindPushNotification
 from meross_iot.model.push.generic import GenericPushNotification
 
-from .common import (PLATFORM, MANAGER, log_exception, calculate_cover_id)
-
-# Conditional Light import with backwards compatibility
-from homeassistant.components.cover import CoverEntity
-
+from .common import (DOMAIN, MANAGER, calculate_humidifier_id, log_exception)
+from homeassistant.components.fan import FanEntity, SUPPORT_PRESET_MODE
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class MerossCoverWrapper(GarageOpenerMixin, BaseDevice):
+class MerossHumidifierDevice(SprayMixin, BaseDevice):
     """
     Type hints helper
     """
     pass
 
 
-class CoverEntityWrapper(CoverEntity):
-    """Wrapper class to adapt the Meross bulbs into the Homeassistant platform"""
-    def __init__(self, device: MerossCoverWrapper, channel: int):
+class HumidifierEntityWrapper(FanEntity):
+    """Wrapper class to adapt the Meross humidifier into the Homeassistant platform"""
+
+    def __init__(self, device: MerossHumidifierDevice, channel: int):
         self._device = device
 
         # If the current device has more than 1 channel, we need to setup the device name and id accordingly
-        self._id = calculate_cover_id(device.internal_id, channel)
+        self._id = calculate_humidifier_id(device.internal_id, channel)
         channel_data = device.channels[channel]
         self._entity_name = "{} ({}) - {}".format(device.name, device.type, channel_data.name)
 
@@ -77,11 +74,12 @@ class CoverEntityWrapper(CoverEntity):
 
     async def async_added_to_hass(self) -> None:
         self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
-        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].add(self.unique_id)
+        self.hass.data[DOMAIN]["ADDED_ENTITIES_IDS"].add(self.unique_id)
 
     async def async_will_remove_from_hass(self) -> None:
         self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
-        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
+        self.hass.data[DOMAIN]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
+
     # endregion
 
     # region Device wrapper common properties
@@ -98,7 +96,7 @@ class CoverEntityWrapper(CoverEntity):
     @property
     def device_info(self):
         return {
-            'identifiers': {(PLATFORM, self._device.internal_id)},
+            'identifiers': {(DOMAIN, self._device.internal_id)},
             'name': self._device.name,
             'manufacturer': 'Meross',
             'model': self._device.type + " " + self._device.hardware_version,
@@ -117,60 +115,86 @@ class CoverEntityWrapper(CoverEntity):
     # endregion
 
     # region Platform-specific command methods
-    async def async_close_cover(self, **kwargs):
-        await self._device.async_close(channel=self._channel_id, skip_rate_limits=True)
+    async def async_turn_off(self, **kwargs) -> None:
+        await self._device.async_set_mode(mode=SprayMode.OFF, channel=self._channel_id, skip_rate_limits=True)
 
-    async def async_open_cover(self, **kwargs):
-        await self._device.async_open(channel=self._channel_id, skip_rate_limits=True)
+    async def async_turn_on(self, speed: Optional[str] = None, **kwargs: Any) -> None:
+        if speed is None:
+            mode = SprayMode.CONTINUOUS
+        else:
+            mode = SprayMode[speed]
+        await self._device.async_set_mode(mode=mode, channel=self._channel_id, skip_rate_limits=True)
 
-    def open_cover(self, **kwargs: Any) -> None:
-        self.hass.async_add_executor_job(self.async_open_cover, **kwargs)
+    async def async_set_speed(self, speed: str) -> None:
+        mode = SprayMode[speed]
+        await self._device.async_set_mode(mode=mode, channel=self._channel_id, skip_rate_limits=True)
 
-    def close_cover(self, **kwargs: Any) -> None:
-        self.hass.async_add_executor_job(self.async_close_cover, **kwargs)
+    def set_direction(self, direction: str) -> None:
+        # Not supported
+        pass
+
+    def set_speed(self, speed: str) -> None:
+        # Not implemented: use async method instead...
+        pass
+
+    def turn_on(self, speed: Optional[str] = None, **kwargs) -> None:
+        # Not implemented: use async method instead...
+        pass
+
+    def turn_off(self, **kwargs: Any) -> None:
+        # Not implemented: use async method instead...
+        pass
     # endregion
 
     # region Platform specific properties
     @property
-    def device_class(self):
-        """Return the class of this device, from component DEVICE_CLASSES."""
-        return DEVICE_CLASS_GARAGE
+    def supported_features(self) -> int:
+        return SUPPORT_PRESET_MODE
 
     @property
-    def supported_features(self):
-        """Flag supported features."""
-        return SUPPORT_OPEN | SUPPORT_CLOSE
+    def is_on(self) -> Optional[bool]:
+        mode = self._device.get_current_mode(channel=self._channel_id)
+        if mode is None:
+            return None
+        return mode != SprayMode.OFF
 
     @property
-    def is_closed(self):
-        open_status = self._device.get_is_open(channel=self._channel_id)
-        return not open_status
+    def percentage(self) -> Optional[int]:
+        mode = self._device.get_current_mode(channel=self._channel_id)
+        if mode == SprayMode.OFF:
+            return 0
+        elif mode == SprayMode.INTERMITTENT:
+            return 50
+        elif mode == SprayMode.CONTINUOUS:
+            return 100
+        else:
+            raise ValueError("Invalid SprayMode value.")
 
     @property
-    def is_closing(self):
-        # Not supported yet
-        return None
-    
+    def preset_mode(self) -> Optional[str]:
+        mode = self._device.get_current_mode(channel=self._channel_id)
+        if mode is not None:
+            return mode.name
+        else:
+            return None
+
     @property
-    def is_opening(self):
-        # Not supported yet
-        return None
+    def preset_modes(self) -> List[str]:
+        return [x.name for x in SprayMode]
 
     # endregion
 
 
-# ----------------------------------------------
-# PLATFORM METHODS
-# ----------------------------------------------
-async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities):
+async def _add_entities(hass: HomeAssistant, devices: Iterable[BaseDevice], async_add_entities):
     new_entities = []
 
-    # Identify all the devices that expose the Light capability
-    devs = filter(lambda d: isinstance(d, GarageOpenerMixin), devices)
+    # Identify all the devices that expose the Spray capability
+    devs = filter(lambda d: isinstance(d, SprayMixin), devices)
+
     for d in devs:
         for channel_index, channel in enumerate(d.channels):
-            w = CoverEntityWrapper(device=d, channel=channel_index)
-            if w.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
+            w = HumidifierEntityWrapper(device=d, channel=channel_index)
+            if w.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:
                 new_entities.append(w)
             else:
                 _LOGGER.info(f"Skipping device {w} as it was already added to registry once.")
@@ -179,15 +203,21 @@ async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     # When loading the platform, immediately add currently available
-    # bulbs.
-    manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
+    # switches.
+    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
     devices = manager.find_devices()
     await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)
 
     # Register a listener for the Bind push notification so that we can add new entities at runtime
     async def platform_async_add_entities(push_notification: GenericPushNotification, target_devices: List[BaseDevice]):
-        if isinstance(push_notification, BindPushNotification):
-            devs = manager.find_devices(device_uuids=(push_notification.hwinfo.uuid,))
+        if push_notification.namespace == Namespace.CONTROL_BIND \
+                or push_notification.namespace == Namespace.SYSTEM_ONLINE \
+                or push_notification.namespace == Namespace.HUB_ONLINE:
+
+            # TODO: Discovery needed only when device becomes online?
+            await manager.async_device_discovery(push_notification.namespace == Namespace.HUB_ONLINE,
+                                                 meross_device_uuid=push_notification.originating_device_uuid)
+            devs = manager.find_devices(device_uuids=(push_notification.originating_device_uuid,))
             await _add_entities(hass=hass, devices=devs, async_add_entities=async_add_entities)
 
     # Register a listener for new bound devices

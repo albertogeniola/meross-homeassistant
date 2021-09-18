@@ -3,17 +3,18 @@ import re
 from typing import Dict
 
 from meross_iot.controller.device import BaseDevice
-from custom_components.meross_cloud.version import MEROSS_CLOUD_VERSION
+from custom_components.meross_cloud.version import MEROSS_IOT_VERSION
 
 _LOGGER = logging.getLogger(__name__)
 
 # Constants
-PLATFORM = "meross_cloud"
+DOMAIN = "meross_cloud"
 ATTR_CONFIG = "config"
 MANAGER = "manager"
+DEVICE_LIST_COORDINATOR = "device_list_coordinator"
 LIMITER = "limiter"
 CLOUD_HANDLER = "cloud_handler"
-MEROSS_MANAGER = "%s.%s" % (PLATFORM, MANAGER)
+MEROSS_MANAGER = "%s.%s" % (DOMAIN, MANAGER)
 SENSORS = "sensors"
 HA_SWITCH = "switch"
 HA_LIGHT = "light"
@@ -21,7 +22,8 @@ HA_SENSOR = "sensor"
 HA_COVER = "cover"
 HA_CLIMATE = "climate"
 HA_FAN = "fan"
-MEROSS_COMPONENTS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
+#MEROSS_PLATFORMS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
+MEROSS_PLATFORMS = (HA_SWITCH,)
 CONNECTION_TIMEOUT_THRESHOLD = 5
 
 CONF_STORED_CREDS = "stored_credentials"
@@ -38,6 +40,7 @@ CONF_OPT_DEVICE_MAX_COMMAND_QUEUE = "device_max_command_queue"
 # Constants
 HA_SENSOR_POLL_INTERVAL_SECONDS = 15             # HA sensor polling interval
 SENSOR_SAMPLE_CACHE_INTERVAL_SECONDS = 30       # Sensors data caching interval in seconds
+HTTP_UPDATE_INTERVAL = 30
 UNIT_PERCENTAGE = "%"
 
 ATTR_API_CALLS_PER_SECOND = "api_calls_per_second"
@@ -48,33 +51,10 @@ ATTR_DROPPED_API_CALLS_PER_SECOND = "dropped_api_calls_per_second"
 HTTP_API_RE = re.compile("(http:\/\/|https:\/\/)?([^:]+)(:([0-9]+))?")
 
 
-def calculate_sensor_id(
-        uuid: str,
-        type: str,
-        measurement_unit: str,
-        channel: int = 0,
-):
-    return "%s:%s:%s:%s:%d" % (HA_SENSOR, uuid, type, measurement_unit, channel)
-
-
-def calculate_cover_id(uuid: str, channel: int):
-    return "%s:%s:%d" % (HA_COVER, uuid, channel)
-
-
-def calculate_switch_id(uuid: str, channel: int):
-    return "%s:%s:%d" % (HA_SWITCH, uuid, channel)
-
-
-def calculate_valve_id(uuid: str):
-    return "%s:%s" % (HA_CLIMATE, uuid)
-
-
-def calculate_light_id(uuid: str, channel: int):
-    return "%s:%s:%d" % (HA_LIGHT, uuid, channel)
-
-
-def calculate_humidifier_id(uuid: str, channel: int):
-    return "%s:%s:%d" % (HA_FAN, uuid, channel)
+def calculate_id(platform:str, uuid: str, channel: int, *extras) -> str:
+    base = "%s:%s:%d" % (platform, uuid, channel)
+    extrastr = "%s" * len(extras) % extras
+    return base+extrastr
 
 
 def dismiss_notification(hass, notification_id):
@@ -82,7 +62,7 @@ def dismiss_notification(hass, notification_id):
         hass.services.async_call(
             domain="persistent_notification",
             service="dismiss",
-            service_data={"notification_id": "%s.%s" % (PLATFORM, notification_id)},
+            service_data={"notification_id": "%s.%s" % (DOMAIN, notification_id)},
         )
     )
 
@@ -95,7 +75,7 @@ def notify_error(hass, notification_id, title, message):
             service_data={
                 "title": title,
                 "message": message,
-                "notification_id": "%s.%s" % (PLATFORM, notification_id),
+                "notification_id": "%s.%s" % (DOMAIN, notification_id),
             },
         )
     )
@@ -123,7 +103,7 @@ def log_exception(
     formatted_message = (
         f"Error occurred.\n"
         f"-------------------------------------\n"
-        f"Component version: {MEROSS_CLOUD_VERSION}\n"
+        f"Component version: {MEROSS_IOT_VERSION}\n"
         f"Device info: \n"
         f"{device_info}\n"
         f'Error Message: "{message}"'

@@ -5,10 +5,12 @@
   "issue_tracker": "https://github.com/albertogeniola/meross-homeassistant",
   "dependencies": ["persistent_notification"],
   "codeowners": ["@albertogeniola"],
-  "requirements": ["meross-iot==0.4.2.2"],
+  "requirements": [
+    "git+https://github.com/albertogeniola/MerossIot.git@development-0.4.X.X#meross_iot"
+  ],
   "config_flow": true,
   "quality_scale": "platinum",
   "iot_class": "cloud_push",
-  "version": "1.1.5rc1",
+  "version": "1.2.0rc0",
   "zeroconf": ["_meross-api._tcp.local."]
 }

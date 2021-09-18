@@ -20,8 +20,8 @@ from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.push.generic import GenericPushNotification
 
-from . import MEROSS_CLOUD_VERSION
-from .common import (PLATFORM, MANAGER, log_exception, HA_SENSOR, calculate_sensor_id,
+from . import MEROSS_IOT_VERSION
+from .common import (DOMAIN, MANAGER, log_exception, HA_SENSOR, calculate_sensor_id,
                      HA_SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property,
                      extract_subdevice_notification_data, ATTR_API_CALLS_PER_SECOND, ATTR_DELAYED_API_CALLS_PER_SECOND,
                      ATTR_DROPPED_API_CALLS_PER_SECOND, SENSOR_SAMPLE_CACHE_INTERVAL_SECONDS)
@@ -42,11 +42,11 @@ class ManagerMonitoringSensor(SensorEntity):
         }
 
     async def async_added_to_hass(self) -> None:
-        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].add(self.unique_id)
+        self.hass.data[DOMAIN]["ADDED_ENTITIES_IDS"].add(self.unique_id)
 
     async def async_will_remove_from_hass(self) -> None:
-        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
-        del self.hass.data[PLATFORM][HA_SENSOR][self.unique_id]
+        self.hass.data[DOMAIN]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
+        del self.hass.data[DOMAIN][HA_SENSOR][self.unique_id]
 
     @property
     def unique_id(self) -> str:
@@ -59,11 +59,11 @@ class ManagerMonitoringSensor(SensorEntity):
     @property
     def device_info(self):
         return {
-            'identifiers': {(PLATFORM, self.unique_id)},
+            'identifiers': {(DOMAIN, self.unique_id)},
             'name': self.name,
             'manufacturer': 'Meross',
             'model': "Software Sensor",
-            'sw_version': MEROSS_CLOUD_VERSION
+            'sw_version': MEROSS_IOT_VERSION
         }
 
     @property
@@ -184,12 +184,12 @@ class GenericSensorWrapper(SensorEntity):
 
     async def async_added_to_hass(self) -> None:
         self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
-        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].add(self.unique_id)
+        self.hass.data[DOMAIN]["ADDED_ENTITIES_IDS"].add(self.unique_id)
 
     async def async_will_remove_from_hass(self) -> None:
         self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
-        self.hass.data[PLATFORM]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
-        del self.hass.data[PLATFORM][HA_SENSOR][self.unique_id]
+        self.hass.data[DOMAIN]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
+        del self.hass.data[DOMAIN][HA_SENSOR][self.unique_id]
 
     # endregion
 
@@ -205,7 +205,7 @@ class GenericSensorWrapper(SensorEntity):
     @property
     def device_info(self):
         return {
-            'identifiers': {(PLATFORM, self._device.internal_id)},
+            'identifiers': {(DOMAIN, self._device.internal_id)},
             'name': self._device.name,
             'manufacturer': 'Meross',
             'model': self._device.type + " " + self._device.hardware_version,
@@ -417,8 +417,8 @@ class VoltageSensorWrapper(GenericSensorWrapper):
 
 def _add_and_register_sensor(hass, clazz: type, args: dict, entities: list):
     d = clazz(**args)
-    if d.unique_id not in hass.data[PLATFORM]["ADDED_ENTITIES_IDS"]:
-        hass.data[PLATFORM][HA_SENSOR][d.unique_id] = d
+    if d.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:
+        hass.data[DOMAIN][HA_SENSOR][d.unique_id] = d
         entities.append(d)
     else:
         _LOGGER.warning(f"Skipping device {d} as it was already added to registry once.")
@@ -461,14 +461,14 @@ async def _add_entities(hass, devices: Iterable[BaseDevice], async_add_entities)
                                      entities=new_entities)
 
     # Add Meross API rate limiter sensor
-    manager = hass.data[PLATFORM][MANAGER]
+    manager = hass.data[DOMAIN][MANAGER]
     _add_and_register_sensor(hass, clazz=ManagerMonitoringSensor, args={"manager": manager}, entities=new_entities)
 
     async_add_entities(new_entities, True)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    manager = hass.data[PLATFORM][MANAGER]  # type:MerossManager
+    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
 
     devices = manager.find_devices()
     await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities)

@@ -16,7 +16,7 @@ from meross_iot.model.http.exception import UnauthorizedException, BadLoginExcep
 from requests.exceptions import ConnectTimeout
 import re
 
-from .common import PLATFORM, CONF_STORED_CREDS, CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, \
+from .common import DOMAIN, CONF_STORED_CREDS, CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, \
     CONF_OPT_ENABLE_RATE_LIMITS, CONF_OPT_GLOBAL_RATE_LIMIT_MAX_TOKENS, CONF_OPT_GLOBAL_RATE_LIMIT_PER_SECOND, \
     CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS, CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND, CONF_OPT_DEVICE_MAX_COMMAND_QUEUE, \
     HTTP_API_RE
@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
 
 
-class MerossFlowHandler(config_entries.ConfigFlow, domain=PLATFORM):
+class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle Meross config flow."""
 
     VERSION = 1

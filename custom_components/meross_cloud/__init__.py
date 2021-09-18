@@ -1,31 +1,39 @@
 """Meross devices platform loader"""
 import logging
 from datetime import datetime, timedelta
-from typing import List, Tuple, Mapping, Any
+from typing import List, Tuple, Mapping, Any, Dict, Optional
 
+import async_timeout
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import callback
 from homeassistant.exceptions import ConfigEntryNotReady, ConfigEntryAuthFailed
+from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import HomeAssistantType
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from meross_iot.http_api import MerossHttpClient, ErrorCodes
 from meross_iot.manager import MerossManager
 from meross_iot.model.credentials import MerossCloudCreds
+from meross_iot.model.enums import OnlineStatus, Namespace
+from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.http.device import HttpDeviceInfo
+from meross_iot.controller.device import BaseDevice
 from meross_iot.model.http.exception import (
     TokenExpiredException,
     TooManyTokensException,
     UnauthorizedException,
-    HttpApiError,
+    HttpApiError, BadLoginException,
 )
+from meross_iot.model.push.generic import GenericPushNotification
 from meross_iot.utilities.limiter import RateLimitChecker
 
 from .common import (
     ATTR_CONFIG,
     CLOUD_HANDLER,
-    PLATFORM,
+    DOMAIN,
     HA_CLIMATE,
     HA_COVER,
     HA_FAN,
@@ -33,7 +41,7 @@ from .common import (
     HA_SENSOR,
     HA_SWITCH,
     MANAGER,
-    MEROSS_COMPONENTS,
+    MEROSS_PLATFORMS,
     SENSORS,
     dismiss_notification,
     notify_error,
@@ -47,9 +55,10 @@ from .common import (
     CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS,
     CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND,
     CONF_OPT_DEVICE_MAX_COMMAND_QUEUE,
-    CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, HTTP_API_RE
+    CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, HTTP_API_RE,
+    HTTP_UPDATE_INTERVAL, DEVICE_LIST_COORDINATOR, calculate_id
 )
-from .version import MEROSS_CLOUD_VERSION
+from .version import MEROSS_IOT_VERSION
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -57,7 +66,7 @@ _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = vol.Schema(
     {
-        PLATFORM: vol.Schema(
+        DOMAIN: vol.Schema(
             {
                 vol.Required(CONF_HTTP_ENDPOINT): cv.string,
                 vol.Required(CONF_USERNAME): cv.string,
@@ -81,7 +90,7 @@ def print_startup_message(http_devices: List[HttpDeviceInfo]):
         f"===============================\n"
         f"Meross Cloud Custom component\n"
         f"Developed by Alberto Geniola\n"
-        f"Low level library version: {MEROSS_CLOUD_VERSION}\n"
+        f"Low level library version: {MEROSS_IOT_VERSION}\n"
         f"-------------------------------\n"
         f"This custom component is under development and not yet ready for production use.\n"
         f"In case of errors/misbehave, please report it here: \n"
@@ -94,6 +103,190 @@ def print_startup_message(http_devices: List[HttpDeviceInfo]):
         f"\n==============================="
     )
     _LOGGER.warning(start_message)
+
+
+class MerossCoordinator(DataUpdateCoordinator):
+    def __init__(self,
+                 hass: HomeAssistantType,
+                 config_entry: ConfigEntry,
+                 http_api_endpoint: str,
+                 email: str,
+                 password: str,
+                 cached_creds: Optional[MerossCloudCreds],
+                 mqtt_skip_cert_validation: bool,
+                 update_interval: timedelta):
+
+        self._entry = config_entry
+        self._http_api_endpoint = http_api_endpoint
+        self._email = email
+        self._password = password
+        self._cached_creds = cached_creds
+        self._skip_cert_validation = mqtt_skip_cert_validation
+        self._setup_done = False
+
+        # Objects not to be initialized here
+        self._client = None
+        self._manager = None
+
+        super().__init__(hass=hass, logger=_LOGGER, name="meross_http_coordinator", update_interval=update_interval)
+
+    async def _async_update_data(self):
+        try:
+            async with async_timeout.timeout(10):
+                # Fetch devices and compose a quick-access dictionary
+                devices = await self._client.async_list_devices()
+                return {device.uuid: device for device in devices}
+
+        except (BadLoginException, TokenExpiredException, UnauthorizedException) as err:
+            # Raising ConfigEntryAuthFailed will cancel future updates
+            # and start a config flow with SOURCE_REAUTH (async_step_reauth)
+            raise ConfigEntryAuthFailed from err
+        except HttpApiError as err:
+            raise UpdateFailed(f"Error communicating with API: {err}")
+
+    async def initial_setup(self):
+        if self._setup_done:
+            raise ValueError("This coordinator was already set up")
+
+        # Test the stored credentials if any. In case the credentials are invalid
+        # try to retrieve a new token
+        try:
+            self._client, http_devices, creds_renewed = await get_or_renew_creds(
+                http_api_url=self._http_api_endpoint,
+                email=self._email,
+                password=self._password,
+                stored_creds=self._cached_creds,
+            )
+        except (BadLoginException, TokenExpiredException, UnauthorizedException) as err:
+            raise ConfigEntryAuthFailed from err
+        except HttpApiError as err:
+            raise ConfigEntryNotReady(f"Error communicating with API: {err}") from err
+
+        # If a new token was issued, store it into the current entry
+        if creds_renewed:
+            # Override the new credentials and store them into HA entry
+            self._cached_creds = self._client.cloud_credentials
+            self.hass.config_entries.async_update_entry(
+                entry=self._entry,
+                data={
+                    CONF_USERNAME: self._email,
+                    CONF_PASSWORD: self._password,
+                    CONF_STORED_CREDS: {
+                        "token": self._cached_creds.token,
+                        "key": self._cached_creds.key,
+                        "user_id": self._cached_creds.user_id,
+                        "user_email": self._cached_creds.user_email,
+                        "issued_on": self._cached_creds.issued_on.isoformat(),
+                    },
+                },
+            )
+
+        # Now that we are logged in at HTTP api level, instantiate the manager.
+        self._manager = MerossManager(
+            http_client=self._client,
+            auto_reconnect=True,
+            mqtt_skip_cert_validation=self._skip_cert_validation,
+        )
+
+        # Since we already have fetched for the DeviceList, publish it right away
+        self.async_set_updated_data({device.uuid: device for device in http_devices})
+
+        # Configure the manager with user options
+        setup_manager_options(manager=self._manager, hass=self.hass, options=self._entry.options)
+
+        # Print startup message, start the manager and issue a first discovery
+        print_startup_message(http_devices=self.data.values())
+        _LOGGER.info("Starting meross manager")
+        await self._manager.async_init()
+        _LOGGER.info("Discovering Meross devices...")
+        await self._manager.async_device_discovery()
+
+        # If no exception is thrown so far, it means setup was successful
+        self._setup_done = True
+
+    @property
+    def manager(self) -> MerossManager:
+        return self._manager
+
+    @property
+    def client(self) -> MerossHttpClient:
+        return self._client
+
+
+class MerossDevice(Entity):
+    def __init__(self,
+                 device: BaseDevice,
+                 channel: int,
+                 device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]],
+                 platform: str):
+        self._coordinator = device_list_coordinator
+        self._device = device
+        self._channel_id = channel
+        self._id = calculate_id(platform=platform, uuid=device.internal_id, channel=channel)
+        self._cached_http_data = device_list_coordinator.data.get(self._device.uuid)
+
+        if hasattr(device, "channels"):
+            channel_data = device.channels[channel]
+            self._entity_name = "{} ({}) - {}".format(device.name, device.type, channel_data.name)
+        else:
+            self._entity_name = "{} ({})".format(device.name, device.type)
+
+    async def async_update(self):
+        if self.online:
+            try:
+                await self._device.async_update()
+            except CommandTimeoutError as e:
+                log_exception(logger=_LOGGER, device=self._device)
+
+    def _http_data_changed(self) -> None:
+        # We just store the latest HTTPInfo regarding this specific device locally, for faster access
+        latest_http_data = self._coordinator.data.get(self._device.uuid)
+        if self._cached_http_data is None or latest_http_data.__dict__ != self._cached_http_data.__dict__: # hack for depth comparison
+            # If HTTP data has changed, we need to schedule a forced refresh
+            self._cached_http_data = latest_http_data
+            self.async_schedule_update_ha_state(force_refresh=True)
+
+    @property
+    def online(self) -> bool:
+        if self._cached_http_data is None:
+            return False
+        else:
+            return self._cached_http_data.online_status==OnlineStatus.ONLINE
+
+    @property
+    def unique_id(self) -> str:
+        return self._id
+
+    @property
+    def name(self) -> str:
+        return self._entity_name
+
+    @property
+    def device_info(self):
+        return {
+            'identifiers': {(DOMAIN, self._device.internal_id)},
+            'name': self._device.name,
+            'manufacturer': 'Meross',
+            'model': self._device.type + " " + self._device.hardware_version,
+            'sw_version': self._device.firmware_version
+        }
+
+    @property
+    def available(self) -> bool:
+        return self.online
+
+    async def _async_push_notification_received(self, namespace: Namespace, data: dict, device_internal_id: str):
+        pass
+
+    async def async_added_to_hass(self) -> None:
+        self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
+        self._coordinator.async_add_listener(self._http_data_changed)
+        self.hass.data[DOMAIN]["ADDED_ENTITIES_IDS"].add(self.unique_id)
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
+        self._coordinator.async_remove_listener(self._http_data_changed)
+        self.hass.data[DOMAIN]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
 
 
 async def get_or_renew_creds(
@@ -137,7 +330,7 @@ async def update_listener(hass: HomeAssistantType, config_entry: ConfigEntry):
     _LOGGER.warning("Reloading configuration")
 
     # Retrieve the meross manager, if in place
-    manager : MerossManager = hass.data.get(PLATFORM,{}).get(MANAGER, None)
+    manager : MerossManager = hass.data.get(DOMAIN, {}).get(MANAGER, None)
     setup_manager_options(manager=manager, hass=hass, options=config_entry.options)
 
 
@@ -213,62 +406,53 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
             f"Found application token issued on {creds.issued_on} to {creds.user_email}. Using it."
         )
 
+    # Initialize the HASS structure
+    hass.data[DOMAIN] = {}
+    hass.data[DOMAIN]["ADDED_ENTITIES_IDS"] = set()
+    # Keep a registry of added sensors
+    # TODO: Do the same for other platforms?
+    # TODO: Is this still needed?
+    hass.data[DOMAIN][HA_SENSOR] = dict()
+
     try:
-        client, http_devices, creds_renewed = await get_or_renew_creds(
-            http_api_url=http_api_endpoint,
+        # Setup the coordinator
+        meross_coordinator = MerossCoordinator(
+            hass=hass,
+            config_entry=config_entry,
+            http_api_endpoint=http_api_endpoint,
             email=email,
             password=password,
-            stored_creds=creds,
-        )
-
-        if creds_renewed:
-            creds = client.cloud_credentials
-            hass.config_entries.async_update_entry(
-                entry=config_entry,
-                data={
-                    CONF_USERNAME: email,
-                    CONF_PASSWORD: password,
-                    CONF_STORED_CREDS: {
-                        "token": creds.token,
-                        "key": creds.key,
-                        "user_id": creds.user_id,
-                        "user_email": creds.user_email,
-                        "issued_on": creds.issued_on.isoformat(),
-                    },
-                },
-            )
-
-        manager = MerossManager(
-            http_client=client,
-            auto_reconnect=True,
+            cached_creds=creds,
             mqtt_skip_cert_validation=mqtt_skip_cert_validation,
+            update_interval=timedelta(seconds=HTTP_UPDATE_INTERVAL),
         )
 
-        hass.data[PLATFORM] = {}
-        hass.data[PLATFORM][MANAGER] = manager
-        hass.data[PLATFORM]["ADDED_ENTITIES_IDS"] = set()
-        # Keep a registry of added sensors
-        # TODO: Do the same for other platforms?
-        hass.data[PLATFORM][HA_SENSOR] = dict()
-        
-        # Configure the manager with user options
-        setup_manager_options(manager=manager, hass=hass, options=config_entry.options)
+        # Initiate the coordinator. This method will also make sure to login to the API,
+        # instantiates the manager, starts it and issues a first discovery.
+        await meross_coordinator.initial_setup()
+        manager = meross_coordinator.manager
+        hass.data[DOMAIN][MANAGER] = manager
+        hass.data[DOMAIN][DEVICE_LIST_COORDINATOR] = meross_coordinator
 
-        print_startup_message(http_devices=http_devices)
-        _LOGGER.info("Starting meross manager")
-        await manager.async_init()
-
-        # Perform the first discovery
-        _LOGGER.info("Discovering Meross devices...")
-        await manager.async_device_discovery()
-
-        # Start the configuration of other entity classes
-        for platform in MEROSS_COMPONENTS:
+        # Once the manager is ok and the first discovery was issued, we can proceed with platforms setup.
+        for platform in MEROSS_PLATFORMS:
             hass.async_create_task(
                 hass.config_entries.async_forward_entry_setup(config_entry, platform)
             )
 
-        # Register and handler to update the configuration
+        def _http_api_polled(*args, **kwargs):
+            # Whenever a new HTTP device is seen, we issue a discovery
+            discovered_devices = meross_coordinator.data.keys()
+            known_devices = manager.find_devices(device_uuids=discovered_devices)
+            if len(known_devices) < len(discovered_devices):
+                _LOGGER.warning("The HTTP API has found new devices that were unknown to us. Triggering discovery.")
+                manager.async_device_discovery(update_subdevice_status=True, cached_http_device_list=discovered_devices.values())
+
+        # Register a handler for HTTP events so that we can check for new devices and trigger
+        # a discovery when needed
+        meross_coordinator.async_add_listener(_http_api_polled)
+
+        # Register a handler to update the configuration
         config_entry.async_on_unload(config_entry.add_update_listener(update_listener))
 
         return True
@@ -316,24 +500,25 @@ async def async_unload_entry(hass, entry):
     _LOGGER.info("Removing Meross Cloud integration.")
     _LOGGER.info("Cleaning up resources...")
 
-    for platform in MEROSS_COMPONENTS:
+    for platform in MEROSS_PLATFORMS:
         _LOGGER.info(f"Cleaning up platform {platform}")
         await hass.config_entries.async_forward_entry_unload(entry, platform)
 
-    # Invalidate the token
-    manager = hass.data[PLATFORM][MANAGER]
     _LOGGER.info("Stopping manager...")
+    manager = hass.data[DOMAIN][MANAGER]
     # TODO: Invalidate the token?
     manager.close()
 
     _LOGGER.info("Cleaning up memory...")
-    for plat in MEROSS_COMPONENTS:
-        if plat in hass.data[PLATFORM]:
-            hass.data[PLATFORM][plat].clear()
-            del hass.data[PLATFORM][plat]
-    del hass.data[PLATFORM][MANAGER]
-    hass.data[PLATFORM].clear()
-    del hass.data[PLATFORM]
+    for plat in MEROSS_PLATFORMS:
+        if plat in hass.data[DOMAIN]:
+            hass.data[DOMAIN][plat].clear()
+            del hass.data[DOMAIN][plat]
+    del hass.data[DOMAIN][MANAGER]
+    hass.data[DOMAIN].clear()
+    del hass.data[DOMAIN]
+
+    # TODO: unregister the http handler device_list_coordinator
 
     _LOGGER.info("Meross cloud component removal done.")
     return True
@@ -346,7 +531,7 @@ async def async_remove_entry(hass, entry) -> None:
 
 async def async_setup(hass, config):
     """
-    This method gets called if HomeAssistant has a valid me ross_cloud: configuration entry within
+    This method gets called if HomeAssistant has a valid meross_cloud: configuration entry within
     configurations.yaml.
 
     Thus, in this method we simply trigger the creation of a config entry.
@@ -354,14 +539,14 @@ async def async_setup(hass, config):
     :return:
     """
 
-    conf = config.get(PLATFORM)
-    hass.data[PLATFORM] = {}
-    hass.data[PLATFORM][ATTR_CONFIG] = conf
+    conf = config.get(DOMAIN)
+    hass.data[DOMAIN] = {}
+    hass.data[DOMAIN][ATTR_CONFIG] = conf
 
     if conf is not None:
         hass.async_create_task(
             hass.config_entries.flow.async_init(
-                PLATFORM, context={"source": config_entries.SOURCE_IMPORT}, data=conf
+                DOMAIN, context={"source": config_entries.SOURCE_IMPORT}, data=conf
             )
         )
 
