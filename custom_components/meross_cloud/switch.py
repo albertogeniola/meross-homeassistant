@@ -38,6 +38,7 @@ class MerossSwitchDevice(ToggleXMixin, BaseDevice):
 
 class SwitchEntityWrapper(MerossDevice, SwitchEntity):
     """Wrapper class to adapt the Meross switches into the Homeassistant platform"""
+    _device: MerossSwitchDevice
 
     def __init__(self,
                  channel: int,
@@ -72,15 +73,15 @@ class SwitchEntityWrapper(MerossDevice, SwitchEntity):
 
     @property
     def is_on(self) -> bool:
-        dev = self._device # type:MerossSwitchDevice
+        dev = self._device
         return dev.is_on(channel=self._channel_id)
 
     async def async_turn_off(self, **kwargs) -> None:
-        dev = self._device  # type:MerossSwitchDevice
+        dev = self._device
         await dev.async_turn_off(channel=self._channel_id, skip_rate_limits=True)
 
     async def async_turn_on(self, **kwargs) -> None:
-        dev = self._device  # type:MerossSwitchDevice
+        dev = self._device
         await dev.async_turn_on(channel=self._channel_id, skip_rate_limits=True)
 
     async def _async_push_notification_received(self, namespace: Namespace, data: dict, device_internal_id: str):

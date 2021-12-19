@@ -195,25 +195,29 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
         # TODO: Test MQTT connection?
+        data = {
+            CONF_USERNAME: username,
+            CONF_PASSWORD: password,
+            CONF_HTTP_ENDPOINT: http_api_endpoint,
+            CONF_STORED_CREDS: {
+                "token": creds.token,
+                "key": creds.key,
+                "user_id": creds.user_id,
+                "user_email": creds.user_email,
+                "issued_on": creds.issued_on.isoformat(),
+            },
+            CONF_MQTT_SKIP_CERT_VALIDATION: skip_cert_validation
+        }
+        entry = await self.async_set_unique_id(http_api_endpoint)
 
-        await self.async_set_unique_id(http_api_endpoint)
-        self._abort_if_unique_id_configured()
+        # In case we are re-authing, update the existing entry and abort
+        self._abort_if_unique_id_configured(updates=data, reload_on_update=True) # No more needed
+        await self.hass.config_entries.async_reload(entry.entry_id)
 
+        # Otherwise create a new entry from scratch
         return self.async_create_entry(
             title=user_input[CONF_HTTP_ENDPOINT],
-            data={
-                CONF_USERNAME: username,
-                CONF_PASSWORD: password,
-                CONF_HTTP_ENDPOINT: http_api_endpoint,
-                CONF_STORED_CREDS: {
-                    "token": creds.token,
-                    "key": creds.key,
-                    "user_id": creds.user_id,
-                    "user_email": creds.user_email,
-                    "issued_on": creds.issued_on.isoformat(),
-                },
-                CONF_MQTT_SKIP_CERT_VALIDATION: skip_cert_validation
-            },
+            data=data
         )
 
     @staticmethod

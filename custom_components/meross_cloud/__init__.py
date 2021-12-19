@@ -128,9 +128,9 @@ class MerossCoordinator(DataUpdateCoordinator):
         self._client = None
         self._manager = None
 
-        super().__init__(hass=hass, logger=_LOGGER, name="meross_http_coordinator", update_interval=update_interval)
+        super().__init__(hass=hass, logger=_LOGGER, name="meross_http_coordinator", update_interval=update_interval, update_method=self._async_fetch_http_data)
 
-    async def _async_update_data(self):
+    async def _async_fetch_http_data(self):
         try:
             async with async_timeout.timeout(10):
                 # Fetch devices and compose a quick-access dictionary
@@ -273,7 +273,7 @@ class MerossDevice(Entity):
 
     @property
     def available(self) -> bool:
-        return self.online
+        return self._coordinator.last_update_success and self.online
 
     async def _async_push_notification_received(self, namespace: Namespace, data: dict, device_internal_id: str):
         pass
