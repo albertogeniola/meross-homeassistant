@@ -210,15 +210,17 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         }
         entry = await self.async_set_unique_id(http_api_endpoint)
 
-        # In case we are re-authing, update the existing entry and abort
-        self._abort_if_unique_id_configured(updates=data, reload_on_update=True) # No more needed
-        await self.hass.config_entries.async_reload(entry.entry_id)
+        # If this is a re-auth for an existing entry, just update the entry configuration.
+        if entry is not None:
+            self._abort_if_unique_id_configured(updates=data, reload_on_update=True)  # No more needed
+            await self.hass.config_entries.async_reload(entry.entry_id)
 
         # Otherwise create a new entry from scratch
-        return self.async_create_entry(
-            title=user_input[CONF_HTTP_ENDPOINT],
-            data=data
-        )
+        else:
+            return self.async_create_entry(
+                title=user_input[CONF_HTTP_ENDPOINT],
+                data=data
+            )
 
     @staticmethod
     @callback
