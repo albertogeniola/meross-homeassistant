@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Optional, Iterable, Dict
+from typing import Optional, Dict
 
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.consumption import ConsumptionXMixin
@@ -14,7 +14,6 @@ from meross_iot.model.http.device import HttpDeviceInfo
 
 # Conditional import for switch device
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
@@ -38,7 +37,6 @@ class SwitchEntityWrapper(MerossDevice, SwitchEntity):
                  channel: int,
                  device: MerossSwitchDevice,
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]]):
-
         # If the current device has more than 1 channel, we need to setup the device name and id accordingly
         super().__init__(
             device=device,
@@ -62,10 +60,6 @@ class SwitchEntityWrapper(MerossDevice, SwitchEntity):
                 self._daily_consumption = await self._device.async_get_daily_power_consumption(channel=self._channel_id)
 
     @property
-    def should_poll(self) -> bool:
-        return False
-
-    @property
     def is_on(self) -> bool:
         dev = self._device
         return dev.is_on(channel=self._channel_id)
@@ -77,32 +71,6 @@ class SwitchEntityWrapper(MerossDevice, SwitchEntity):
     async def async_turn_on(self, **kwargs) -> None:
         dev = self._device
         await dev.async_turn_on(channel=self._channel_id, skip_rate_limits=True)
-
-    async def _async_push_notification_received(self, namespace: Namespace, data: dict, device_internal_id: str):
-        update_state = False
-        full_update = False
-
-        if namespace == Namespace.CONTROL_UNBIND:
-            _LOGGER.warning(f"Received unbind event. Removing device {self.name} from HA")
-            await self.platform.async_remove_entity(self.entity_id)
-        elif namespace == Namespace.SYSTEM_ONLINE:
-            _LOGGER.warning(f"Device {self.name} reported online event.")
-            online = OnlineStatus(int(data.get('online').get('status')))
-            update_state = True
-            full_update = online == OnlineStatus.ONLINE
-
-        elif namespace == Namespace.HUB_ONLINE:
-            _LOGGER.warning(f"Device {self.name} reported (HUB) online event.")
-            online = OnlineStatus(int(data.get('status')))
-            update_state = True
-            full_update = online == OnlineStatus.ONLINE
-        else:
-            update_state = True
-            full_update = False
-
-        # In all other cases, just tell HA to update the internal state representation
-        if update_state:
-            self.async_schedule_update_ha_state(force_refresh=full_update)
 
     @property
     def current_power_w(self) -> Optional[float]:
@@ -151,9 +119,6 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
     entity_adder_callback()
 
 # TODO: Implement entry unload
-# async def async_unload_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
-#     manager.unregister_push_notification_handler_coroutine(platform_async_add_entities)
-
 # TODO: Unload entry
 # TODO: Remove entry
 

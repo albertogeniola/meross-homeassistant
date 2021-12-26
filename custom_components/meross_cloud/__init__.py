@@ -231,6 +231,10 @@ class MerossDevice(Entity):
         else:
             self._entity_name = "{} ({})".format(device.name, device.type)
 
+    @property
+    def should_poll(self) -> bool:
+        return False
+
     async def async_update(self):
         if self.online:
             try:
@@ -279,7 +283,29 @@ class MerossDevice(Entity):
         return self._coordinator.last_update_success and self.online
 
     async def _async_push_notification_received(self, namespace: Namespace, data: dict, device_internal_id: str):
-        pass
+        update_state = False
+        full_update = False
+
+        if namespace == Namespace.CONTROL_UNBIND:
+            _LOGGER.warning(f"Received unbind event. Removing device %s from HA", self.name)
+            await self.platform.async_remove_entity(self.entity_id)
+        elif namespace == Namespace.SYSTEM_ONLINE:
+            _LOGGER.warning(f"Device %s reported online event.", self.name)
+            online = OnlineStatus(int(data.get('online').get('status')))
+            update_state = True
+            full_update = online == OnlineStatus.ONLINE
+        elif namespace == Namespace.HUB_ONLINE:
+            _LOGGER.warning(f"Device {self.name} reported (HUB) online event.")
+            online = OnlineStatus(int(data.get('status')))
+            update_state = True
+            full_update = online == OnlineStatus.ONLINE
+        else:
+            update_state = True
+            full_update = False
+
+        # In all other cases, just tell HA to update the internal state representation
+        if update_state:
+            self.async_schedule_update_ha_state(force_refresh=full_update)
 
     async def async_added_to_hass(self) -> None:
         self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)

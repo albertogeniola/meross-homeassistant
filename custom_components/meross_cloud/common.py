@@ -3,7 +3,8 @@ import re
 from typing import Dict
 
 from meross_iot.controller.device import BaseDevice
-from custom_components.meross_cloud.version import MEROSS_IOT_VERSION
+
+from .version import MEROSS_IOT_VERSION
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ HA_COVER = "cover"
 HA_CLIMATE = "climate"
 HA_FAN = "fan"
 #MEROSS_PLATFORMS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
-MEROSS_PLATFORMS = (HA_SWITCH,)
+MEROSS_PLATFORMS = (HA_SWITCH,HA_LIGHT)
 CONNECTION_TIMEOUT_THRESHOLD = 5
 
 CONF_STORED_CREDS = "stored_credentials"
@@ -38,7 +39,7 @@ CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND = "device_rate_limit_per_second"
 CONF_OPT_DEVICE_MAX_COMMAND_QUEUE = "device_max_command_queue"
 
 # Constants
-HA_SENSOR_POLL_INTERVAL_SECONDS = 15             # HA sensor polling interval
+HA_SENSOR_POLL_INTERVAL_SECONDS = 15            # HA sensor polling interval
 SENSOR_SAMPLE_CACHE_INTERVAL_SECONDS = 30       # Sensors data caching interval in seconds
 HTTP_UPDATE_INTERVAL = 30
 UNIT_PERCENTAGE = "%"
