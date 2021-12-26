@@ -442,11 +442,11 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
 
         def _http_api_polled(*args, **kwargs):
             # Whenever a new HTTP device is seen, we issue a discovery
-            discovered_devices = meross_coordinator.data.keys()
-            known_devices = manager.find_devices(device_uuids=discovered_devices)
+            discovered_devices = meross_coordinator.data
+            known_devices = manager.find_devices(device_uuids=discovered_devices.keys())
             if len(known_devices) < len(discovered_devices):
-                _LOGGER.warning("The HTTP API has found new devices that were unknown to us. Triggering discovery.")
-                manager.async_device_discovery(update_subdevice_status=True, cached_http_device_list=discovered_devices.values())
+                _LOGGER.info("The HTTP API has found new devices that were unknown to us. Triggering discovery.")
+                hass.create_task(manager.async_device_discovery(update_subdevice_status=True, cached_http_device_list=discovered_devices.values()))
 
         # Register a handler for HTTP events so that we can check for new devices and trigger
         # a discovery when needed
