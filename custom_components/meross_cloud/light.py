@@ -1,12 +1,9 @@
 import logging
-from typing import Any, Optional, Iterable, List, Dict
+from typing import Optional, Dict
 
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.light import LightMixin
 from meross_iot.manager import MerossManager
-from meross_iot.model.enums import OnlineStatus, Namespace
-from meross_iot.model.exception import CommandTimeoutError
-from meross_iot.model.push.generic import GenericPushNotification
 from meross_iot.model.http.device import HttpDeviceInfo
 
 import homeassistant.util.color as color_util
@@ -17,7 +14,7 @@ from homeassistant.components.light import SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SU
 from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
-from .common import (DOMAIN, MANAGER, log_exception, HA_LIGHT, DEVICE_LIST_COORDINATOR)
+from .common import (DOMAIN, MANAGER, HA_LIGHT, DEVICE_LIST_COORDINATOR)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,14 +28,13 @@ class MerossLightDevice(LightMixin, BaseDevice):
 
 class LightEntityWrapper(MerossDevice, LightEntity):
     """Wrapper class to adapt the Meross bulbs into the Homeassistant platform"""
-    _device: LightMixin
+    _device: MerossLightDevice
 
     def __init__(self,
                  channel: int,
                  device: MerossLightDevice,
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]]):
 
-        # If the current device has more than 1 channel, we need to setup the device name and id accordingly
         super().__init__(
             device=device,
             channel=channel,

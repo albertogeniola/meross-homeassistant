@@ -9,7 +9,6 @@ from meross_iot.controller.mixins.garage import GarageOpenerMixin
 from meross_iot.controller.mixins.light import LightMixin
 from meross_iot.controller.mixins.toggle import ToggleXMixin, ToggleMixin
 from meross_iot.manager import MerossManager
-from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.http.device import HttpDeviceInfo
 
 # Conditional import for switch device
@@ -37,7 +36,6 @@ class SwitchEntityWrapper(MerossDevice, SwitchEntity):
                  channel: int,
                  device: MerossSwitchDevice,
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]]):
-        # If the current device has more than 1 channel, we need to setup the device name and id accordingly
         super().__init__(
             device=device,
             channel=channel,
