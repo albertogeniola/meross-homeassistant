@@ -48,7 +48,7 @@ class SwitchEntityWrapper(MerossDevice, SwitchEntity):
 
         # Device properties
         self._last_power_sample = None
-        self._daily_consumtpion = None
+        self._daily_consumption = None
 
     async def async_update(self):
         if self.online:
@@ -59,7 +59,7 @@ class SwitchEntityWrapper(MerossDevice, SwitchEntity):
                 self._last_power_sample = await self._device.async_get_instant_metrics(channel=self._channel_id)
 
             if isinstance(self._device, ConsumptionXMixin):
-                self._daily_consumtpion = await self._device.async_get_daily_power_consumption(channel=self._channel_id)
+                self._daily_consumption = await self._device.async_get_daily_power_consumption(channel=self._channel_id)
 
     @property
     def should_poll(self) -> bool:
@@ -111,11 +111,11 @@ class SwitchEntityWrapper(MerossDevice, SwitchEntity):
 
     @property
     def today_energy_kwh(self) -> Optional[float]:
-        if self._daily_consumtpion is not None:
+        if self._daily_consumption is not None:
             today = datetime.today()
             total = 0
             daystart = datetime(year=today.year, month=today.month, day=today.day, hour=0, second=0)
-            for x in self._daily_consumtpion:
+            for x in self._daily_consumption:
               if x['date'] == daystart:
                 total = x['total_consumption_kwh']
             return total
