@@ -1,12 +1,7 @@
 import logging
 from datetime import datetime
-from datetime import timedelta
-from typing import Any, Optional, Iterable, List, Dict
+from typing import Optional, Iterable, Dict
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.typing import HomeAssistantType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.consumption import ConsumptionXMixin
 from meross_iot.controller.mixins.electricity import ElectricityMixin
@@ -15,16 +10,15 @@ from meross_iot.controller.mixins.light import LightMixin
 from meross_iot.controller.mixins.toggle import ToggleXMixin, ToggleMixin
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus, Namespace
-from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.http.device import HttpDeviceInfo
-from meross_iot.model.push.generic import GenericPushNotification
-
-from . import MerossDevice
-from .common import (DOMAIN, MANAGER, log_exception, DEVICE_LIST_COORDINATOR, HA_SWITCH)
 
 # Conditional import for switch device
 from homeassistant.components.switch import SwitchEntity
-
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.typing import HomeAssistantType
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from . import MerossDevice
+from .common import (DOMAIN, MANAGER, DEVICE_LIST_COORDINATOR, HA_SWITCH)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -127,54 +121,34 @@ class SwitchEntityWrapper(MerossDevice, SwitchEntity):
             return total
 
 
-async def _add_entities(hass: HomeAssistant, devices: Iterable[BaseDevice], async_add_entities, device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]]):
-    new_entities = []
-
-    # Identify all the devices that expose the Toggle or ToggleX capabilities
-    devs = filter(lambda d: isinstance(d, ToggleXMixin) or isinstance(d, ToggleMixin), devices)
-
-    # Exclude garage openers and lights.
-    devs = filter(lambda d: not (isinstance(d, GarageOpenerMixin) or isinstance(d, LightMixin)), devs)
-
-    for d in devs:
-        for channel_index, channel in enumerate(d.channels):
-            w = SwitchEntityWrapper(device=d, channel=channel_index, device_list_coordinator=device_list_coordinator)
-            if w.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:
-                new_entities.append(w)
-            else:
-                _LOGGER.debug(f"Skipping device {w} as it was already added to registry once.")
-    async_add_entities(new_entities, True)
-
-
 async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_entities):
-    manager = hass.data[DOMAIN][MANAGER]  # type:MerossManager
-    coordinator = hass.data[DOMAIN][DEVICE_LIST_COORDINATOR]  # type:DataUpdateCoordinator[Dict[str, HttpDeviceInfo]]
+    def entity_adder_callback():
+        """Discover and adds new Meross entities"""
+        manager: MerossManager = hass.data[DOMAIN][MANAGER]  # type
+        coordinator = hass.data[DOMAIN][DEVICE_LIST_COORDINATOR]
+        devices = manager.find_devices()
 
-    devices = manager.find_devices()
-    await _add_entities(hass=hass, devices=devices, async_add_entities=async_add_entities, device_list_coordinator=coordinator)
+        new_entities = []
 
-    # TODO: replace the following logic with an handler attached to the coordinator
-    """
-    # Register a listener for the Bind push notification so that we can add new entities at runtime
-    async def platform_async_add_entities(push_notification: GenericPushNotification, target_devices: List[BaseDevice], *args, **kwargs):
-        # TODO: Transform this into a listener for the device coordinator
-        if push_notification.namespace == Namespace.CONTROL_BIND \
-                or push_notification.namespace == Namespace.SYSTEM_ONLINE \
-                or push_notification.namespace == Namespace.HUB_ONLINE:
+        # Identify all the devices that expose the Toggle or ToggleX capabilities
+        devs = filter(lambda d: isinstance(d, ToggleXMixin) or isinstance(d, ToggleMixin), devices)
 
-            # If the event belongs to an unseen device, trigger a discovery
-            known_devices = manager.find_devices(device_uuids=(push_notification.originating_device_uuid,))
-            needs_subdevice_update = push_notification.namespace == Namespace.HUB_ONLINE
-            if len(known_devices)<1:
+        # Exclude garage openers and lights.
+        devs = filter(lambda d: not (isinstance(d, GarageOpenerMixin) or isinstance(d, LightMixin)), devs)
 
-                await manager.async_device_discovery(update_subdevice_status=needs_subdevice_update,
-                                                     meross_device_uuid=push_notification.originating_device_uuid)
-                devs = manager.find_devices(device_uuids=(push_notification.originating_device_uuid,))
-                await _add_entities(hass=hass, devices=devs, async_add_entities=async_add_entities, device_list_coordinator=device_list_coordinator)
+        for d in devs:
+            for channel_index, channel in enumerate(d.channels):
+                w = SwitchEntityWrapper(device=d, channel=channel_index,
+                                        device_list_coordinator=coordinator)
+                if w.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:
+                    new_entities.append(w)
 
-    # Register a listener for new bound devices
-    manager.register_push_notification_handler_coroutine(platform_async_add_entities)
-    """
+        async_add_entities(new_entities, True)
+
+    coordinator = hass.data[DOMAIN][DEVICE_LIST_COORDINATOR]
+    coordinator.async_add_listener(entity_adder_callback)
+    # Run the entity adder a first time during setup
+    entity_adder_callback()
 
 # TODO: Implement entry unload
 # async def async_unload_entry(hass: HomeAssistantType, config_entry: ConfigEntry):

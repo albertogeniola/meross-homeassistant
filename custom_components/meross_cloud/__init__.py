@@ -1,7 +1,7 @@
 """Meross devices platform loader"""
 import logging
 from datetime import datetime, timedelta
-from typing import List, Tuple, Mapping, Any, Dict, Optional
+from typing import List, Tuple, Mapping, Any, Dict, Optional, Collection
 
 import async_timeout
 import homeassistant.helpers.config_validation as cv
@@ -361,6 +361,13 @@ def setup_manager_options(manager:MerossManager, hass: HomeAssistantType, option
             manager.limiter = None
 
 
+def _http_info_changed(known: Collection[HttpDeviceInfo], discovered: Collection[HttpDeviceInfo]) -> bool:
+    """Tells when a new device is discovered among the known ones"""
+    known_ids = [ dev.uuid for dev in known ]
+    unknown = [ dev for dev in discovered if dev.uuid not in known_ids]
+    return len(unknown)>0
+
+
 async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
     """
     This class is called by the HomeAssistant framework when a configuration entry is provided.
@@ -444,7 +451,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
             # Whenever a new HTTP device is seen, we issue a discovery
             discovered_devices = meross_coordinator.data
             known_devices = manager.find_devices(device_uuids=discovered_devices.keys())
-            if len(known_devices) < len(discovered_devices):
+            if _http_info_changed(known_devices, discovered_devices.values()):
                 _LOGGER.info("The HTTP API has found new devices that were unknown to us. Triggering discovery.")
                 hass.create_task(manager.async_device_discovery(update_subdevice_status=True, cached_http_device_list=discovered_devices.values()))
 
