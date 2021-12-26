@@ -223,7 +223,6 @@ class MerossDevice(Entity):
         self._device = device
         self._channel_id = channel
         self._id = calculate_id(platform=platform, uuid=device.internal_id, channel=channel)
-        self._cached_http_data = device_list_coordinator.data.get(self._device.uuid)
 
         if hasattr(device, "channels"):
             channel_data = device.channels[channel]
@@ -239,19 +238,14 @@ class MerossDevice(Entity):
                 log_exception(logger=_LOGGER, device=self._device)
 
     def _http_data_changed(self) -> None:
-        # We just store the latest HTTPInfo regarding this specific device locally, for faster access
-        latest_http_data = self._coordinator.data.get(self._device.uuid)
-        if self._cached_http_data is None or latest_http_data.__dict__ != self._cached_http_data.__dict__: # hack for depth comparison
-            # If HTTP data has changed, we need to schedule a forced refresh
-            self._cached_http_data = latest_http_data
-            self.async_schedule_update_ha_state(force_refresh=True)
+        self.async_schedule_update_ha_state(force_refresh=True)
 
     @property
     def online(self) -> bool:
-        if self._cached_http_data is None:
+        if not self._coordinator.last_update_success:
             return False
         else:
-            return self._cached_http_data.online_status==OnlineStatus.ONLINE
+            return self._coordinator.data.get(self._device.uuid).online_status==OnlineStatus.ONLINE
 
     @property
     def unique_id(self) -> str:
