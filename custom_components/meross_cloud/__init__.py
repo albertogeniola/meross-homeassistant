@@ -223,6 +223,7 @@ class MerossDevice(Entity):
         self._device = device
         self._channel_id = channel
         self._id = calculate_id(platform=platform, uuid=device.internal_id, channel=channel)
+        self._last_http_state = None
 
         if hasattr(device, "channels"):
             channel_data = device.channels[channel]
@@ -238,14 +239,22 @@ class MerossDevice(Entity):
                 log_exception(logger=_LOGGER, device=self._device)
 
     def _http_data_changed(self) -> None:
-        self.async_schedule_update_ha_state(force_refresh=True)
+        new_data = self._coordinator.data.get(self._device.uuid)
+        if self._last_http_state is not None and self._last_http_state.online_status!=OnlineStatus.ONLINE and new_data.online_status==OnlineStatus.ONLINE:
+            self._last_http_state = new_data
+            self.async_schedule_update_ha_state(force_refresh=True)
+        else:
+            self._last_http_state = new_data
+            self.async_schedule_update_ha_state(force_refresh=False)
 
     @property
     def online(self) -> bool:
         if not self._coordinator.last_update_success:
             return False
+        elif self._last_http_state is not None:
+            return self._last_http_state.online_status == OnlineStatus.ONLINE
         else:
-            return self._coordinator.data.get(self._device.uuid).online_status==OnlineStatus.ONLINE
+            return self._coordinator.data.get(self._device.uuid).online_status == OnlineStatus.ONLINE
 
     @property
     def unique_id(self) -> str:
