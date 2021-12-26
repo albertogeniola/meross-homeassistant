@@ -142,7 +142,7 @@ async def _add_entities(hass: HomeAssistant, devices: Iterable[BaseDevice], asyn
             if w.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:
                 new_entities.append(w)
             else:
-                _LOGGER.info(f"Skipping device {w} as it was already added to registry once.")
+                _LOGGER.debug(f"Skipping device {w} as it was already added to registry once.")
     async_add_entities(new_entities, True)
 
 
