@@ -218,18 +218,23 @@ class MerossDevice(Entity):
                  device: BaseDevice,
                  channel: int,
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]],
-                 platform: str):
+                 platform: str,
+                 supplementary_classifier: str = None):
         self._coordinator = device_list_coordinator
         self._device = device
         self._channel_id = channel
-        self._id = calculate_id(platform=platform, uuid=device.internal_id, channel=channel)
+        self._id = calculate_id(platform=platform, uuid=device.internal_id, channel=channel, *supplementary_classifier)
         self._last_http_state = None
+
+        base_name = f"{device.name} ({device.type})"
+        if supplementary_classifier is not None:
+            base_name += f" {supplementary_classifier}"
 
         if hasattr(device, "channels"):
             channel_data = device.channels[channel]
-            self._entity_name = "{} ({}) - {}".format(device.name, device.type, channel_data.name)
+            self._entity_name =  f"{base_name} - {channel_data.name}"
         else:
-            self._entity_name = "{} ({})".format(device.name, device.type)
+            self._entity_name = base_name
 
     @property
     def should_poll(self) -> bool:
