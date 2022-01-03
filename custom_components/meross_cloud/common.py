@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Dict
+from typing import Dict, List
 
 from meross_iot.controller.device import BaseDevice
 
@@ -52,10 +52,14 @@ ATTR_DROPPED_API_CALLS_PER_SECOND = "dropped_api_calls_per_second"
 HTTP_API_RE = re.compile("(http:\/\/|https:\/\/)?([^:]+)(:([0-9]+))?")
 
 
-def calculate_id(platform:str, uuid: str, channel: int, *extras) -> str:
+def calculate_id(platform:str, uuid: str, channel: int, supplementary_classifiers: List[str] = None) -> str:
     base = "%s:%s:%d" % (platform, uuid, channel)
-    extrastr = "%s" * len(extras) % extras
-    return base+extrastr
+    if supplementary_classifiers is not None:
+        extrastr = ":".join(supplementary_classifiers)
+        if extrastr != "":
+            extrastr = ":" + extrastr
+        return base + extrastr
+    return base
 
 
 def dismiss_notification(hass, notification_id):

@@ -219,20 +219,22 @@ class MerossDevice(Entity):
                  channel: int,
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]],
                  platform: str,
-                 supplementary_classifier: str = None):
+                 supplementary_classifiers: Optional[List[str]] = None):
         self._coordinator = device_list_coordinator
         self._device = device
         self._channel_id = channel
-        self._id = calculate_id(platform=platform, uuid=device.internal_id, channel=channel, *supplementary_classifier)
         self._last_http_state = None
 
         base_name = f"{device.name} ({device.type})"
-        if supplementary_classifier is not None:
-            base_name += f" {supplementary_classifier}"
+        if supplementary_classifiers is not None:
+            self._id = calculate_id(platform=platform, uuid=device.internal_id, channel=channel, supplementary_classifiers=supplementary_classifiers)
+            base_name += f" " + " ".join(supplementary_classifiers)
+        else:
+            self._id = calculate_id(platform=platform, uuid=device.internal_id, channel=channel)
 
-        if hasattr(device, "channels"):
+        if device.channels is not None and len(device.channels) > 0:
             channel_data = device.channels[channel]
-            self._entity_name =  f"{base_name} - {channel_data.name}"
+            self._entity_name = f"{base_name} - {channel_data.name}"
         else:
             self._entity_name = base_name
 

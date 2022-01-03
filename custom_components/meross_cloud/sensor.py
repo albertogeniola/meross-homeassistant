@@ -14,7 +14,7 @@ from meross_iot.model.http.device import HttpDeviceInfo
 from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_HUMIDITY, \
-    DEVICE_CLASS_POWER, POWER_WATT
+    DEVICE_CLASS_POWER, POWER_WATT, DEVICE_CLASS_CURRENT, DEVICE_CLASS_VOLTAGE
 from homeassistant.const import PERCENTAGE
 from homeassistant.helpers.typing import StateType, HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -44,7 +44,7 @@ class GenericSensorWrapper(MerossDevice, SensorEntity):
             channel=channel,
             device_list_coordinator=device_list_coordinator,
             platform=HA_SENSOR,
-            supplementary_classifier=f"{sensor_class}_{measurement_unit}")
+            supplementary_classifiers=[sensor_class, measurement_unit])
 
         # Make sure the given device supports exposes the device_method_or_property passed as arg
         if not hasattr(device, device_method_or_property):
@@ -152,7 +152,7 @@ class PowerSensorWrapper(GenericSensorWrapper):
                     await self._device.async_get_instant_metrics(channel=self._channel_id)
                 else:
                     # Use the cached value
-                    _LOGGER.debug(f"Skipping data refresh for {self.name} as its value is recent enough")
+                    _LOGGER.debug("Skipping data refresh for %s as its value is recent enough", self.name)
 
             except CommandTimeoutError as e:
                 log_exception(logger=_LOGGER, device=self._device)
@@ -168,7 +168,7 @@ class PowerSensorWrapper(GenericSensorWrapper):
 class CurrentSensorWrapper(GenericSensorWrapper):
     _device: ElectricitySensorDevice
     def __init__(self, device: ElectricitySensorDevice, device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
-        super().__init__(sensor_class=DEVICE_CLASS_POWER,
+        super().__init__(sensor_class=DEVICE_CLASS_CURRENT,
                          measurement_unit="A",
                          device_method_or_property='get_last_sample',
                          state_class=STATE_CLASS_MEASUREMENT,
@@ -210,7 +210,7 @@ class CurrentSensorWrapper(GenericSensorWrapper):
 class VoltageSensorWrapper(GenericSensorWrapper):
     _device: ElectricitySensorDevice
     def __init__(self, device: ElectricitySensorDevice, device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
-        super().__init__(sensor_class=DEVICE_CLASS_POWER,
+        super().__init__(sensor_class=DEVICE_CLASS_VOLTAGE,
                          measurement_unit="V",
                          device_method_or_property='get_last_sample',
                          state_class=STATE_CLASS_MEASUREMENT,
@@ -281,8 +281,10 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
         # Add Power Sensors
         for d in power_sensors:
             for channel_index, channel in enumerate(d.channels):
-                new_entities.append(PowerSensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
-                new_entities.append(CurrentSensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
+                new_entities.append(
+                    PowerSensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
+                new_entities.append(
+                    CurrentSensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
                 new_entities.append(
                     VoltageSensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
 
