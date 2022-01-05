@@ -102,12 +102,16 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
         # Exclude garage openers and lights.
         devs = filter(lambda d: not (isinstance(d, GarageOpenerMixin) or isinstance(d, LightMixin)), devs)
 
-        for d in devs:
-            for channel_index, channel in enumerate(d.channels):
-                w = SwitchEntityWrapper(device=d, channel=channel_index,
-                                        device_list_coordinator=coordinator)
-                if w.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:
-                    new_entities.append(w)
+        try:
+            for d in devs:
+                channels = [c.index for c in d.channels] if len(d.channels) > 0 else [0]
+                for channel_index in channels:
+                    w = SwitchEntityWrapper(device=d, channel=channel_index,
+                                            device_list_coordinator=coordinator)
+                    if w.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:
+                        new_entities.append(w)
+        except Exception as e:
+            raise(e)
 
         async_add_entities(new_entities, True)
 

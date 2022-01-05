@@ -48,7 +48,8 @@ class GenericSensorWrapper(MerossDevice, SensorEntity):
 
         # Make sure the given device supports exposes the device_method_or_property passed as arg
         if not hasattr(device, device_method_or_property):
-            _LOGGER.error("The device %s (%s) does not expose property %s", device.uuid, device.name, device_method_or_property)
+            _LOGGER.error("The device %s (%s) does not expose property %s", device.uuid, device.name,
+                          device_method_or_property)
             raise ValueError(f"The device {device} does not expose property {device_method_or_property}")
 
         self._device_method_or_property = device_method_or_property
@@ -63,7 +64,8 @@ class GenericSensorWrapper(MerossDevice, SensorEntity):
 
 
 class Ms100TemperatureSensorWrapper(GenericSensorWrapper):
-    def __init__(self, device: Ms100Sensor, device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
+    def __init__(self, device: Ms100Sensor, device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]],
+                 channel: int = 0):
         super().__init__(
             sensor_class=DEVICE_CLASS_TEMPERATURE,
             measurement_unit=TEMP_CELSIUS,
@@ -75,7 +77,8 @@ class Ms100TemperatureSensorWrapper(GenericSensorWrapper):
 
 
 class Ms100HumiditySensorWrapper(GenericSensorWrapper):
-    def __init__(self, device: Ms100Sensor, device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
+    def __init__(self, device: Ms100Sensor, device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]],
+                 channel: int = 0):
         super().__init__(sensor_class=DEVICE_CLASS_HUMIDITY,
                          measurement_unit=PERCENTAGE,
                          device_method_or_property='last_sampled_humidity',
@@ -87,7 +90,9 @@ class Ms100HumiditySensorWrapper(GenericSensorWrapper):
 
 class Mts100TemperatureSensorWrapper(GenericSensorWrapper):
     _device: Mts100v3Valve
-    def __init__(self, device: Mts100v3Valve, device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]]):
+
+    def __init__(self, device: Mts100v3Valve,
+                 device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]]):
         super().__init__(sensor_class=DEVICE_CLASS_TEMPERATURE,
                          measurement_unit=TEMP_CELSIUS,
                          device_method_or_property='last_sampled_temperature',
@@ -102,7 +107,8 @@ class Mts100TemperatureSensorWrapper(GenericSensorWrapper):
                 last_sampled_temp = self._device.last_sampled_temperature
                 last_sampled_time = self._device.last_sampled_time
                 now = datetime.utcnow()
-                if last_sampled_temp is None or last_sampled_time is None or (now - self._device.last_sampled_time).total_seconds() > SENSOR_SAMPLE_CACHE_INTERVAL_SECONDS:
+                if last_sampled_temp is None or last_sampled_time is None or (
+                        now - self._device.last_sampled_time).total_seconds() > SENSOR_SAMPLE_CACHE_INTERVAL_SECONDS:
                     # Force device refresh
                     _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
                     await self._device.async_get_temperature()
@@ -126,7 +132,9 @@ class ElectricitySensorDevice(ElectricityMixin, BaseDevice):
 
 class PowerSensorWrapper(GenericSensorWrapper):
     _device: ElectricitySensorDevice
-    def __init__(self, device: ElectricitySensorDevice, device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
+
+    def __init__(self, device: ElectricitySensorDevice,
+                 device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
         super().__init__(sensor_class=DEVICE_CLASS_POWER,
                          measurement_unit=POWER_WATT,
                          device_method_or_property='get_last_sample',
@@ -167,7 +175,9 @@ class PowerSensorWrapper(GenericSensorWrapper):
 
 class CurrentSensorWrapper(GenericSensorWrapper):
     _device: ElectricitySensorDevice
-    def __init__(self, device: ElectricitySensorDevice, device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
+
+    def __init__(self, device: ElectricitySensorDevice,
+                 device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
         super().__init__(sensor_class=DEVICE_CLASS_CURRENT,
                          measurement_unit="A",
                          device_method_or_property='get_last_sample',
@@ -209,7 +219,9 @@ class CurrentSensorWrapper(GenericSensorWrapper):
 
 class VoltageSensorWrapper(GenericSensorWrapper):
     _device: ElectricitySensorDevice
-    def __init__(self, device: ElectricitySensorDevice, device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
+
+    def __init__(self, device: ElectricitySensorDevice,
+                 device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
         super().__init__(sensor_class=DEVICE_CLASS_VOLTAGE,
                          measurement_unit="V",
                          device_method_or_property='get_last_sample',
@@ -272,7 +284,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
         # Add MS100 Temperature & Humidity sensors
         for d in humidity_temp_sensors:
             new_entities.append(Ms100HumiditySensorWrapper(device=d, device_list_coordinator=coordinator, channel=0))
-            new_entities.append(Ms100TemperatureSensorWrapper(device=d,device_list_coordinator=coordinator, channel=0))
+            new_entities.append(Ms100TemperatureSensorWrapper(device=d, device_list_coordinator=coordinator, channel=0))
 
         # Add MTS100Valve Temperature sensors
         for d in mts100_temp_sensors:
@@ -280,7 +292,8 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
 
         # Add Power Sensors
         for d in power_sensors:
-            for channel_index, channel in enumerate(d.channels):
+            channels = [c.index for c in d.channels] if len(d.channels) > 0 else [0]
+            for channel_index in channels:
                 new_entities.append(
                     PowerSensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
                 new_entities.append(
@@ -296,6 +309,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
     # Run the entity adder a first time during setup
     entity_adder_callback()
 
+
 # TODO: Implement entry unload
 # TODO: Unload entry
 # TODO: Remove entry
@@ -303,4 +317,3 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
 
 def setup_platform(hass, config, async_add_entities, discovery_info=None):
     pass
-
