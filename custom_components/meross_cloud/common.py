@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Dict
+from typing import Dict, List
 
 from meross_iot.controller.device import BaseDevice
 
@@ -23,8 +23,7 @@ HA_SENSOR = "sensor"
 HA_COVER = "cover"
 HA_CLIMATE = "climate"
 HA_FAN = "fan"
-#MEROSS_PLATFORMS = (HA_LIGHT, HA_SWITCH, HA_COVER, HA_SENSOR, HA_CLIMATE, HA_FAN)
-MEROSS_PLATFORMS = (HA_SWITCH,HA_LIGHT,HA_COVER,HA_FAN, HA_SENSOR)
+MEROSS_PLATFORMS = (HA_SWITCH, HA_LIGHT, HA_COVER, HA_FAN, HA_SENSOR, HA_CLIMATE)
 CONNECTION_TIMEOUT_THRESHOLD = 5
 
 CONF_STORED_CREDS = "stored_credentials"
@@ -39,8 +38,8 @@ CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND = "device_rate_limit_per_second"
 CONF_OPT_DEVICE_MAX_COMMAND_QUEUE = "device_max_command_queue"
 
 # Constants
-HA_SENSOR_POLL_INTERVAL_SECONDS = 15            # HA sensor polling interval
-SENSOR_SAMPLE_CACHE_INTERVAL_SECONDS = 30       # Sensors data caching interval in seconds
+HA_SENSOR_POLL_INTERVAL_SECONDS = 15  # HA sensor polling interval
+SENSOR_SAMPLE_CACHE_INTERVAL_SECONDS = 30  # Sensors data caching interval in seconds
 HTTP_UPDATE_INTERVAL = 30
 UNIT_PERCENTAGE = "%"
 
@@ -48,14 +47,17 @@ ATTR_API_CALLS_PER_SECOND = "api_calls_per_second"
 ATTR_DELAYED_API_CALLS_PER_SECOND = "delayed_api_calls_per_second"
 ATTR_DROPPED_API_CALLS_PER_SECOND = "dropped_api_calls_per_second"
 
-
 HTTP_API_RE = re.compile("(http:\/\/|https:\/\/)?([^:]+)(:([0-9]+))?")
 
 
-def calculate_id(platform:str, uuid: str, channel: int, *extras) -> str:
+def calculate_id(platform: str, uuid: str, channel: int, supplementary_classifiers: List[str] = None) -> str:
     base = "%s:%s:%d" % (platform, uuid, channel)
-    extrastr = "%s" * len(extras) % extras
-    return base+extrastr
+    if supplementary_classifiers is not None:
+        extrastr = ":".join(supplementary_classifiers)
+        if extrastr != "":
+            extrastr = ":" + extrastr
+        return base + extrastr
+    return base
 
 
 def dismiss_notification(hass, notification_id):

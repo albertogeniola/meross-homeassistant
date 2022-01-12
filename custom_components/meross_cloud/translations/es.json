@@ -4,18 +4,48 @@
             "single_instance_allowed": "El complemento Meross ya está instalado y no se puede volver a instalar."
         },
         "error": {
+            "invalid_credentials": "Credenciales no válidas.",
             "connection_error": "No se puede conectar con Meross.",
-            "invalid_credentials": "Credenciales no válidas."
+            "invalid_http_endpoint": "Punto de conexión de la API de HTTTP de Meross no válido",
+            "api_invalid_ssl_code": "Respuesta SSL no válida recibida por el servidor. ¿Estás seguro de que el servidor está expuesto en HTTPS? Intentalo con http y comprueba si esto sucede nuevamente.",
+            "unknown_error": "Ocurrió un error inesperado",
+            "api_connection_refused": "No se puede conectar al servidor de API HTTP (S). Asegurate de que la dirección es correcta",
+            "client_connection_error": "Ha ocurrido un error mientras se conectaba al API HTTP",
+            "missing_credentials": "Proporciona las credenciales que faltan"
         },
         "step": {
             "user": {
                 "data": {
                     "password": "Contraseña",
-                    "username": "Correo electrónico"
+                    "username": "Correo electrónico",
+                    "http_api_endpoint": "HTTP API Endpoint",
+                    "mqtt_hostname": "Dirección IP MQTT",
+                    "mqtt_port": "Puerto MQTT",
+                    "skip_mqtt_cert_validation": "Omite las comprobaciones de validación del certificadoSkip MQTT"
                 },
                 "title": "Ingrese las credenciales de su cuenta Meross"
+            },
+            "reauth_confirm": {
+              "title": "Requiere volver a autenticarse",
+              "description": "La integración de Meross requiere que vuelvas a autenticarte con tu cuenta"
             }
         },
         "title": "Meross"
+    },
+    "options": {
+          "error": {},
+          "step": {
+              "init": {
+                  "data": {
+                      "enable_rate_limits": "Habilitar los ratios de conexión al API",
+                      "global_rate_limit_max_tokens": "Limite global de conexiones MQTT",
+                      "global_rate_limit_per_second": "Limite global de conexiones MQTT (Máximo de API llamadas/segundo)",
+                      "device_rate_limit_max_tokens": "Limite individual por dispositivo de conexiones MQTT",
+                      "device_rate_limit_per_second": "Limite individual por dispositivo de conexiones MQTT (Máximo de API llamadas/segundo)",
+                      "device_max_command_queue": "Longitud maxima de cola de comandos por dispositivo"
+                  },
+                  "title": "Configure Manager"
+              }
+          }
     }
 }

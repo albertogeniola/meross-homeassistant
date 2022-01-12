@@ -27,8 +27,6 @@ from meross_iot.model.http.exception import (
     UnauthorizedException,
     HttpApiError, BadLoginException,
 )
-from meross_iot.model.push.generic import GenericPushNotification
-from meross_iot.utilities.limiter import RateLimitChecker
 
 from .common import (
     ATTR_CONFIG,
@@ -191,9 +189,6 @@ class MerossCoordinator(DataUpdateCoordinator):
         # Since we already have fetched for the DeviceList, publish it right away
         self.async_set_updated_data({device.uuid: device for device in http_devices})
 
-        # Configure the manager with user options
-        setup_manager_options(manager=self._manager, hass=self.hass, options=self._entry.options)
-
         # Print startup message, start the manager and issue a first discovery
         print_startup_message(http_devices=self.data.values())
         _LOGGER.info("Starting meross manager")
@@ -219,20 +214,22 @@ class MerossDevice(Entity):
                  channel: int,
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]],
                  platform: str,
-                 supplementary_classifier: str = None):
+                 supplementary_classifiers: Optional[List[str]] = None):
         self._coordinator = device_list_coordinator
         self._device = device
         self._channel_id = channel
-        self._id = calculate_id(platform=platform, uuid=device.internal_id, channel=channel, *supplementary_classifier)
         self._last_http_state = None
 
         base_name = f"{device.name} ({device.type})"
-        if supplementary_classifier is not None:
-            base_name += f" {supplementary_classifier}"
+        if supplementary_classifiers is not None:
+            self._id = calculate_id(platform=platform, uuid=device.internal_id, channel=channel, supplementary_classifiers=supplementary_classifiers)
+            base_name += f" " + " ".join(supplementary_classifiers)
+        else:
+            self._id = calculate_id(platform=platform, uuid=device.internal_id, channel=channel)
 
-        if hasattr(device, "channels"):
+        if device.channels is not None and len(device.channels) > 0:
             channel_data = device.channels[channel]
-            self._entity_name =  f"{base_name} - {channel_data.name}"
+            self._entity_name = f"{base_name} - {channel_data.name}"
         else:
             self._entity_name = base_name
 
@@ -359,42 +356,6 @@ async def get_or_renew_creds(
         return http_client, http_devices, True
 
 
-async def update_listener(hass: HomeAssistantType, config_entry: ConfigEntry):
-    """Handle options update."""
-    _LOGGER.warning("Reloading configuration")
-
-    # Retrieve the meross manager, if in place
-    manager : MerossManager = hass.data.get(DOMAIN, {}).get(MANAGER, None)
-    setup_manager_options(manager=manager, hass=hass, options=config_entry.options)
-
-
-def setup_manager_options(manager:MerossManager, hass: HomeAssistantType, options: Mapping[str, Any]):
-    # Options reading
-    enable_api_rate_limits = options.get(CONF_OPT_ENABLE_RATE_LIMITS, False)
-    limiter = None
-    if manager is not None:
-        _LOGGER.info("Meross manager is in place, updating its configuration")
-        global_limit_burst = options.get(CONF_OPT_GLOBAL_RATE_LIMIT_MAX_TOKENS, None)
-        global_limit_per_second = options.get(CONF_OPT_GLOBAL_RATE_LIMIT_PER_SECOND, None)
-        device_limit_burst = options.get(CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS, None)
-        device_limit_per_second = options.get(CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND, None)
-        device_max_command_queue = options.get(CONF_OPT_DEVICE_MAX_COMMAND_QUEUE, None)
-        
-        if enable_api_rate_limits:
-            _LOGGER.warning("Rate limits have been enabled. Setting rate limiter to MerossManager.")
-            limiter = RateLimitChecker(global_burst_rate=global_limit_burst,
-                                       global_time_window=timedelta(seconds=1.0),
-                                       global_tokens_per_interval=global_limit_per_second,
-                                       device_time_window=timedelta(seconds=1.0),
-                                       device_burst_rate=device_limit_burst,
-                                       device_tokens_per_interval=device_limit_per_second,
-                                       device_max_command_queue=device_max_command_queue)
-            manager.limiter = limiter
-        else:
-            # Disable API limiting
-            manager.limiter = None
-
-
 def _http_info_changed(known: Collection[HttpDeviceInfo], discovered: Collection[HttpDeviceInfo]) -> bool:
     """Tells when a new device is discovered among the known ones"""
     known_ids = [ dev.uuid for dev in known ]
@@ -492,9 +453,6 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
         # Register a handler for HTTP events so that we can check for new devices and trigger
         # a discovery when needed
         meross_coordinator.async_add_listener(_http_api_polled)
-
-        # Register a handler to update the configuration
-        config_entry.async_on_unload(config_entry.add_update_listener(update_listener))
 
         return True
 
