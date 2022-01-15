@@ -1,12 +1,11 @@
 <div class="container" fxLayout="row wrap" fxLayoutGap="12px">
- <p>Please remove all the Meross Devices from your Meross Account (via the APP) and then
-  pair them via the Custom Pairer App.
-  This plugin supports Meross Bridging:
-  that means you might run local MQTT broker and propagate states/commands to the official
-  Meross Cloud. That allows you to use both the Officila Meross app while connecting devices
-  to the local MQTT broker. Cool uh?
-  Please notice that your smartphone must be connected to the same Local Network where this Addon is executing.
-</p>
+  <p>
+    Please remove all the Meross Devices from your Meross Account (via the APP) and then pair them via the Custom Pairer
+    App. This plugin supports Meross Bridging: that means you might run local MQTT broker and propagate states/commands
+    to the official Meross Cloud. That allows you to use both the Officila Meross app while connecting devices to the
+    local MQTT broker. Cool uh? Please notice that your smartphone must be connected to the same Local Network where
+    this Addon is executing.
+  </p>
 </div>
 <div class="container" fxLayout="row wrap" fxLayoutGap="12px">
   <!-- Device List -->
@@ -65,7 +64,8 @@
       <ng-container matColumnDef="status">
         <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
         <td class="p10" mat-cell *matCellDef="let element" [matTooltip]="'Last message on ' + element.last_seen_time">
-          <span>{{ element.online_status | onlineDeviceStatusName }}</span><br/>
+          <span>{{ element.online_status | onlineDeviceStatusName }}</span
+          ><br />
           <span class="small">Bridge: {{ element.bridge_status | bridgeStatusName }}</span>
         </td>
       </ng-container>
