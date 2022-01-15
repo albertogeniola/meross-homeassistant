@@ -1,0 +1,25 @@
+name: "Meross Local Broker Addon"
+description: "Enables LAN-ONLY broker, avoiding Meross Cloud usage."
+version: "0.0.1"
+slug: "meross_local_broker"
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+startup: application
+boot: auto
+ports:
+  2001/tcp: 2001
+  2002/tcp: 2002
+ingress: true
+ingress_port: 8099
+host_network: true
+homeassistant: 1.0.0
+options:
+  email: meross_local@local
+  password: Changeme!
+schema:
+  email: "str"
+  password: "str"

@@ -1,8 +1,8 @@
-ARG BUILD_FROM=homeassistant/amd64-base-debian
+ARG BUILD_FROM=homeassistant/amd64-base-debian:buster
 FROM ${BUILD_FROM}
 
 # Build arguments
-ARG BUILD_ARCH
+ARG BUILD_ARCH=amd64
 ARG BUILD_DATE
 ARG BUILD_REF
 ARG BUILD_VERSION
@@ -20,10 +20,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Set workdir
 WORKDIR /usr/src
 
-# Copy the requirements.txt file
-COPY rootfs/opt/custom_broker/requirements.txt requirements.txt
-
-# Setup base
+# Install base dependencies
 # hadolint ignore=DL3003
 RUN apt-get update \
   && apt-get install --no-install-recommends -y gnupg gpg-agent \
@@ -51,32 +48,29 @@ RUN apt-get update \
     software-properties-common \
     xsltproc \
     logrotate \
-  \
-  && pip3 install wheel \
-  && mkdir -p /tmp/go \
-  && \
-    if [ "${BUILD_ARCH}" = "armhf" ]; then \
-    export GOOS=linux ; export GOARCH=arm ; \
+  && pip3 install wheel
+
+# Setup GO source
+RUN mkdir -p /tmp/go \
+  && export GOOS=linux \
+  && if [ "${BUILD_ARCH}" = "armhf" ]; then \
+      export GOARCH=arm ; \
     elif [ "${BUILD_ARCH}" = "armv7" ]; then \
-    export GOOS=linux ; export GOARM=7 ; export GOARCH=arm ; \
+      export GOARM=7 ; export GOARCH=arm ; \
     elif [ "${BUILD_ARCH}" = "aarch64" ]; then \
-    export GOOS=linux ; export GOARCH=arm64 ; \
+      export GOARCH=arm64 ; \
     elif [ "${BUILD_ARCH}" = "i386" ]; then \
-    export GOOS=linux ; export GOARCH=386 ; \
+      export GOARCH=386 ; \
     elif [ "${BUILD_ARCH}" = "amd64" ]; then \
-    export GOOS=linux ; export GOARCH=amd64 ; \
+      export GOARCH=amd64 ; \
     else \
     echo 'NOT VALID BUILD'; exit 1; \
     fi \
   && curl https://dl.google.com/go/go1.16.3.${GOOS}-${GOARCH}.tar.gz --output /tmp/go/go.tar.gz \
   && tar -C /usr/local -xzf /tmp/go/go.tar.gz \
   && export PATH=$PATH:/usr/local/go/bin \
-  \
-  && pip3 install -r requirements.txt \
-  \
   && git clone --branch "v${LIBWEBSOCKETS}" --depth=1 \
     https://github.com/warmcat/libwebsockets.git /tmp/libwebsockets \
-  \
   && mkdir -p /tmp/libwebsockets/build \
   && cd /tmp/libwebsockets/build \
   && cmake .. \
@@ -92,11 +86,8 @@ RUN apt-get update \
     -DLWS_WITH_ZLIB=OFF \
   && make \
   && make install \
-  \
-  && git clone --branch "v${MOSQUITTO}" --depth=1 \
-      https://github.com/eclipse/mosquitto.git /tmp/mosquitto \
-  && git clone --branch "v${MOSQUTTO_DISCONNECT}" --depth=1 \
-      https://github.com/albertogeniola/mosquitto-disconnections-plugin.git /tmp/mosquitto-disconnections-plugin \
+  && git clone --branch "v${MOSQUITTO}" --depth=1 https://github.com/eclipse/mosquitto.git /tmp/mosquitto \
+  && git clone --branch "v${MOSQUTTO_DISCONNECT}" --depth=1 https://github.com/albertogeniola/mosquitto-disconnections-plugin.git /tmp/mosquitto-disconnections-plugin \
   && mkdir -p /tmp/mosquitto/plugins/disconnections \
   && cp -R /tmp/mosquitto-disconnections-plugin/src/* /tmp/mosquitto/plugins/disconnections \
   && echo "add_subdirectory(disconnections)" >> /tmp/mosquitto/plugins/CMakeLists.txt \
@@ -115,7 +106,6 @@ RUN apt-get update \
   && make install \
   && mkdir -p /usr/share/mosquitto \
   && cp /usr/local/lib/mosquitto_disconnections.so /usr/share/mosquitto/mosquitto_disconnections.so \
-  \
   && cd /tmp \
   && git clone --depth 1 --branch "${MOSQUITTO_GO_AUTH}" \
         https://github.com/iegomez/mosquitto-go-auth.git \
@@ -124,10 +114,8 @@ RUN apt-get update \
   && cp /tmp/mosquitto-go-auth/pw /usr/share/mosquitto/pw \
   && cp /tmp/mosquitto-go-auth/go-auth.so /usr/share/mosquitto/go-auth.so \
   && chmod +x /usr/share/mosquitto/pw \
-  \
   && addgroup --system mosquitto \
   && adduser --system --no-create-home --disabled-login --group mosquitto \
-  \
   && apt-get clean \
   && rm -fr \
     /etc/nginx \
@@ -135,8 +123,10 @@ RUN apt-get update \
     /opt/acl \
     /tmp/*
 
+# Copy the requirements.txt file and install the listed packages
+COPY rootfs/opt/custom_broker/requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
+
 WORKDIR /
 COPY rootfs /
 RUN chmod +x /usr/local/bin/*.sh
-
-LABEL io.hass.version="VERSION" io.hass.type="addon" io.hass.arch="armhf|aarch64|i386|amd64"

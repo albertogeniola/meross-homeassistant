@@ -7,4 +7,4 @@
 /addons/meross_local_broker/rootfs/etc/fix-attrs.d/** text eol=lf
 /addons/meross_local_broker/rootfs/etc/services.d/** text eol=lf
 /addons/meross_local_broker/rootfs/usr/local/bin/** text eol=lf
-/addons/meross_local_broker/Dockerfile
+/addons/meross_local_broker/Dockerfile text eol=lf
