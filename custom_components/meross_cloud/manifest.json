@@ -6,11 +6,11 @@
   "dependencies": ["persistent_notification"],
   "codeowners": ["@albertogeniola"],
   "requirements": [
-    "meross_iot==0.4.4.2"
+    "git+https://github.com/albertogeniola/MerossIot.git@0.4.4.3-169#meross_homeassistant==0.4.4.3-169"
   ],
   "config_flow": true,
   "quality_scale": "platinum",
   "iot_class": "cloud_push",
-  "version": "1.2.0rc0",
+  "version": "1.2.0rc1",
   "zeroconf": ["_meross-api._tcp.local."]
 }
