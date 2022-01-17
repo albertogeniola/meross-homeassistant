@@ -1,6 +1,5 @@
 {
   "name": "Meross Integration",
-  "content_in_root": false,
   "homeassistant": "0.9.0",
   "domains": ["sensor", "climate", "switch", "cover", "fan", "light"]
 }
