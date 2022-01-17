@@ -7,9 +7,9 @@ export enum DeviceOnlineStatus {
 }
 
 export enum BridgeStatus {
-  DISCONNECTED = "Disconnected",
-  CONNECTED = "Connected",
-  ERROR = "Error"
+  DISCONNECTED = 'Disconnected',
+  CONNECTED = 'Connected',
+  ERROR = 'Error',
 }
 
 export interface DeviceChannel {
