@@ -18,13 +18,7 @@ _must have_ internet access to accomplish such task. You also need an account fo
 you should reuse the one from your meross app.
 
 ## Installation & Configuration
-
-First, install the component via HACS by clicking on
-Click install.
-Reboot Home Assistant.
-Hard refresh browser cache.
-Add Integration or in the HA UI go to "Configuration" -> "Integrations" click "+" and search for "Tesla Custom Integration".
-
+First, you need to install this integration via HACS. To do so, simply click on INSTALL on this dialog.
 Once installed, you should set up the Meross Cloud component to connect to the Meross Cloud service.
 Just navigate to \_settings -> Integrations, click "add" and then select "Meross Cloud IoT".
 A pop-up will appear, asking for the Meross API endpoint to use and your Meross credentials.
