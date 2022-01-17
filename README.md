@@ -5,12 +5,6 @@
 A full-featured Homeassistant component to drive Meross devices. 
 This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
 
-### :exclamation: Attention: Update to v1.1.4 or newer version:exclamation: ###
-Dear users, Meross I recently received a notice from Meross asking to take down versions up to 1.1.4, as they believe there is some sort of bug causing high traffic volumes on their servers. For this reason, all versions from v1.0.7 up to 1.1.4 (excluded) have been temporarely withdrawn from GitHub and HACS. 
-In order to avoid service denial from Meross, you are urged to upgrade to version v1.1.4 or downgrade to v1.0.7 (which was the previously stable version). 
-
-Even though this might sound as an ultimatum from Meross, we are finally given the opportunity to collaborate with their security team in order to agree on some MQTT/HTTP rate limits and make sure this HA component works flawlessly. For this reason, I'd really appreciate if you could comply with that request: it would be easier for us to establish a collaborative partnership.
-
 ## :new: :rocket: Local-Only Addon under development :rocket:
 I had promised to the community that I would have focused my development efforts in the local-addon, and... so I am doing :)
 As already mentioned many times, the reason why it takes so much time is because everything done here is the result of hours 
@@ -34,15 +28,6 @@ implement any "logic-layer" implemented on Meross Systems on the new addon I am 
 sure that everything works together. That means that I am not able to spend much time in solving issues that may arise in 
 the meantime, and for that I apologize. If you like this project and you want to support me, please consider donating:
 that motivates me and helps me buy _more ram_ which is absolutely necessary when developing on a virtualized environment.
-
-## Version 1.0 is here!
-After months of work and sleepless weekends, it's finally time to present to the Meross community the new version of the HomeAssistant component that allows Meross device controlling. The new version of this library is based on the complete refactored low-level MerossIot library. It's now fully async, based on Meross push notifications and much more robust and resilient to network disconnections.
-
-### Updating from legacy versions
-In case you are updating the component from legacy versions, you need to remove the previous one and fully remove
-cached devices/entities from your HomeAssistant installation. This is necessary as the library completely changed
-the device/entity naming system and is unable to remove previous entities installed by old versions of the component.
-Sorry about that. 
 
 ## Installation & configuration
 You can install this component in two ways: via HACS or manually.
@@ -95,27 +80,6 @@ The following table summarizes the fields that the wizard will require you to fi
 
 The following animation shows an example of component configuration
 [![Installation via web UI](https://raw.githubusercontent.com/albertogeniola/meross-homeassistant/master/docs/source/images/components/meross_cloud/install-via-webui.gif)](https://raw.githubusercontent.com/albertogeniola/meross-homeassistant/master/docs/source/images/components/meross_cloud/install-via-webui.gif)
-
-### API rate limiting
-
-Starting from version 1.1.0, this component has introduced the possibility to configure MQTT messaging rate limits.
-You can configure such feature via component options configuration. 
-
-The current version of this component implements a classic [Token Bucket](https://it.wikipedia.org/wiki/Token_bucket) 
-algorithm. More specifically, every device is subjected to its own token-bucket algorithm, driven by 
-`Single device MQTT burst limit` and `Single device MQTT rate limit` parameters. 
-On top of that, there is a global MQTT rate limiter (still implemented via Token Bucket), driven by 
-`Global MQTT burst limit` and `Global MQTT rate limit` parameters.
-
-|  Field Name                      | Example Value   | Description                                             | 
-|----------------------------------|-----------------|---------------------------------------------------------|
-| Enable MQTT Rate limits          | True (Checked)  | When checked, enables MQTT rate limiting. If unchecked, rate limiting is disabled. |
-| Global MQTT burst limit          | 10              | Maximum number of global MQTT messages that can be sent in a short time burst |
-| Global MQTT rate limit           | 4               | Global MQTT messages/second rate to allow |
-| Single device MQTT burst limit   | 3               | MQTT burst limit for a single device |
-| Single device MQTT rate limit    | 2               | MQTT rate limit for a single device |
-| Single device max command queue length  | 5        | Maximum commands that can be queued (delayed) for a single device. MQTT commands exceeding the queue length will be dropped by the limiter |
-
 
 ## Features
 ### Massive support
