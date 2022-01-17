@@ -81,27 +81,6 @@ The following table summarizes the fields that the wizard will require you to fi
 The following animation shows an example of component configuration
 [![Installation via web UI](https://raw.githubusercontent.com/albertogeniola/meross-homeassistant/master/docs/source/images/components/meross_cloud/install-via-webui.gif)](https://raw.githubusercontent.com/albertogeniola/meross-homeassistant/master/docs/source/images/components/meross_cloud/install-via-webui.gif)
 
-### API rate limiting
-
-Starting from version 1.1.0, this component has introduced the possibility to configure MQTT messaging rate limits.
-You can configure such feature via component options configuration. 
-
-The current version of this component implements a classic [Token Bucket](https://it.wikipedia.org/wiki/Token_bucket) 
-algorithm. More specifically, every device is subjected to its own token-bucket algorithm, driven by 
-`Single device MQTT burst limit` and `Single device MQTT rate limit` parameters. 
-On top of that, there is a global MQTT rate limiter (still implemented via Token Bucket), driven by 
-`Global MQTT burst limit` and `Global MQTT rate limit` parameters.
-
-|  Field Name                      | Example Value   | Description                                             | 
-|----------------------------------|-----------------|---------------------------------------------------------|
-| Enable MQTT Rate limits          | True (Checked)  | When checked, enables MQTT rate limiting. If unchecked, rate limiting is disabled. |
-| Global MQTT burst limit          | 10              | Maximum number of global MQTT messages that can be sent in a short time burst |
-| Global MQTT rate limit           | 4               | Global MQTT messages/second rate to allow |
-| Single device MQTT burst limit   | 3               | MQTT burst limit for a single device |
-| Single device MQTT rate limit    | 2               | MQTT rate limit for a single device |
-| Single device max command queue length  | 5        | Maximum commands that can be queued (delayed) for a single device. MQTT commands exceeding the queue length will be dropped by the limiter |
-
-
 ## Features
 ### Massive support
 This library supports all the Meross devices currently exposed by the Meross IoT library.
