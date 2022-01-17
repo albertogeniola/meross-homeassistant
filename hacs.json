@@ -1,5 +1,6 @@
 {
   "name": "Meross Integration",
-  "homeassistant": "0.9.0",
+  "hacs": "1.6.0",
+  "homeassistant": "1.0.0",
   "domains": ["sensor", "climate", "switch", "cover", "fan", "light"]
 }
