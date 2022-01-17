@@ -16,10 +16,10 @@ ports:
 ingress: true
 ingress_port: 8099
 host_network: true
-homeassistant: 1.0.0
+homeassistant: "1.0.0"
 options:
-  email: meross_local@local
-  password: Changeme!
+  email: "meross_local@local"
+  password: "Changeme!"
 schema:
   email: "str"
   password: "str"
