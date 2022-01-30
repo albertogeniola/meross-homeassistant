@@ -27,5 +27,16 @@
     "abort": {
       "single_instance_allowed": "Only a single configuration of Meross is allowed."
     }
+  },
+  "options": {
+    "error": {},
+    "step": {
+      "init": {
+        "data": {
+          "custom_user_agent": "Custom HTTP User Agent header for API polling"
+        },
+        "title": "Meross Cloud Options"
+      }
+    }
   }
 }

@@ -33,19 +33,14 @@
     "title": "Meross"
   },
   "options": {
-        "error": {},
-        "step": {
-            "init": {
-                "data": {
-                    "enable_rate_limits": "Enable API rate limits",
-                    "global_rate_limit_max_tokens": "Global MQTT burst limit",
-                    "global_rate_limit_per_second": "Global MQTT rate limit (maximum api calls/second)",
-                    "device_rate_limit_max_tokens": "Single device MQTT burst limit",
-                    "device_rate_limit_per_second": "Single device MQTT rate limit (maximum api calls/second)",
-                    "device_max_command_queue": "Single device Maximum command queue length"
-                },
-                "title": "Configure Manager"
-            }
-        }
+    "error": {},
+    "step": {
+      "init": {
+        "data": {
+          "custom_user_agent": "Custom HTTP User Agent header for API polling"
+        },
+        "title": "Meross Cloud Options"
+      }
     }
+  }
 }

@@ -20,11 +20,10 @@ from homeassistant.helpers.typing import StateType, HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
 from .common import (DOMAIN, MANAGER, log_exception, HA_SENSOR,
-                     HA_SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property,
-                     SENSOR_SAMPLE_CACHE_INTERVAL_SECONDS, DEVICE_LIST_COORDINATOR)
+                     HA_SENSOR_POLL_INTERVAL_SECONDS, invoke_method_or_property, DEVICE_LIST_COORDINATOR)
 
 _LOGGER = logging.getLogger(__name__)
-PARALLEL_UPDATES = 1
+PARALLEL_UPDATES = 2
 SCAN_INTERVAL = timedelta(seconds=HA_SENSOR_POLL_INTERVAL_SECONDS)
 
 
@@ -103,22 +102,10 @@ class Mts100TemperatureSensorWrapper(GenericSensorWrapper):
     async def async_update(self):
         if self._device.online_status == OnlineStatus.ONLINE:
             try:
-                # We only call the explicit method if the sampled value is older than 10 seconds.
-                last_sampled_temp = self._device.last_sampled_temperature
-                last_sampled_time = self._device.last_sampled_time
-                now = datetime.utcnow()
-                if last_sampled_temp is None or last_sampled_time is None or (
-                        now - self._device.last_sampled_time).total_seconds() > SENSOR_SAMPLE_CACHE_INTERVAL_SECONDS:
-                    # Force device refresh
-                    _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
-                    await self._device.async_get_temperature()
-                else:
-                    # Use the cached value
-                    _LOGGER.debug(f"Skipping data refresh for {self.name} as its value is recent enough")
-
+                _LOGGER.debug(f"Refreshing instant metrics for device {self.name}")
+                await self._device.async_get_temperature()
             except CommandTimeoutError as e:
                 log_exception(logger=_LOGGER, device=self._device)
-                pass
 
     @property
     def should_poll(self) -> bool:
