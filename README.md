@@ -5,30 +5,6 @@
 A full-featured Homeassistant component to drive Meross devices. 
 This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
 
-## :new: :rocket: Local-Only Addon under development :rocket:
-I had promised to the community that I would have focused my development efforts in the local-addon, and... so I am doing :)
-As already mentioned many times, the reason why it takes so much time is because everything done here is the result of hours 
-and hours of procotol inspection sessions, reverse engineering and [hacking](https://en.wikipedia.org/wiki/Hacker_culture). 
-
-Just to rise the hype, here there are some screens of the on-going development addon, which is 75% completed:
-<img src="https://user-images.githubusercontent.com/4648843/117581720-9d2bb080-b0fe-11eb-802e-1f360d7c3c04.png" alt="Log Screenshot" width=250/>
-<img src="https://user-images.githubusercontent.com/4648843/117581724-9e5cdd80-b0fe-11eb-9822-a1cc4363a929.png" alt="Info Screenshot" width=250/>
-<img src="https://user-images.githubusercontent.com/4648843/117581904-aa956a80-b0ff-11eb-926c-132614eb9bda.png" alt="WebUi Screenshot" width=250/>
-
-
-### What is the local-addon?
-Meross Plugin has gained great success and popularity among the HomeAssistant users. However, the Meross engineers are imposing
-new limits on their MQTT broker system, which cause problems to the HA users who want to implement aggressive polling or have
-more than 10 devices connected to HA. For this reason, I am working on a new HomeAssistant addon, namely "Meross Local Addon", 
-which aims at re-implementing the Meross MQTT Broker and HTTP API layer locally to the addon. This would basically allow users
-to rely only on LAN-local connection, using HomeAssistant as command center. 
-
-As you can imagine, there is a huge work behind that: first I need to reverse-engineer the Meross protocols, then I need to 
-implement any "logic-layer" implemented on Meross Systems on the new addon I am developing and, eventually, I have to make
-sure that everything works together. That means that I am not able to spend much time in solving issues that may arise in 
-the meantime, and for that I apologize. If you like this project and you want to support me, please consider donating:
-that motivates me and helps me buy _more ram_ which is absolutely necessary when developing on a virtualized environment.
-
 ## Installation & configuration
 You can install this component in two ways: via HACS or manually.
 HACS is a nice community-maintained components manager, which allows you to install git-hub hosted components in a few clicks.
@@ -103,8 +79,31 @@ HomeAssistant best practices, in particular:
 - No polling: the library is event-based. It saves bandwidth and makes the UI much more reactive.
 - Robust to disconnection: the library handles network disruption;
 - Lovelace notification: supports UI persistent event notification;
-- PEP8 code styling
 
+
+## :new: :rocket: Local-Only Addon under development :rocket:
+I had promised to the community that I would have focused my development efforts in the local-addon, and... so I am doing :)
+As already mentioned many times, the reason why it takes so much time is because everything done here is the result of hours 
+and hours of procotol inspection sessions, reverse engineering and [hacking](https://en.wikipedia.org/wiki/Hacker_culture). 
+
+Just to rise the hype, here there are some screens of the on-going development addon, which is 75% completed:
+<img src="https://user-images.githubusercontent.com/4648843/117581720-9d2bb080-b0fe-11eb-802e-1f360d7c3c04.png" alt="Log Screenshot" width=250/>
+<img src="https://user-images.githubusercontent.com/4648843/117581724-9e5cdd80-b0fe-11eb-9822-a1cc4363a929.png" alt="Info Screenshot" width=250/>
+<img src="https://user-images.githubusercontent.com/4648843/117581904-aa956a80-b0ff-11eb-926c-132614eb9bda.png" alt="WebUi Screenshot" width=250/>
+
+
+### What is the local-addon?
+Meross Plugin has gained great success and popularity among the HomeAssistant users. However, the Meross engineers are imposing
+new limits on their MQTT broker system, which cause problems to the HA users who want to implement aggressive polling or have
+more than 10 devices connected to HA. For this reason, I am working on a new HomeAssistant addon, namely "Meross Local Addon", 
+which aims at re-implementing the Meross MQTT Broker and HTTP API layer locally to the addon. This would basically allow users
+to rely only on LAN-local connection, using HomeAssistant as command center. 
+
+As you can imagine, there is a huge work behind that: first I need to reverse-engineer the Meross protocols, then I need to 
+implement any "logic-layer" implemented on Meross Systems on the new addon I am developing and, eventually, I have to make
+sure that everything works together. That means that I am not able to spend much time in solving issues that may arise in 
+the meantime, and for that I apologize. If you like this project and you want to support me, please consider donating:
+that motivates me and helps me buy _more ram_ which is absolutely necessary when developing on a virtualized environment.
 
 ## Supporting my work
 By buying me a coffee, not only you make my development more efficient, but also motivate me to further improve 
