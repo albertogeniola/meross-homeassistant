@@ -83,11 +83,16 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
         manager: MerossManager = hass.data[DOMAIN][MANAGER]  # type
         coordinator = hass.data[DOMAIN][DEVICE_LIST_COORDINATOR]
         devices = manager.find_devices(device_class=GarageOpenerMixin)
-
         new_entities = []
-
         for d in devices:
-            channels = [c.index for c in d.channels] if len(d.channels) > 0 else [0]
+            # For multi-channel garage doors opener (like MSG200), the main channel is not operable and
+            # does not provide meaningful states. For this reason, we will ignore the "main channel"
+            # of any cover device which has more than 1 channels. Of course, we will keep working with channel
+            # 0 when dealing with dingle-door openers.
+            if len(d.channels) > 1:
+                channels = [c.index for c in d.channels if c.index > 0]
+            else:
+                channels = [0]
             for channel_index in channels:
                 w = CoverEntityWrapper(device=d, channel=channel_index, device_list_coordinator=coordinator)
                 if w.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:

@@ -31,21 +31,5 @@
             }
         },
         "title": "Meross"
-    },
-    "options": {
-          "error": {},
-          "step": {
-              "init": {
-                  "data": {
-                      "enable_rate_limits": "Habilitar los ratios de conexión al API",
-                      "global_rate_limit_max_tokens": "Limite global de conexiones MQTT",
-                      "global_rate_limit_per_second": "Limite global de conexiones MQTT (Máximo de API llamadas/segundo)",
-                      "device_rate_limit_max_tokens": "Limite individual por dispositivo de conexiones MQTT",
-                      "device_rate_limit_per_second": "Limite individual por dispositivo de conexiones MQTT (Máximo de API llamadas/segundo)",
-                      "device_max_command_queue": "Longitud maxima de cola de comandos por dispositivo"
-                  },
-                  "title": "Configure Manager"
-              }
-          }
     }
 }

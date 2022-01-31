@@ -4,6 +4,7 @@ from typing import Dict, List
 
 from meross_iot.controller.device import BaseDevice
 
+from . import version
 from .version import MEROSS_IOT_VERSION
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,17 +31,10 @@ CONF_STORED_CREDS = "stored_credentials"
 CONF_MQTT_SKIP_CERT_VALIDATION = "skip_mqtt_cert_validation"
 CONF_HTTP_ENDPOINT = "http_api_endpoint"
 
-CONF_OPT_ENABLE_RATE_LIMITS = "enable_rate_limits"
-CONF_OPT_GLOBAL_RATE_LIMIT_MAX_TOKENS = "global_rate_limit_max_tokens"
-CONF_OPT_GLOBAL_RATE_LIMIT_PER_SECOND = "global_rate_limit_per_second"
-CONF_OPT_DEVICE_RATE_LIMIT_MAX_TOKENS = "device_rate_limit_max_tokens"
-CONF_OPT_DEVICE_RATE_LIMIT_PER_SECOND = "device_rate_limit_per_second"
-CONF_OPT_DEVICE_MAX_COMMAND_QUEUE = "device_max_command_queue"
+CONF_OPT_CUSTOM_USER_AGENT = "custom_user_agent"
 
-# Constants
-HA_SENSOR_POLL_INTERVAL_SECONDS = 15  # HA sensor polling interval
-SENSOR_SAMPLE_CACHE_INTERVAL_SECONDS = 30  # Sensors data caching interval in seconds
-HTTP_UPDATE_INTERVAL = 30
+HA_SENSOR_POLL_INTERVAL_SECONDS = 30     # HA sensor polling interval
+HTTP_UPDATE_INTERVAL = 120               # Meross Cloud "discovery" interval
 UNIT_PERCENTAGE = "%"
 
 ATTR_API_CALLS_PER_SECOND = "api_calls_per_second"
@@ -48,6 +42,8 @@ ATTR_DELAYED_API_CALLS_PER_SECOND = "delayed_api_calls_per_second"
 ATTR_DROPPED_API_CALLS_PER_SECOND = "dropped_api_calls_per_second"
 
 HTTP_API_RE = re.compile("(http:\/\/|https:\/\/)?([^:]+)(:([0-9]+))?")
+
+DEFAULT_USER_AGENT = f"MerossHA/{version.MEROSS_INTEGRATION_VERSION}"
 
 
 def calculate_id(platform: str, uuid: str, channel: int, supplementary_classifiers: List[str] = None) -> str:
