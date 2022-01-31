@@ -1,5 +1,6 @@
 from meross_iot.http_api import ErrorCodes
 from meross_iot.model.http.exception import HttpApiError
+from os import getenv
 
 from logger import get_logger
 
@@ -21,6 +22,7 @@ from model.exception import BadRequestError
 
 # Configure main logger
 _LOGGER = get_logger("http_api")
+
 
 app = Flask(__name__)
 CORS(app)  # TODO: Fix this. Maybe we can restrict the origin access. In case we use an nginx, this might be superfluous
@@ -59,4 +61,7 @@ def handle_http_exception(e):
 
 
 if __name__ == '__main__':
-    app.run(port=2002, host="0.0.0.0", debug=True)
+    debug_env = getenv("ENABLE_DEBUG", None)
+    enable_debug = debug_env.lower() == "true"
+    app.run(port=2002, host="0.0.0.0", debug=enable_debug,
+            use_debugger=False, use_reloader=False)

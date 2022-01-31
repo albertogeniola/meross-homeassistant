@@ -13,6 +13,11 @@ boot: auto
 ports:
   2001/tcp: 2001
   2002/tcp: 2002
+  10001/tcp: 10001
+ports_description:
+  2001/tcp: "MQTT Broker port"
+  2002/tcp: "HTTP API port"
+  10001/tcp: "Remote debugger port"
 ingress: true
 ingress_port: 8099
 host_network: true
@@ -20,6 +25,8 @@ homeassistant: "1.0.0"
 options:
   email: "meross_local@local"
   password: "Changeme!"
+  debug_mode: False
 schema:
   email: "str"
   password: "str"
+  debug_mode: "bool"

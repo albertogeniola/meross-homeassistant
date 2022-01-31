@@ -1,0 +1,34 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Attach Remote",
+      "type": "python",
+      "request": "attach",
+      "port": 6789,
+      "host": "192.168.1.22",
+      "pathMappings": [
+        {
+          "localRoot": "C:\\Users\\Alberto Geniola\\PycharmProjects\\meross-homeassistant",
+          "remoteRoot": "/config"
+        }
+      ]
+    },
+    {
+      "name": "Python: Attach Remote Addon",
+      "type": "python",
+      "request": "attach",
+      "port": 10001,
+      "host": "localhost",
+      "pathMappings": [
+        {
+          "localRoot": "/workspaces/meross-homeassistant/addons/meross_local_broker/rootfs/opt/custom_broker/",
+          "remoteRoot": "/opt/custom_broker"
+        }
+      ]
+    }
+  ]
+}
