@@ -13,10 +13,11 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: "12"
-      - name: Install node dependencies
-        run: npm install
-      - name: Build Web Interface
-        run: npm run build
+      - name: Install node dependencies & build
+        working-directory: ./addons/meross_local_broker
+        run: |
+          npm install
+          npm run build
       - name: Test build container
         uses: home-assistant/builder@master
         with:
