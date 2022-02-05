@@ -1,0 +1,19 @@
+name: "Test Addon Build"
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Test build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v2
+      - name: Test build
+        uses: home-assistant/builder@master
+        with:
+          args: |
+            --test \
+            --all \
+            --target addons/meross_local_broker \
+            --docker-hub albertogeniola

@@ -2,8 +2,6 @@
 
 pushd /opt/custom_broker >/dev/null
 
-CONFIG_PATH=/data/options.json
-
 # Start flask
 debug=$(bashio::config 'debug_mode')
 debug_port=$(bashio::addon.port 10001)
