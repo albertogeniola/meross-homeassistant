@@ -19,6 +19,9 @@ fi
 ingress_entry=$(bashio::addon.ingress_entry)
 sed -i "s#%%APIURL%%#${ingress_entry}#g" /var/www/assets/env.js
 
+# Create logging directory for API Server
+mkdir -p /var/log/broker
+
 # Initializing DB
 pushd /opt/custom_broker >/dev/null
 

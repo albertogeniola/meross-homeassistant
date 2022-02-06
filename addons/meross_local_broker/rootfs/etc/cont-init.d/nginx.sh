@@ -5,5 +5,14 @@
 ingress_entry=$(bashio::addon.ingress_entry)
 ingress_interface=$(bashio::addon.ip_address)
 
+# Safe defaults
+if [[ $ingress_interface = "" ]]; then
+    ingress_interface="0.0.0.0"
+fi
+
+if [[ $ingress_entry = "" ]]; then
+    ingress_entry="/"
+fi
+
 sed -i "s#%%ingress_entry%%#${ingress_entry}#g" /etc/nginx/ingress.conf
 sed -i "s/%%interface%%/${ingress_interface}/g" /etc/nginx/ingress.conf

@@ -104,3 +104,9 @@ venv.bak/
 # mypy
 .mypy_cache/
 /.idea/
+.local_debug/data/database.db
+.local_debug/data/mqtt/certs/ca.crt
+.local_debug/data/mqtt/certs/ca.key
+.local_debug/data/mqtt/certs/ca.srl
+.local_debug/data/mqtt/certs/server.crt
+.local_debug/data/mqtt/certs/server.key
