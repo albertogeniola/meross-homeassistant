@@ -7,8 +7,8 @@ CONFIG_PATH=/data/options.json
 DB_PATH=/data/database.db
 
 # If the user has asked to reinit the db, remove it
-REINIT_DB=$(jq "if .resetdb then .resetdb else 0 end" $CONFIG_PATH)
-if [[ $REINIT_DB -eq 1 ]]; then
+REINIT_DB=$(bashio::config 'resetdb')
+if [[ $REINIT_DB == true ]]; then
   if [[ -f $DB_PATH ]]; then
     bashio::log.warning "User configuration requires DB reinitialization. Removing previous DB data."
     rm $DB_PATH
