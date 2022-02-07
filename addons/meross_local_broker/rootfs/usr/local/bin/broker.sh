@@ -28,11 +28,10 @@ AGENT_PBKDF2=$(/usr/share/mosquitto/pw -p $AGENT_PASSWORD)
 echo "$AGENT_USERNAME:$AGENT_PBKDF2">/etc/mosquitto/auth.pw
 
 # Allow MQTT connection to the admin user
-ADMIN_USERNAME=$(jq --raw-output ".email" $CONFIG_PATH)
-ADMIN_PASSWORD=$(jq --raw-output ".password" $CONFIG_PATH)
+ADMIN_USERNAME=$(bashio::config 'email')
+ADMIN_PASSWORD=$(bashio::config 'password')
 ADMIN_PBKDF2=$(/usr/share/mosquitto/pw -p "$ADMIN_PASSWORD")
 echo "$ADMIN_USERNAME:$ADMIN_PBKDF2">>/etc/mosquitto/auth.pw
-
 
 # Grant to the _agent user permissions to:
 # - read from /appliance/+/publish
@@ -45,5 +44,6 @@ bashio::log.info "Waiting MQTT server..."
 bashio::net.wait_for 2001
 
 python3 broker_agent.py --port 2001 --host localhost --username "$AGENT_USERNAME" --password "$AGENT_PASSWORD" --cert-ca "/data/mqtt/certs/ca.crt" $debug $bridging
+bashio::log.warning "BROKER AGENT EXITED"
 
 popd >/dev/null

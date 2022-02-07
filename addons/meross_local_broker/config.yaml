@@ -27,10 +27,12 @@ options:
   email: "meross_local@local"
   password: "Changeme!"
   federate_with_meross: False
+  resetdb: False
 schema:
   email: "str"
   password: "str"
   federate_with_meross: "bool"
+  resetdb: "bool"
 environment:
   debug: true
   debug_port: 10001
