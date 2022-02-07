@@ -26,10 +26,11 @@ homeassistant: "1.0.0"
 options:
   email: "meross_local@local"
   password: "Changeme!"
-  debug_mode: False
   federate_with_meross: False
 schema:
   email: "str"
   password: "str"
-  debug_mode: "bool"
   federate_with_meross: "bool"
+environment:
+  debug: true
+  debug_port: 10001

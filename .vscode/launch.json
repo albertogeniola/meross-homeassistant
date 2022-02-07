@@ -5,7 +5,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: Attach Remote",
+      "name": "RASPBERRY PI - REMOTE",
       "type": "python",
       "request": "attach",
       "port": 6789,
@@ -18,7 +18,7 @@
       ]
     },
     {
-      "name": "Python: Attach Remote Addon",
+      "name": "Addon REMOTE",
       "type": "python",
       "request": "attach",
       "port": 10001,

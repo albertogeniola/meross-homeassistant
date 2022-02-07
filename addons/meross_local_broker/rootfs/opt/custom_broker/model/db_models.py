@@ -155,7 +155,7 @@ class Event(Base, Serializer):
     __tablename__ = 'events'
     __table_args__ = {'sqlite_autoincrement': True}
     
-    event_id = Column(String(32), primary_key=True, autoincrement=True)
+    event_id = Column(Integer, primary_key=True, autoincrement=True)
     severity = Column(Enum(OnlineStatus))
     type = Column(String(64))
     
