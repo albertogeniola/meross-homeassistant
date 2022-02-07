@@ -8,6 +8,8 @@ from db_helper import dbhelper
 from flask import Blueprint, request
 from logger import get_logger
 from meross_iot.model.enums import OnlineStatus
+from model.enums import EventType
+
 
 devs_blueprint = Blueprint('_devs', __name__)
 _LOGGER = get_logger(__name__)
@@ -51,6 +53,7 @@ def device_login():
         _LOGGER.debug("DEVICE_AUTH=> Raw message content: %s", request.data)
         _LOGGER.error(
             "DEVICE_AUTH=> Expected JSON body has not been received.")
+        dbhelper.store_event(event_type=EventType.CONNECT_FAILURE, details=f"Invalid connection attempted from {str(request.remote_addr)}")
         return "ko", 403
 
     username = request.json.get('username')
@@ -109,6 +112,7 @@ def _custom_login(email: str, password: str):
     if user is None:
         _LOGGER.error(
             "LOGIN_CHECK(custom)=> User \"%s\" does not exist.", email)
+        dbhelper.store_event(event_type=EventType.USER_LOGIN_FAILURE, details=f"Custom login from {str(request.remote_addr)} failed: username {email} does not exist.")
         return "ko", 401
 
     hashed_pass = _hash_password(salt=user.salt, password=password)
@@ -117,11 +121,13 @@ def _custom_login(email: str, password: str):
 
     if hashed_pass == user.password:
         _LOGGER.info(
-            "LOGIN_CHECK(custom)=> App login attempt succeeded UserId: %s", email)
+            "LOGIN_CHECK(custom)=> User login attempt succeeded UserId: %s", email)
+        dbhelper.store_event(event_type=EventType.USER_LOGIN_SUCCESS, user_id=user.user_id, details=f"Custom login from {str(request.remote_addr)} succeeded.")
         return "ok", 200
     else:
         _LOGGER.warning(
-            "LOGIN_CHECK(custom)=> App login attempt failed (UserId %s)", email)
+            "LOGIN_CHECK(custom)=> User login attempt failed (UserId %s)", email)
+        dbhelper.store_event(event_type=EventType.USER_LOGIN_FAILURE, details=f"Custom login from {str(request.remote_addr)} with email {email} failed: wrong credentials.")
         return "ko", 403
 
 
@@ -129,8 +135,8 @@ def _app_login(user_id: str, md5hash: str) -> Tuple[str, int]:
     try:
         userid = int(user_id)
     except ValueError:
-        _LOGGER.error(
-            "LOGIN_CHECK(app)=> UserId \"%s\" is invalid.", str(user_id))
+        _LOGGER.error("LOGIN_CHECK(app)=> UserId \"%s\" is invalid.", str(user_id))
+        dbhelper.store_event(event_type=EventType.USER_LOGIN_FAILURE, user_id=user_id, details=f"App login from {str(request.remote_addr)} with user_id {str(user_id)} failed: invalid user_id, it should be numerical.")
         return "ko", 400
 
     # Lookup key by the given username.
@@ -138,6 +144,7 @@ def _app_login(user_id: str, md5hash: str) -> Tuple[str, int]:
     if user is None:
         _LOGGER.error(
             "LOGIN_CHECK(app)=> User with ID \"%s\" does not exist.", str(userid))
+        dbhelper.store_event(event_type=EventType.USER_LOGIN_FAILURE, user_id=user_id, details=f"App login from {str(request.remote_addr)} with user_id {str(user_id)} failed: user id does not exist.")
         return "ko", 401
 
     # Calculate the expected hash: MD5(<userid><mqtt_key>).hex()
@@ -151,10 +158,12 @@ def _app_login(user_id: str, md5hash: str) -> Tuple[str, int]:
     if expected_digest == md5hash:
         _LOGGER.info(
             "LOGIN_CHECK(app)=> App login attempt succeeded UserId: %s", str(userid))
+        dbhelper.store_event(event_type=EventType.USER_LOGIN_SUCCESS, user_id=user_id, details=f"App login from {str(request.remote_addr)} with user_id {str(user_id)} succeeded.")
         return "ok", 200
     else:
         _LOGGER.warning(
             "LOGIN_CHECK(app)=> App login attempt failed (UserId %s)", str(userid))
+        dbhelper.store_event(event_type=EventType.USER_LOGIN_FAILURE, user_id=user_id, details=f"App login from {str(request.remote_addr)} with user_id {str(user_id)} failed: invalid user/password combination.")
         return "ko", 403
 
 
@@ -164,6 +173,7 @@ def _device_login(mac: str, user_id: str, device_uuid: str, md5hash: str, client
     except ValueError:
         _LOGGER.error(
             "LOGIN_CHECK(device)=> UserId \"%s\" is invalid.", str(user_id))
+        dbhelper.store_event(event_type=EventType.DEVICE_CONNECT_FAILURE, user_id=user_id, details=f"Device {device_uuid} ({str(request.remote_addr)}) failed authentication: invalid user_id specified.")
         return "ko", 400
 
     # Lookup key by the given username.
@@ -171,6 +181,7 @@ def _device_login(mac: str, user_id: str, device_uuid: str, md5hash: str, client
     if user is None:
         _LOGGER.error(
             "LOGIN_CHECK(device)=> User with ID \"%s\" does not exist.", str(userid))
+        dbhelper.store_event(event_type=EventType.DEVICE_CONNECT_FAILURE, user_id=user_id, details=f"Device {device_uuid} ({str(request.remote_addr)}) failed authentication: provided user_id {str(user_id)} does not exist.")
         return "ko", 401
 
     expected_md5hash = md5()
@@ -188,8 +199,10 @@ def _device_login(mac: str, user_id: str, device_uuid: str, md5hash: str, client
         _LOGGER.info(
             "Device login attempt succeeded. Device with mac \"%s\" (uuid %s) has been associated to "
             "userid \"%s\"", str(mac), str(device_uuid), str(userid))
+        dbhelper.store_event(event_type=EventType.DEVICE_CONNECT_SUCCESS, user_id=user_id, device_uuid=device_uuid, details=f"Device {device_uuid} ({str(request.remote_addr)}) successfully authenticated.")
         return "ok", 200
     else:
         _LOGGER.warning(
             "Device login attempt failed (device with mac \"%s\", userid \"%s\")", str(mac), str(userid))
+        dbhelper.store_event(event_type=EventType.DEVICE_CONNECT_FAILURE, user_id=user_id, device_uuid=device_uuid, details=f"Device {device_uuid} ({str(request.remote_addr)}) failed authentication.")
         return "ko", 403

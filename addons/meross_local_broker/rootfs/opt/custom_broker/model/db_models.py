@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship
 from database import Base
 from sqlalchemy.inspection import inspect
 
-from model.enums import BridgeStatus
+from model.enums import BridgeStatus, EventType
 
 
 class Serializer(object):
@@ -156,6 +156,9 @@ class Event(Base, Serializer):
     __table_args__ = {'sqlite_autoincrement': True}
     
     event_id = Column(Integer, primary_key=True, autoincrement=True)
-    severity = Column(Enum(OnlineStatus))
-    type = Column(String(64))
+    event_type = Column(Enum(EventType), nullable=False)
+    device_uuid = Column(String, nullable=True)
+    sub_device_id = Column(String, nullable=True)
+    user_id = Column(String, nullable=True)
+    details = Column(String, nullable=True)
     

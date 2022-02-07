@@ -4,10 +4,10 @@ from logger import get_logger
 from typing import Optional, List
 
 from database import db_session
-from model.db_models import UserToken, Device, User, DeviceChannel, SubDevice
+from model.db_models import UserToken, Device, User, DeviceChannel, SubDevice, Event
 from datetime import datetime
 
-from model.enums import BridgeStatus
+from model.enums import BridgeStatus, EventType
 
 l = get_logger(__name__)
 
@@ -149,6 +149,12 @@ class DbHelper:
     def reset_device_online_status(self) -> None:
         self._s.query(Device).update({Device.online_status: OnlineStatus.UNKNOWN})
         self._s.commit()
+
+    def store_event(self, event_type: EventType, device_uuid: str = None, sub_device_id: str = None, user_id:str = None, details: str = None) -> Event:
+        event = Event(event_type=event_type, device_uuid=device_uuid, sub_device_id=sub_device_id, user_id=user_id, details=details)
+        self._s.add(event)
+        self._s.commit()
+        return event
 
 
 dbhelper = DbHelper()
