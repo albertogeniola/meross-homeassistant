@@ -29,6 +29,13 @@
           "remoteRoot": "/opt/custom_broker"
         }
       ]
+    },
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Launch Chrome against localhost",
+      "url": "http://localhost:4200",
+      "webRoot": "${workspaceFolder}/addons/meross_local_broker/addon_web_ui"
     }
   ]
 }

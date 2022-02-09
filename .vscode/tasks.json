@@ -36,6 +36,20 @@
       },
       "args": [".local_debug/run_addon_locally.sh"],
       "problemMatcher": []
+    },
+    {
+      "label": "[LOCAL] Run Web UI",
+      "type": "shell",
+      "command": "npm",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/addons/meross_local_broker/addon_web_ui"
+      },
+      "args": ["run", "start"],
+      "problemMatcher": []
     }
   ]
 }

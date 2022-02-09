@@ -8,8 +8,15 @@
   box-sizing: border-box;
 }
 
+/* get the required local files */
+@font-face {
+  font-family: "Roboto";
+  src: url("fonts/roboto.eot");
+}
+
 html,
 body {
+  font-family: "Roboto", sans-serif;
   display: flex;
   flex-direction: column;
   margin: 0;

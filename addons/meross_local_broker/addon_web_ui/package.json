@@ -21,6 +21,7 @@
   "dependencies": {
     "@angular/animations": "^11.0.8",
     "@angular/cdk": "^12.0.2",
+    "@angular/cli": "^11.0.6",
     "@angular/common": "^11.0.8",
     "@angular/compiler": "^11.0.8",
     "@angular/core": "^11.0.8",
@@ -39,7 +40,6 @@
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^0.1100.6",
-    "@angular/cli": "~11.0.6",
     "@angular/compiler-cli": "^11.0.8",
     "@angular/language-service": "^11.0.8",
     "@biesbjerg/ngx-translate-extract": "^7.0.3",
