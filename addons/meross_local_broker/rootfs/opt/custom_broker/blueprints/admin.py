@@ -6,6 +6,8 @@ from flask import Blueprint
 from db_helper import dbhelper
 from model.db_models import Device
 from model.exception import BadRequestError
+from s6 import get_services_info
+
 
 admin_blueprint = Blueprint('admin', __name__)
 _LOGGER = get_logger(__name__)
@@ -53,3 +55,11 @@ def list_subdevices() -> List[Dict]:
     """ List all subdevices """
     subdevices = dbhelper.get_all_subdevices()
     return jsonify(Device.serialize_list(subdevices))
+
+
+# TODO: check super-admin role...
+@admin_blueprint.route('/processes', methods=['GET'])
+def list_processes() -> List[Dict]:
+    """ List processes """
+    services = get_services_info()
+    return jsonify([s.serialize() for s in services])
