@@ -6,7 +6,7 @@ from flask import Blueprint
 from db_helper import dbhelper
 from model.db_models import Device
 from model.exception import BadRequestError
-from s6 import get_services_info
+from s6 import service_manager
 
 
 admin_blueprint = Blueprint('admin', __name__)
@@ -58,8 +58,25 @@ def list_subdevices() -> List[Dict]:
 
 
 # TODO: check super-admin role...
-@admin_blueprint.route('/processes', methods=['GET'])
-def list_processes() -> List[Dict]:
-    """ List processes """
-    services = get_services_info()
+@admin_blueprint.route('/services', methods=['GET'])
+def list_services() -> List[Dict]:
+    """ List services """
+    services = service_manager.get_services_info()
     return jsonify([s.serialize() for s in services])
+
+
+# TODO: check super-admin role...
+@admin_blueprint.route('/services/<service_name>/execute/<command>', methods=['POST'])
+def execute_service_command(service_name: str, command: str) -> bool:
+    """ Executes a command on a service """
+    cmd = command.lower()
+    result = False
+    if cmd == "start": 
+        result = service_manager.start_service(service_name)
+    elif cmd == "stop":
+        result = service_manager.stop_service(service_name)
+    elif command == "restart":
+        result = service_manager.restart_service(service_name)
+    else:
+        raise BadRequestError(msg="Invalid command specified.")
+    return jsonify(result)

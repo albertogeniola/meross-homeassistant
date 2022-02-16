@@ -2,6 +2,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Device, DeviceOnlineStatus } from '@app/model/device';
 import { SubdeviceStore } from '@app/providers/subdevice';
+import { ServiceStatus } from '@app/model/service';
 import { Subdevice } from '@app/model/subdevice';
 import { environment } from '@env/environment';
 import { Observable, of } from 'rxjs';
@@ -66,5 +67,37 @@ export class AdminService {
     return this.http
       .get<Subdevice[]>(environment.backend + '/_admin_/subdevices', { headers })
       .pipe(catchError(this.handleError<any[]>('listSubdevices', [])));
+  }
+
+  listServices(): Observable<ServiceStatus[]> {
+    var headers = new HttpHeaders();
+    headers.append('Content-Type', 'application/json; charset=utf-8');
+    return this.http
+      .get<ServiceStatus[]>(environment.backend + '/_admin_/services', { headers })
+      .pipe(catchError(this.handleError<any[]>('listServices', [])));
+  }
+
+  private executeServiceCommand(serviceName: string, command: string): Observable<boolean> {
+    var headers = new HttpHeaders();
+    headers.append('Content-Type', 'application/json; charset=utf-8');
+    return this.http
+      .post<boolean>(
+        environment.backend + '/_admin_/services/' + serviceName + '/execute/' + command.toUpperCase(),
+        null,
+        { headers }
+      )
+      .pipe(catchError(this.handleError('executeServiceCommand', null)));
+  }
+
+  stopService(serviceName: string): Observable<boolean> {
+    return this.executeServiceCommand(serviceName, 'STOP');
+  }
+
+  startService(serviceName: string): Observable<boolean> {
+    return this.executeServiceCommand(serviceName, 'START');
+  }
+
+  restartService(serviceName: string): Observable<boolean> {
+    return this.executeServiceCommand(serviceName, 'RESTART');
   }
 }

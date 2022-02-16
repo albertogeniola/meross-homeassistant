@@ -18,6 +18,19 @@
       ]
     },
     {
+      "name": "Addon REMOTE (Win)",
+      "type": "python",
+      "request": "attach",
+      "port": 10001,
+      "host": "localhost",
+      "pathMappings": [
+        {
+          "localRoot": "C:\\Users\\Alberto Geniola\\PycharmProjects\\meross-homeassistant\\addons\\meross_local_broker\\rootfs\\opt\\custom_broker/",
+          "remoteRoot": "/opt/custom_broker"
+        }
+      ]
+    },
+    {
       "name": "Addon REMOTE",
       "type": "python",
       "request": "attach",

@@ -1,22 +1,24 @@
 <div class="process-cards-container">
-  <mat-card *ngFor="let pinfo of processes" class="process-card">
+  <mat-card *ngFor="let service of services" class="process-card">
     <mat-card-title-group>
       <div mat-card-avatar>
         <div
           [ngClass]="{
-            'led-green': pinfo.status == 'running',
-            'led-gray': pinfo.status == 'stopped',
-            'led-red': pinfo.status == 'error'
+            'led-green': service.status == 'RUNNING',
+            'led-gray': service.status == 'STOPPED',
+            'led-red': service.status == 'DOWN'
           }"
         ></div>
       </div>
-      <mat-card-title>{{ pinfo.name }}</mat-card-title>
-      <mat-card-subtitle>Status: {{ pinfo.status }}</mat-card-subtitle>
+      <mat-card-title>{{ service.name }}</mat-card-title>
+      <mat-card-subtitle>Status: {{ service.status }}</mat-card-subtitle>
     </mat-card-title-group>
     <mat-card-actions>
-      <button mat-button [disabled]="pinfo.status == 'running'">START</button>
-      <button mat-button [disabled]="pinfo.status == 'stopped'">STOP</button>
-      <button mat-button [disabled]="pinfo.status != 'running'">RESTART</button>
+      <button mat-button [disabled]="service.status == 'RUNNING'" (click)="startService(service.name)">START</button>
+      <button mat-button [disabled]="service.status == 'STOPPED'" (click)="stopService(service.name)">STOP</button>
+      <button mat-button [disabled]="service.status != 'RUNNING'" (click)="restartService(service.name)">
+        RESTART
+      </button>
     </mat-card-actions>
   </mat-card>
 </div>

@@ -1,4 +1,7 @@
 import { Component, OnInit } from '@angular/core';
+import { ServiceStatus } from '@app/model/service';
+import { ServiceStore } from '@app/providers/service';
+import { AdminService } from '@app/services/admin';
 
 @Component({
   selector: 'app-status',
@@ -6,13 +9,24 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./status.component.scss'],
 })
 export class StatusComponent implements OnInit {
-  public processes: any = [
-    { name: 'test', status: 'running' },
-    { name: 'test', status: 'stopped' },
-    { name: 'test', status: 'error' },
-  ];
+  public services: ServiceStatus[] = [];
 
-  constructor() {}
+  constructor(private serviceStore: ServiceStore, private adminService: AdminService) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    // Update the services once
+    this.serviceStore.services.subscribe((services) => (this.services = services));
+  }
+
+  stopService(serviceName: string): void {
+    this.adminService.stopService(serviceName).subscribe((res) => console.log(res));
+  }
+
+  startService(serviceName: string): void {
+    this.adminService.startService(serviceName).subscribe((res) => console.log(res));
+  }
+
+  restartService(serviceName: string): void {
+    this.adminService.restartService(serviceName).subscribe((res) => console.log(res));
+  }
 }
