@@ -14,6 +14,7 @@ import { AboutModule } from './about/about.module';
 import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app-routing.module';
 import { StatusComponent } from './status/status.component';
+import { AnsiparserPipe } from './ansiparser.pipe';
 
 @NgModule({
   imports: [
@@ -30,7 +31,7 @@ import { StatusComponent } from './status/status.component';
     AboutModule,
     AppRoutingModule, // must be imported as the last module as it contains the fallback route
   ],
-  declarations: [AppComponent, StatusComponent],
+  declarations: [AppComponent, StatusComponent, AnsiparserPipe],
   providers: [],
   bootstrap: [AppComponent],
 })

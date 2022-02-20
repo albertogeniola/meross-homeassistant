@@ -1,19 +1,8 @@
 import { Injectable } from '@angular/core';
 import { ServiceStatus } from '@app/model/service';
-import { BehaviorSubject, defer, interval, Observable } from 'rxjs';
+import { BehaviorSubject, interval, Observable } from 'rxjs';
 import { AdminService } from '../services/admin';
-import { timer, from } from 'rxjs';
-import {
-  map,
-  concatMap,
-  repeatWhen,
-  share,
-  tap,
-  publishReplay,
-  shareReplay,
-  switchMap,
-  takeUntil,
-} from 'rxjs/operators';
+import { share, switchMap } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root',

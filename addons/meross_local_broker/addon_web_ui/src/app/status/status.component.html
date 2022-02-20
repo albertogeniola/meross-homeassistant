@@ -17,7 +17,11 @@
     <mat-tab-group id="tab-group">
       <mat-tab *ngFor="let service of serviceNames" [label]="service">
         <div class="log-list">
-          <div class="log-list-row" *ngFor="let l of logs[service]">{{ l }}</div>
+          <div class="log-list-row" *ngFor="let l of logs[service]">
+            <span *ngFor="let span of l | ansiparser" [style]="span.css">
+              {{ span.text }}
+            </span>
+          </div>
         </div>
       </mat-tab>
     </mat-tab-group>
