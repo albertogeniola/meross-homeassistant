@@ -16,3 +16,8 @@ fi
 
 sed -i "s#%%ingress_entry%%#${ingress_entry}#g" /etc/nginx/ingress.conf
 sed -i "s/%%interface%%/${ingress_interface}/g" /etc/nginx/ingress.conf
+
+# Prepare log dir
+mkdir -p /var/log/nginx
+chown nobody:nogroup /var/log/nginx
+chmod 02755 /var/log/nginx

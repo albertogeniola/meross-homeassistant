@@ -10,12 +10,29 @@ import { AdminService } from '@app/services/admin';
 })
 export class StatusComponent implements OnInit {
   public services: ServiceStatus[] = [];
+  public serviceNames: string[] = [];
+  public logs: Map<string, string[]> = new Map();
 
   constructor(private serviceStore: ServiceStore, private adminService: AdminService) {}
 
   ngOnInit(): void {
-    // Update the services once
-    this.serviceStore.services.subscribe((services) => (this.services = services));
+    // Update the services once and make sure to subscribe to all the services
+    this.serviceStore.services.subscribe((services) => {
+      this.services = services;
+      for (let service of this.services) {
+        this.serviceNames.push(service.name);
+        this.serviceStore.followServiceLogs(service.name).subscribe((lines) => {
+          this.logs[service.name] = lines.reverse();
+        });
+      }
+    });
+    this.serviceStore.serviceUpdates.subscribe((services) => {
+      this.services = services;
+      this.serviceNames = [];
+      for (let s of services) {
+        this.serviceNames.push(s.name);
+      }
+    });
   }
 
   stopService(serviceName: string): void {

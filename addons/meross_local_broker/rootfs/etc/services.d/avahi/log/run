@@ -1,0 +1,2 @@
+#!/usr/bin/with-contenv sh
+exec logutil-service /var/log/avahi

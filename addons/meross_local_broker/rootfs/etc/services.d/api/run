@@ -3,4 +3,5 @@
 # Start meross API service
 # ==============================================================================
 bashio::log.info "Starting the Meross daemon"
+exec 2>&1
 exec /usr/local/bin/api.sh

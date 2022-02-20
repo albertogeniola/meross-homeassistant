@@ -19,9 +19,6 @@ fi
 ingress_entry=$(bashio::addon.ingress_entry)
 sed -i "s#%%APIURL%%#${ingress_entry}#g" /var/www/assets/env.js
 
-# Create logging directory for API Server
-mkdir -p /var/log/broker
-
 # Initializing DB
 pushd /opt/custom_broker >/dev/null
 
@@ -43,3 +40,8 @@ else
   bashio::log.info "DB setup finished"
 fi
 popd >/dev/null
+
+# Prepare log dir
+mkdir -p /var/log/api
+chown nobody:nogroup /var/log/api
+chmod 02755 /var/log/api

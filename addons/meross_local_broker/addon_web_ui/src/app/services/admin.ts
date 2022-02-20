@@ -77,6 +77,14 @@ export class AdminService {
       .pipe(catchError(this.handleError<any[]>('listServices', [])));
   }
 
+  getServiceLog(serviceName: string): Observable<string[]> {
+    var headers = new HttpHeaders();
+    headers.append('Content-Type', 'application/json; charset=utf-8');
+    return this.http
+      .get<string[]>(environment.backend + '/_admin_/services/' + serviceName + '/log', { headers })
+      .pipe(catchError(this.handleError('getServiceLog', [])));
+  }
+
   private executeServiceCommand(serviceName: string, command: string): Observable<boolean> {
     var headers = new HttpHeaders();
     headers.append('Content-Type', 'application/json; charset=utf-8');

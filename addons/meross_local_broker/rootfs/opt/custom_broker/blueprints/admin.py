@@ -67,7 +67,7 @@ def list_services() -> List[Dict]:
 
 # TODO: check super-admin role...
 @admin_blueprint.route('/services/<service_name>/execute/<command>', methods=['POST'])
-def execute_service_command(service_name: str, command: str) -> bool:
+def execute_service_command(service_name: str, command: str):
     """ Executes a command on a service """
     cmd = command.lower()
     result = False
@@ -80,3 +80,10 @@ def execute_service_command(service_name: str, command: str) -> bool:
     else:
         raise BadRequestError(msg="Invalid command specified.")
     return jsonify(result)
+
+
+# TODO: check super-admin role...
+@admin_blueprint.route('/services/<service_name>/log', methods=['GET'])
+def get_service_log(service_name: str):
+    """ Returns the log of the given service """
+    return jsonify(service_manager.get_log(service_name))

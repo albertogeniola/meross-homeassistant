@@ -1,7 +1,10 @@
 #!/usr/bin/with-contenv bashio
 # ==============================================================================
-# Start mosquitto service
+# Configures the Avahi daemon
 # ==============================================================================
-bashio::log.info "Starting the Mosquitto daemon"
-exec 2>&1
-exec /usr/local/bin/mosquitto.sh
+# shellcheck disable=SC1091
+
+# Prepare log dir
+mkdir -p /var/log/broker
+chown nobody:nogroup /var/log/broker
+chmod 02755 /var/log/broker

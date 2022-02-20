@@ -34,11 +34,11 @@ else
   bashio::log.info "All certificate files seems present."
 fi
 
-if [[ ! -d $MQTT_MOSQUITTO_LOG_DIR_PATH ]]; then
-  mkdir -p $MQTT_MOSQUITTO_LOG_DIR_PATH
-fi
-
 # Align permissions
 bashio::log.info "Aligning permissions for certificates"
 chown -vR mosquitto:mosquitto $MQTT_CERTS_FOLDER_PATH
-chown -vR mosquitto:mosquitto $MQTT_MOSQUITTO_LOG_DIR_PATH
+
+# Prepare log dir
+mkdir -p $MQTT_MOSQUITTO_LOG_DIR_PATH
+chown nobody:nogroup $MQTT_MOSQUITTO_LOG_DIR_PATH
+chmod 02755 $MQTT_MOSQUITTO_LOG_DIR_PATH
