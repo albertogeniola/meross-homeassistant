@@ -1,13 +1,14 @@
 from meross_iot.model.enums import OnlineStatus
-
 from logger import get_logger
 from typing import Optional, List
-
+from constants import BASE62_ALPHABET
 from database import db_session
 from model.db_models import UserToken, Device, User, DeviceChannel, SubDevice, Event
 from datetime import datetime
-
+from utilities import _hash_password
 from model.enums import BridgeStatus, EventType
+import random
+
 
 l = get_logger(__name__)
 
@@ -15,6 +16,45 @@ l = get_logger(__name__)
 class DbHelper:
     def __init__(self):
         self._s = db_session
+
+    def add_update_user(self, email: str, password: str, user_key: str, user_id: int, enable_meross_link: bool = False) -> User:
+        # Consistency check on enable_meross_link
+        # If there is any other user configured as "bridge" for Meross Link, unset it.
+        if enable_meross_link:
+            u = self._s.query(User).filter(User.enable_meross_link==True).first()
+            if u is not None and u.email != email:
+                l.warn("Changing federated meross user. Not using credentials from %s account as Meross Link.", u.email)
+                u.enable_meross_link = False
+                self._s.add(u)
+                self._s.commit()
+        
+        # Check if the given user/password already exists or is valid.
+        u = self._s.query(User).filter(User.email == email).first()
+        if u is None:
+            l.info(f"User %s not found in db. Adding a new entry...", email)
+            if user_key is None:
+                # Prefer using an empty KEY rather than a randomized one
+                user_key = ''
+            salt = ''.join(random.choice(BASE62_ALPHABET) for i in range(16))
+            hashed_pass = _hash_password(salt=salt, password=password)
+            u = User(email=email, user_id=user_id, salt=salt, password=hashed_pass, mqtt_key=user_key, enable_meross_link=enable_meross_link)
+            self._s.add(u)
+            self._s.commit()
+        else:
+            l.warning(f"User %s already exists. Updating its password/userid/mqttkey...", email)
+            salt = u.salt
+            hashed_pass = _hash_password(salt=salt, password=password)
+            u.password = hashed_pass
+
+            if user_key is not None:
+                u.mqtt_key = user_key
+
+            if user_id is not None:
+                u.user_id = user_id
+
+            self._s.add(u)
+            self._s.commit()
+        return u
 
     def store_new_user_token(self, userid, token) -> UserToken:
         token = UserToken(user_id=userid, token=token)

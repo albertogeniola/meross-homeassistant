@@ -7,6 +7,7 @@ from meross_iot.model.http.exception import HttpApiError
 
 from db_helper import dbhelper
 from model.db_models import User, UserToken
+from utilities import _hash_password
 
 
 def verify_token(token) -> Optional[User]:
@@ -18,16 +19,6 @@ def verify_token(token) -> Optional[User]:
 
 def _user_logout(token: str) -> None:
     dbhelper.remove_user_token(token=token)
-
-
-def _hash_password(salt: str, password: str) -> str:
-    # Get the salt, compute the hashed password and compare it with the one stored in the db
-    clearsaltedpwd = f"{salt}{password}"
-    hashed_pass = sha256()
-    hashed_pass.update(clearsaltedpwd.encode('utf8'))
-    computed_hashed_password = hashed_pass.hexdigest()
-
-    return computed_hashed_password
 
 
 def _user_login(email: str, password: str) -> Tuple[User, UserToken]:

@@ -6,10 +6,14 @@
     <span class="title">{{ title }}</span>
   </div>
   <div fxHide.lt-md>
-    <a class="brand" href="https://github.com/ngx-rocket" translate>APP_NAME</a>
+    <a class="brand" translate>APP_NAME</a>
     <button mat-button routerLink="/home" routerLinkActive="active">
       <mat-icon>home</mat-icon>
       <span translate>Home</span>
+    </button>
+    <button mat-button routerLink="/configuration" routerLinkActive="active">
+      <mat-icon>settings</mat-icon>
+      <span translate>Configuration</span>
     </button>
     <button mat-button routerLink="/status" routerLinkActive="active">
       <mat-icon>poll</mat-icon>

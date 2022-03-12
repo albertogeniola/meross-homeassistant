@@ -1,0 +1,61 @@
+<div class="configuration-container">
+  <div class="account-container">
+    <mat-card class="account-card">
+      <mat-card-subtitle>Device Pairing information</mat-card-subtitle>
+      <mat-card-title>Account</mat-card-title>
+      <mat-card-content>
+        <p>
+          Please configure the account credentials to be used for device pairing. These are the credentials info to be
+          used with the Meross Custom Pairer app to pair your devices with this borker.
+        </p>
+        <div class="form-container">
+          <mat-form-field>
+            <mat-label>Account Email</mat-label>
+            <input matInput placeholder="meross@local" [(ngModel)]="accountEmail" required />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Account Password</mat-label>
+            <input
+              matInput
+              [type]="hidePassword ? 'password' : 'text'"
+              placeholder="ChangeMe!"
+              [(ngModel)]="accountPassword"
+              required
+            />
+            <button
+              mat-icon-button
+              matSuffix
+              (click)="hidePassword = !hidePassword"
+              [attr.aria-label]="'Hide password'"
+              [attr.aria-pressed]="hidePassword"
+            >
+              <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+          </mat-form-field>
+          <div [ngClass]="{ 'meross-link-disclaimer': enableMerossLink }">
+            <mat-slide-toggle class="vspaced" color="accent" [(ngModel)]="enableMerossLink">
+              Enable Meross Link
+            </mat-slide-toggle>
+            <p *ngIf="enableMerossLink">
+              Meross Link enables the local broker to act as a relay against the Official cloud. To make this work, make
+              sure you specify your personal <b>meross account credentials</b>.
+            </p>
+          </div>
+          <button class="vspaced" mat-raised-button color="primary" (click)="saveAccountData()">Apply</button>
+        </div>
+      </mat-card-content>
+      <mat-divider inset></mat-divider>
+      <ngx-qrcode
+        *ngIf="encodedAccountLoginData"
+        [elementType]="elementType"
+        [value]="encodedAccountLoginData"
+        cssClass="qrcode"
+        [errorCorrectionLevel]="correctionLevel"
+      >
+      </ngx-qrcode>
+      <mat-card-footer>
+        <mat-progress-bar mode="indeterminate" *ngIf="processing"></mat-progress-bar>
+      </mat-card-footer>
+    </mat-card>
+  </div>
+</div>
