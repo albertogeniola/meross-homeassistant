@@ -5,7 +5,7 @@ debug=${debug_mode:-false}
 
 # Start flask
 bashio::log.info "Starting flask..."
-if [[ $debug==true ]]; then
+if [[ $debug == "true" ]]; then
   bashio::log.info "Setting flask debug flags"
   export ENABLE_DEBUG=True
   export DEBUG_PORT=${debug_port:-10001}
@@ -15,7 +15,5 @@ else
   export ENABLE_DEBUG=False
   python3 ./http_api.py
 fi
-
-bashio::log.warning "Flask terminated."
 
 popd >/dev/null

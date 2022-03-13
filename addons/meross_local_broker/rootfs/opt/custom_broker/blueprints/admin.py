@@ -9,6 +9,7 @@ from model.exception import BadRequestError
 from constants import DEFAULT_USER_ID
 from s6 import service_manager
 from setup import setup_account
+import time
 
 
 admin_blueprint = Blueprint('admin', __name__)
@@ -102,7 +103,7 @@ def get_account():
 
 
 # TODO: check super-admin role...
-@admin_blueprint.route('/configuration/account', methods=['POST'])
+@admin_blueprint.route('/configuration/account', methods=['PUT'])
 def set_account():
     """ Configures the Meross Account to be use as authentication method """
     # Arg checks
@@ -111,16 +112,27 @@ def set_account():
         raise BadRequestError(msg=f"Missing json payload.")
     email: str = payload.get('email')
     password: str = payload.get('password')
-    meross_link: bool = payload.get('meross_link')
+    meross_link: bool = payload.get('enableMerossLink')
     if email is None:
         raise BadRequestError(msg=f"Missing or invalid email.")
     if password is None:
         raise BadRequestError(msg=f"Missing or invalid password.")
     if meross_link is None:
-        raise BadRequestError(msg=f"Missing or invalid meross_link option.")
+        raise BadRequestError(msg=f"Missing or invalid enableMerossLink option.")
     
     # Setup Account
     user = setup_account(email=email, password=password, enable_meross_link=meross_link)
+
+    # As soon as the Account is set, we need to restart the mosquitto and the broker services
+    #_LOGGER.warn("Stopping broker & MQTT services (due to account configuration changes)")
+    #service_manager.stop_service("Local Agent")
+    #service_manager.stop_service("MQTT Service")
+    #time.sleep(10)
+    #_LOGGER.warn("Starting broker & MQTT services (due to account configuration changes)")
+    #service_manager.start_service("Local Agent")
+    #service_manager.start_service("MQTT Service")
+    service_manager.restart_service("Local Agent")
+    service_manager.restart_service("MQTT Service")
     
     # TODO: Restart/Reload broker?
     return jsonify(user.serialize())

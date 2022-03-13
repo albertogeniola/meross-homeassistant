@@ -5,5 +5,5 @@
 if { s6-test ${1} -ne 0 }
 if { s6-test ${1} -ne 256 }
 
-bashio::log.info "Meross-service finished"
+bashio::log.info "Broker-service finished"
 s6-svscanctl -t /var/run/s6/services

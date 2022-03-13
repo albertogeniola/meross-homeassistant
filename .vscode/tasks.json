@@ -38,6 +38,17 @@
       "problemMatcher": []
     },
     {
+      "label": "[LOCAL] Run Addon container [REINIT]",
+      "type": "process",
+      "command": "bash.exe",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "args": [".local_debug/run_addon_locally_reinit.sh"],
+      "problemMatcher": []
+    },
+    {
       "label": "[LOCAL] Run Web UI",
       "type": "shell",
       "command": "npm",

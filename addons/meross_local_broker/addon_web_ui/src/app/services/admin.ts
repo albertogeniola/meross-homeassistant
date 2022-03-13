@@ -91,7 +91,21 @@ export class AdminService {
     headers.append('Content-Type', 'application/json; charset=utf-8');
     return this.http
       .get<User | any>(environment.backend + '/_admin_/configuration/account', { headers })
-      .pipe(catchError(this.handleError('getAccountConfiguration', [])));
+      .pipe(catchError(this.handleError('getAccountConfiguration', null)));
+  }
+
+  updateAccountConfiguration(email: string, password: string, enableMerossLink: boolean): Observable<User> {
+    var headers = new HttpHeaders();
+    headers.append('Content-Type', 'application/json; charset=utf-8');
+    var data = {
+      email: email,
+      password: password,
+      enableMerossLink: enableMerossLink,
+    };
+
+    return this.http
+      .put<User | null>(environment.backend + '/_admin_/configuration/account', data, { headers })
+      .pipe(catchError(this.handleError('updateAccountConfiguration', null)));
   }
 
   private executeServiceCommand(serviceName: string, command: string): Observable<boolean> {

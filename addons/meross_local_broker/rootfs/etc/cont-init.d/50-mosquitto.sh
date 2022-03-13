@@ -3,7 +3,6 @@
 # Configures Meross service
 # ==============================================================================
 
-CONFIG_PATH=/data/options.json
 MQTT_CERTS_FOLDER_PATH=/data/mqtt/certs
 MQTT_CA_KEY_PATH="$MQTT_CERTS_FOLDER_PATH/ca.key"
 MQTT_CA_CRT_PATH="$MQTT_CERTS_FOLDER_PATH/ca.crt"

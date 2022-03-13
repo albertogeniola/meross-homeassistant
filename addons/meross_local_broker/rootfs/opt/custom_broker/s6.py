@@ -103,32 +103,38 @@ class ServiceManager:
     def get_services_info(self) -> List[ServiceInfo]:
         return [self.get_service_info(s) for s in self._SERVICE_DIRS]
 
-    def stop_service(self, service_name: str) -> bool:
+    def stop_service(self, service_name: str, wait: bool = True) -> bool:
         """Stops the process"""
         service_descriptor=self._SERVICE_DIRS.get(service_name)
         if service_descriptor is None:
             raise BadRequestError("Invalid service name specified.")
-        process = Popen(['s6-svc', '-d', service_descriptor.service_dir])
-        return_code = process.wait()
-        return return_code == 0
+        process = Popen(['s6-svc', '-d -wD', service_descriptor.service_dir], shell=True)
+        if wait:
+            return_code = process.wait()
+            return return_code == 0
+        return None
 
-    def start_service(self, service_name: str) -> bool:
+    def start_service(self, service_name: str, wait: bool = True) -> Optional[bool]:
         """Starts the process"""
         service_descriptor=self._SERVICE_DIRS.get(service_name)
         if service_descriptor is None:
             raise BadRequestError("Invalid service name specified.")
-        process = Popen(['s6-svc', '-u', service_descriptor.service_dir])
-        return_code = process.wait()
-        return return_code == 0
+        process = Popen(['s6-svc', '-u', service_descriptor.service_dir], shell=True)
+        if wait:
+            return_code = process.wait()
+            return return_code == 0
+        return None
 
-    def restart_service(self, service_name: str) -> bool:
+    def restart_service(self, service_name: str, wait: bool = True) -> Optional[bool]:
         """Starts the process"""
         service_descriptor = self._SERVICE_DIRS.get(service_name)
         if service_descriptor is None:
             raise BadRequestError("Invalid service name specified.")
-        process = Popen(['s6-svc', '-r', service_descriptor.service_dir])
-        return_code = process.wait()
-        return return_code == 0
+        process = Popen(['s6-svc', '-r', service_descriptor.service_dir], shell=True)
+        if wait:
+            return_code = process.wait()
+            return return_code == 0
+        return None
 
     def get_log(self, service_name: str, tail: Optional[int] = 100) -> List[str]:
         """Retrieves the s6 log of that process/service"""

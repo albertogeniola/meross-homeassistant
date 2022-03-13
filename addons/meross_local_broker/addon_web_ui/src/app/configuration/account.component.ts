@@ -14,8 +14,8 @@ import { Validators } from '@angular/forms';
 export class AccountComponent implements OnInit {
   accountForm = this.fb.group({
     email: ['', Validators.required],
-    password: [''],
-    enableMerossLink: [''],
+    password: ['', Validators.required],
+    enableMerossLink: [false],
   });
 
   public hidePassword: boolean = true;
@@ -24,42 +24,57 @@ export class AccountComponent implements OnInit {
   public elementType = NgxQrcodeElementTypes.IMG;
   public correctionLevel = NgxQrcodeErrorCorrectionLevels.MEDIUM;
   public encodedAccountLoginData: string = null;
+  public reconfigureAccount: boolean = false;
 
   public configuredAccount: User = null;
 
   constructor(private fb: FormBuilder, private adminService: AdminService) {}
 
+  private loadAccount(account: User | null) {
+    if (!account) {
+      this.configuredAccount = null;
+      this.reconfigureAccount = true;
+    } else {
+      // Fetch configured data
+      this.configuredAccount = account;
+      this.accountForm.controls.password.setValue(null);
+      this.accountForm.controls.email.setValue(account.email);
+      this.accountForm.controls.enableMerossLink.setValue(account.enable_meross_link);
+    }
+  }
+
   ngOnInit(): void {
-    this.adminService.getAccountConfiguration().subscribe((account) => {
-      if (!account) {
-        this.configuredAccount = null;
-      } else {
-        // Fetch configured data
-        this.configuredAccount = account;
-        this.accountForm.controls.email.setValue(account.email);
-        this.accountForm.controls.enableMerossLink.setValue(account.enable_meross_link);
-      }
+    this.adminService.getAccountConfiguration().subscribe((account: User) => {
+      this.loadAccount(account);
     });
   }
 
-  changed(): boolean {
-    return (
-      this.configuredAccount.email != this.accountForm.controls.email.value ||
-      this.configuredAccount.enable_meross_link != this.accountForm.controls.enableMerossLink.value
-    );
+  editConfiguration(reconfigure: boolean): void {
+    if (reconfigure) {
+      this.adminService.getAccountConfiguration().subscribe((account: User) => {
+        this.loadAccount(account);
+      });
+    }
+    this.reconfigureAccount = reconfigure;
   }
 
-  updateAccountData() {
+  onSubmit(): void {
+    this.processing = true;
+    this.adminService
+      .updateAccountConfiguration(
+        this.accountForm.controls.email.value,
+        this.accountForm.controls.password.value,
+        this.accountForm.controls.enableMerossLink.value
+      )
+      .subscribe((account: User) => {
+        this.processing = false;
+        this.loadAccount(account);
+        this.editConfiguration(false);
+      });
+
     /*
-    let data = {
-      email: this.accountEmail,
-      password: this.accountPassword,
-      enableMerossLink: this.enableMerossLink,
-    };
     let strdata = JSON.stringify(data);
     this.encodedAccountLoginData = btoa(strdata);
     */
   }
-
-  onSubmit() {}
 }

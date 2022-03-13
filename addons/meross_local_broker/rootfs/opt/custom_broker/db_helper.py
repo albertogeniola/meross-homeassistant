@@ -29,7 +29,7 @@ class DbHelper:
                 self._s.commit()
         
         # Check if the given user/password already exists or is valid.
-        u = self._s.query(User).filter(User.email == email).first()
+        u = self._s.query(User).filter(User.user_id == user_id).first()
         if u is None:
             l.info(f"User %s not found in db. Adding a new entry...", email)
             if user_key is None:
@@ -44,13 +44,10 @@ class DbHelper:
             l.warning(f"User %s already exists. Updating its password/userid/mqttkey...", email)
             salt = u.salt
             hashed_pass = _hash_password(salt=salt, password=password)
+            u.email = email
             u.password = hashed_pass
-
             if user_key is not None:
-                u.mqtt_key = user_key
-
-            if user_id is not None:
-                u.user_id = user_id
+                u.mqtt_key = user_key        
 
             self._s.add(u)
             self._s.commit()
