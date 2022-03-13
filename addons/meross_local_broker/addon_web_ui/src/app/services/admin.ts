@@ -1,6 +1,7 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Device, DeviceOnlineStatus } from '@app/model/device';
+import { User } from '@app/model/user';
 import { SubdeviceStore } from '@app/providers/subdevice';
 import { ServiceStatus } from '@app/model/service';
 import { Subdevice } from '@app/model/subdevice';
@@ -83,6 +84,14 @@ export class AdminService {
     return this.http
       .get<string[]>(environment.backend + '/_admin_/services/' + serviceName + '/log', { headers })
       .pipe(catchError(this.handleError('getServiceLog', [])));
+  }
+
+  getAccountConfiguration(): Observable<User> {
+    var headers = new HttpHeaders();
+    headers.append('Content-Type', 'application/json; charset=utf-8');
+    return this.http
+      .get<User | any>(environment.backend + '/_admin_/configuration/account', { headers })
+      .pipe(catchError(this.handleError('getAccountConfiguration', [])));
   }
 
   private executeServiceCommand(serviceName: string, command: string): Observable<boolean> {

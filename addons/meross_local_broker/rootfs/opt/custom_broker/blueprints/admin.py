@@ -98,7 +98,7 @@ def get_account():
     user = dbhelper.get_user_by_id(userid=DEFAULT_USER_ID)
     if user is None:
         raise BadRequestError(msg=f"Invalid/Missing userid {DEFAULT_USER_ID} in the DB. Please set it again.")
-    return jsonify(user.serialize(with_password=True))
+    return jsonify(user.serialize())
 
 
 # TODO: check super-admin role...
@@ -123,4 +123,4 @@ def set_account():
     user = setup_account(email=email, password=password, enable_meross_link=meross_link)
     
     # TODO: Restart/Reload broker?
-    return jsonify(user.serialize(with_password=True))
+    return jsonify(user.serialize())

@@ -44,10 +44,9 @@ class User(Base, Serializer):
     def __repr__(self):
         return '<User %r (%r)>' % (self.user_id, self.email)
 
-    def serialize(self, with_password: bool = False):
+    def serialize(self, ):
         d = Serializer.serialize(self)
-        if not with_password:
-            del d['password']
+        del d['password']
         del d['salt']
         del d['owned_devices']
         return d
