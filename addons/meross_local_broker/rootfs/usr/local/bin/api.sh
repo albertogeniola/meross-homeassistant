@@ -9,11 +9,9 @@ if [[ $debug == "true" ]]; then
   bashio::log.info "Setting flask debug flags"
   export ENABLE_DEBUG=True
   export DEBUG_PORT=${debug_port:-10001}
-  python3 -m debugpy --listen 0.0.0.0:$DEBUG_PORT ./http_api.py
+  exec python3 -m debugpy --listen 0.0.0.0:$DEBUG_PORT ./http_api.py
 else
   bashio::log.info "Setting flask production flags"
   export ENABLE_DEBUG=False
-  python3 ./http_api.py
+  exec python3 ./http_api.py
 fi
-
-popd >/dev/null

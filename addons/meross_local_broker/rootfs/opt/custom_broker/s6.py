@@ -1,6 +1,7 @@
+from asyncio import subprocess
 from asyncore import read
 from subprocess import Popen, PIPE
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 from os import path
 from model.exception import BadRequestError
 
@@ -81,7 +82,7 @@ class ServiceInfo:
 class ServiceManager:
     _SERVICE_DIRS = {
         "MQTT Service": ServiceDescriptor("MQTT Service", "/var/run/s6/services/mosquitto", "/var/log/mosquitto", "Mosquitto MQTT broker service where meross devices connect to."),
-        "Local API": ServiceDescriptor("Local API", "/var/run/s6/services/api", "/var/log/api", "Local HTTP API"),
+        "Local API": ServiceDescriptor("Local API", "/var/run/s6/services/api", "/var/log/api", "Local HTTP web API server"),
         "Local Agent": ServiceDescriptor("Local Agent", "/var/run/s6/services/broker", "/var/log/broker", "Local Meross Agent running over MQTT service"),
         "Web UI Proxy": ServiceDescriptor("Web UI Proxy", "/var/run/s6/services/nginx", "/var/log/nginx", "Web UI reverse proxy"),
         "mDNS Service": ServiceDescriptor("mDNS Service", "/var/run/s6/services/avahi", "/var/log/avahi", "mDNS service broadcaster"),
@@ -103,38 +104,38 @@ class ServiceManager:
     def get_services_info(self) -> List[ServiceInfo]:
         return [self.get_service_info(s) for s in self._SERVICE_DIRS]
 
-    def stop_service(self, service_name: str, wait: bool = True) -> bool:
+    def stop_service(self, service_name: str, wait: bool = True) -> Tuple[Optional[int], Optional[str]]:
         """Stops the process"""
         service_descriptor=self._SERVICE_DIRS.get(service_name)
         if service_descriptor is None:
             raise BadRequestError("Invalid service name specified.")
-        process = Popen(['s6-svc', '-d -wD', service_descriptor.service_dir], shell=True)
+        process = Popen(['/bin/s6-svc', '-wD', '-d', service_descriptor.service_dir], shell=False, stdout=PIPE, stderr=subprocess.STDOUT)
         if wait:
-            return_code = process.wait()
-            return return_code == 0
-        return None
+            stdout, stderr = process.communicate()
+            return process.returncode, stdout.decode('utf-8')
+        return None, None
 
-    def start_service(self, service_name: str, wait: bool = True) -> Optional[bool]:
+    def start_service(self, service_name: str, wait: bool = True) -> Tuple[Optional[int], Optional[str]]:
         """Starts the process"""
         service_descriptor=self._SERVICE_DIRS.get(service_name)
         if service_descriptor is None:
             raise BadRequestError("Invalid service name specified.")
-        process = Popen(['s6-svc', '-u', service_descriptor.service_dir], shell=True)
+        process = Popen(['/bin/s6-svc', '-wU', '-u', service_descriptor.service_dir], shell=False, stdout=PIPE, stderr=subprocess.STDOUT)
         if wait:
-            return_code = process.wait()
-            return return_code == 0
-        return None
+            stdout, stderr = process.communicate()
+            return process.returncode, stdout.decode('utf-8')
+        return None, None
 
-    def restart_service(self, service_name: str, wait: bool = True) -> Optional[bool]:
+    def restart_service(self, service_name: str, wait: bool = True) -> Tuple[Optional[int], Optional[str]]:
         """Starts the process"""
         service_descriptor = self._SERVICE_DIRS.get(service_name)
         if service_descriptor is None:
             raise BadRequestError("Invalid service name specified.")
-        process = Popen(['s6-svc', '-r', service_descriptor.service_dir], shell=True)
+        process = Popen(['/bin/s6-svc', '-wR', '-r', service_descriptor.service_dir], shell=False, stdout=PIPE, stderr=subprocess.STDOUT)
         if wait:
-            return_code = process.wait()
-            return return_code == 0
-        return None
+            stdout, stderr = process.communicate()
+            return process.returncode, stdout.decode('utf-8')
+        return None, None
 
     def get_log(self, service_name: str, tail: Optional[int] = 100) -> List[str]:
         """Retrieves the s6 log of that process/service"""

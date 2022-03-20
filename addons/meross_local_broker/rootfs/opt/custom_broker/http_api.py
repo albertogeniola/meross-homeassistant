@@ -67,4 +67,4 @@ if __name__ == '__main__':
     debug_env = getenv("ENABLE_DEBUG", None)
     enable_debug = debug_env.lower() == "true"
     app.run(port=2002, host="0.0.0.0", debug=enable_debug,
-            use_debugger=False, use_reloader=False)
+            use_debugger=False, use_reloader=enable_debug)

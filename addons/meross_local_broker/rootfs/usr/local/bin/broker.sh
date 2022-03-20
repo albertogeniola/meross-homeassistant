@@ -37,6 +37,4 @@ echo -e "user $AGENT_USERNAME\ntopic readwrite #">/etc/mosquitto/auth.acl
 bashio::log.info "Waiting MQTT server..."
 bashio::net.wait_for 2001
 
-python3 broker_agent.py --port 2001 --host localhost --username "$AGENT_USERNAME" --password "$AGENT_PASSWORD" --cert-ca "/data/mqtt/certs/ca.crt" $debug
-
-popd >/dev/null
+exec python3 broker_agent.py --port 2001 --host localhost --username "$AGENT_USERNAME" --password "$AGENT_PASSWORD" --cert-ca "/data/mqtt/certs/ca.crt" $debug

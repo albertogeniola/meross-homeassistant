@@ -73,16 +73,18 @@ def list_services() -> List[Dict]:
 def execute_service_command(service_name: str, command: str):
     """ Executes a command on a service """
     cmd = command.lower()
-    result = False
     if cmd == "start": 
-        result = service_manager.start_service(service_name)
+        return_code, stdout = service_manager.start_service(service_name)
     elif cmd == "stop":
-        result = service_manager.stop_service(service_name)
+        return_code, stdout = service_manager.stop_service(service_name)
     elif command == "restart":
-        result = service_manager.restart_service(service_name)
+        return_code, stdout = service_manager.restart_service(service_name)
     else:
         raise BadRequestError(msg="Invalid command specified.")
-    return jsonify(result)
+    return jsonify({
+        "return_code": return_code,
+        "output": stdout
+    })
 
 
 # TODO: check super-admin role...
@@ -124,13 +126,7 @@ def set_account():
     user = setup_account(email=email, password=password, enable_meross_link=meross_link)
 
     # As soon as the Account is set, we need to restart the mosquitto and the broker services
-    #_LOGGER.warn("Stopping broker & MQTT services (due to account configuration changes)")
-    #service_manager.stop_service("Local Agent")
-    #service_manager.stop_service("MQTT Service")
-    #time.sleep(10)
-    #_LOGGER.warn("Starting broker & MQTT services (due to account configuration changes)")
-    #service_manager.start_service("Local Agent")
-    #service_manager.start_service("MQTT Service")
+    _LOGGER.warn("Restarting broker & MQTT services (due to account configuration changes)")
     service_manager.restart_service("Local Agent")
     service_manager.restart_service("MQTT Service")
     
