@@ -1,8 +1,10 @@
+from hashlib import md5
+from uuid import uuid4
 from meross_iot.model.credentials import MerossCloudCreds
 
 from logger import get_logger
 import argparse
-from constants import DEFAULT_USER_ID, DEFAULT_USER_KEY
+from constants import DEFAULT_USER_ID
 from database import init_db
 from db_helper import dbhelper
 from model.db_models import User
@@ -23,7 +25,7 @@ def get_meross_credentials(email: str, password: str) -> MerossCloudCreds:
 
 
 def setup_account(email: str, password: str, enable_meross_link: bool) -> User:
-    user_key = DEFAULT_USER_KEY
+    user_key = str(md5(uuid4().bytes).hexdigest().lower())
     user_id = DEFAULT_USER_ID
     if enable_meross_link:
         l.info("Trying to federate against Meross Cloud for user %s...", email)

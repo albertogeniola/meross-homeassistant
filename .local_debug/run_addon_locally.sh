@@ -11,3 +11,4 @@ docker run --rm \
     --mount type=bind,source="$(pwd)"/addons/meross_local_broker/rootfs/opt/custom_broker,target=/opt/custom_broker \
     -v "$(pwd)/.local_debug/data":/data local/meross_local_broker
 
+
