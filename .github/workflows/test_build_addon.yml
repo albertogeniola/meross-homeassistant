@@ -1,6 +1,9 @@
 name: "Test Addon Build"
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - feature/local_addon
 
 jobs:
   build:
