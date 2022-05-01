@@ -1,8 +1,9 @@
 name: "Publish Addon"
 
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - releases/addon
 
 jobs:
   publish:
