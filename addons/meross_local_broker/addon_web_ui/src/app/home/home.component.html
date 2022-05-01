@@ -1,128 +1,127 @@
-<div class="container" fxLayout="row wrap" fxLayoutGap="12px">
-  <p>
-    Please remove all the Meross Devices from your Meross Account (via the APP) and then pair them via the Custom Pairer
-    App. This plugin supports Meross Bridging: that means you might run local MQTT broker and propagate states/commands
-    to the official Meross Cloud. That allows you to use both the Officila Meross app while connecting devices to the
-    local MQTT broker. Cool uh? Please notice that your smartphone must be connected to the same Local Network where
-    this Addon is executing.
-  </p>
-</div>
-<div class="container" fxLayout="row wrap" fxLayoutGap="12px">
-  <!-- Device List -->
-  <div class="max-800">
-    <mat-toolbar color="primary">
-      <span>Paired devices</span>
-      <span class="spacer"></span>
-    </mat-toolbar>
-    <table mat-table [dataSource]="deviceSource" class="mat-elevation-z8" matSort>
-      <!-- Device Name Column -->
-      <ng-container matColumnDef="deviceId">
-        <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>Device Name</th>
-        <td class="p10" mat-cell *matCellDef="let element">
-          <div style="flex-direction: row; display: flex">
-            <div>
-              <button mat-icon-button [matMenuTriggerFor]="deviceMenu" aria-label="Device menu">
-                <mat-icon>more_vert</mat-icon>
-              </button>
-              <mat-menu #deviceMenu="matMenu">
-                <button mat-menu-item (click)="assignName(element)">
-                  <mat-icon>edit</mat-icon>
-                  <span>Assign name</span>
-                </button>
-              </mat-menu>
-            </div>
-            <div>
-              <a *ngIf="element.dev_name === null" (click)="assignName(element)" class="grayout">(No name set)</a>
-              <span *ngIf="element.dev_name !== null">{{ element.dev_name }}</span>
-              <br />
-              <span class="mat-small">{{ element.uuid }}</span>
-            </div>
-          </div>
-        </td>
-      </ng-container>
-
-      <ng-container matColumnDef="type">
-        <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>Device Type</th>
-        <td class="p10" mat-cell *matCellDef="let element">{{ element.device_type }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="network">
-        <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>Network Info</th>
-        <td class="p10" mat-cell *matCellDef="let element">
-          <span class="mat-small">{{ element.mac }}</span>
-          <span class="mat-small" *ngIf="element.local_ip"><br />({{ element.local_ip }})</span>
-        </td>
-      </ng-container>
-
-      <ng-container matColumnDef="userId">
-        <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>User Id</th>
-        <td class="p10" mat-cell *matCellDef="let element">
-          {{ element.user_id }}
-        </td>
-      </ng-container>
-
-      <ng-container matColumnDef="status">
-        <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
-        <td class="p10" mat-cell *matCellDef="let element" [matTooltip]="'Last message on ' + element.last_seen_time">
-          <span>{{ element.online_status | onlineDeviceStatusName }}</span
-          ><br />
-          <span class="small">Bridge: {{ element.bridge_status | bridgeStatusName }}</span>
-        </td>
-      </ng-container>
-
-      <tr mat-header-row *matHeaderRowDef="devicesColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: devicesColumns"></tr>
-
-      <!-- Row shown when there is no matching data. -->
-      <tr class="mat-row" *matNoDataRow>
-        <td class="mat-cell" colspan="4">No data matching</td>
-      </tr>
-
-      <mat-paginator [pageSizeOptions]="[15, 30, 100]"></mat-paginator>
-    </table>
+<div class="container" fxFlex fxLayout="column">
+  <div *ngIf="unconfigured" class="first-conf-banner">
+    <p>
+      It looks like this is your first setup! Why won't you start with the
+      <a mat-raised-button color="primary" href="/wizard">Wizard Setup?</a>
+    </p>
   </div>
+  <div fxLayout="row wrap" fxLayoutGap="12px">
+    <!-- Device List -->
+    <div class="max-800">
+      <mat-toolbar color="primary">
+        <span>Paired devices</span>
+        <span class="spacer"></span>
+      </mat-toolbar>
+      <table mat-table [dataSource]="deviceSource" class="mat-elevation-z8" matSort>
+        <!-- Device Name Column -->
+        <ng-container matColumnDef="deviceId">
+          <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>Device Name</th>
+          <td class="p10" mat-cell *matCellDef="let element">
+            <div style="flex-direction: row; display: flex">
+              <div>
+                <button mat-icon-button [matMenuTriggerFor]="deviceMenu" aria-label="Device menu">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #deviceMenu="matMenu">
+                  <button mat-menu-item (click)="assignName(element)">
+                    <mat-icon>edit</mat-icon>
+                    <span>Assign name</span>
+                  </button>
+                </mat-menu>
+              </div>
+              <div>
+                <a *ngIf="element.dev_name === null" (click)="assignName(element)" class="grayout">(No name set)</a>
+                <span *ngIf="element.dev_name !== null">{{ element.dev_name }}</span>
+                <br />
+                <span class="mat-small">{{ element.uuid }}</span>
+              </div>
+            </div>
+          </td>
+        </ng-container>
 
-  <!-- SubDevice List -->
-  <div class="max-800">
-    <mat-toolbar color="primary">
-      <span>Paired subdevices</span>
-      <span class="spacer"></span>
-    </mat-toolbar>
-    <table mat-table [dataSource]="subdeviceSource" class="mat-elevation-z8" matSort>
-      <!-- Subdevice Name Column -->
-      <ng-container matColumnDef="subdeviceId">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Subdevice Name/Id</th>
-        <td mat-cell *matCellDef="let element">
-          <span *ngIf="element.sub_device_name">{{ element.sub_device_name }}</span>
-          <span *ngIf="!element.sub_device_name">Unknown</span>
-          <br />
-          <span class="mat-small">{{ element.sub_device_id }}</span>
-        </td>
-      </ng-container>
+        <ng-container matColumnDef="type">
+          <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>Device Type</th>
+          <td class="p10" mat-cell *matCellDef="let element">{{ element.device_type }}</td>
+        </ng-container>
 
-      <!-- Subdevice Type Column -->
-      <ng-container matColumnDef="type">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Subdevice Type</th>
-        <td mat-cell *matCellDef="let element">{{ element.sub_device_type }}</td>
-      </ng-container>
+        <ng-container matColumnDef="network">
+          <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>Network Info</th>
+          <td class="p10" mat-cell *matCellDef="let element">
+            <span class="mat-small">{{ element.mac }}</span>
+            <span class="mat-small" *ngIf="element.local_ip"><br />({{ element.local_ip }})</span>
+          </td>
+        </ng-container>
 
-      <!-- Subdevice HubId Column -->
-      <ng-container matColumnDef="hubId">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Hub UUID</th>
-        <td mat-cell *matCellDef="let element">
-          <span class="mat-small">{{ element.hub_uuid }}</span>
-        </td>
-      </ng-container>
+        <ng-container matColumnDef="userId">
+          <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>User Id</th>
+          <td class="p10" mat-cell *matCellDef="let element">
+            {{ element.user_id }}
+          </td>
+        </ng-container>
 
-      <tr mat-header-row *matHeaderRowDef="subdevicesColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: subdevicesColumns"></tr>
+        <ng-container matColumnDef="status">
+          <th class="p10" mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+          <td class="p10" mat-cell *matCellDef="let element" [matTooltip]="'Last message on ' + element.last_seen_time">
+            <span>{{ element.online_status | onlineDeviceStatusName }}</span
+            ><br />
+            <span class="small">Bridge: {{ element.bridge_status | bridgeStatusName }}</span>
+          </td>
+        </ng-container>
 
-      <!-- Row shown when there is no matching data. -->
-      <tr class="mat-row" *matNoDataRow>
-        <td class="mat-cell" colspan="4">No data matching</td>
-      </tr>
+        <tr mat-header-row *matHeaderRowDef="devicesColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: devicesColumns"></tr>
 
-      <mat-paginator [pageSizeOptions]="[15, 30, 100]"></mat-paginator>
-    </table>
+        <!-- Row shown when there is no matching data. -->
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell" colspan="4">No data matching</td>
+        </tr>
+
+        <mat-paginator [pageSizeOptions]="[15, 30, 100]"></mat-paginator>
+      </table>
+    </div>
+
+    <!-- SubDevice List -->
+    <div class="max-800">
+      <mat-toolbar color="primary">
+        <span>Paired subdevices</span>
+        <span class="spacer"></span>
+      </mat-toolbar>
+      <table mat-table [dataSource]="subdeviceSource" class="mat-elevation-z8" matSort>
+        <!-- Subdevice Name Column -->
+        <ng-container matColumnDef="subdeviceId">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Subdevice Name/Id</th>
+          <td mat-cell *matCellDef="let element">
+            <span *ngIf="element.sub_device_name">{{ element.sub_device_name }}</span>
+            <span *ngIf="!element.sub_device_name">Unknown</span>
+            <br />
+            <span class="mat-small">{{ element.sub_device_id }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Subdevice Type Column -->
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Subdevice Type</th>
+          <td mat-cell *matCellDef="let element">{{ element.sub_device_type }}</td>
+        </ng-container>
+
+        <!-- Subdevice HubId Column -->
+        <ng-container matColumnDef="hubId">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Hub UUID</th>
+          <td mat-cell *matCellDef="let element">
+            <span class="mat-small">{{ element.hub_uuid }}</span>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="subdevicesColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: subdevicesColumns"></tr>
+
+        <!-- Row shown when there is no matching data. -->
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell" colspan="4">No data matching</td>
+        </tr>
+
+        <mat-paginator [pageSizeOptions]="[15, 30, 100]"></mat-paginator>
+      </table>
+    </div>
   </div>
 </div>

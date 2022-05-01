@@ -18,6 +18,7 @@ import { StatusComponent } from './status/status.component';
 import { AccountComponent } from './configuration/account.component';
 import { NgxQRCodeModule } from '@techiediaries/ngx-qrcode';
 import { ConfigurationComponent } from './configuration/configuration.component';
+import { WizardComponent } from './wizard/wizard.component';
 
 @NgModule({
   imports: [
@@ -35,7 +36,14 @@ import { ConfigurationComponent } from './configuration/configuration.component'
     NgxQRCodeModule,
     AppRoutingModule,
   ],
-  declarations: [AppComponent, AnsiparserPipe, StatusComponent, AccountComponent, ConfigurationComponent],
+  declarations: [
+    AppComponent,
+    AnsiparserPipe,
+    StatusComponent,
+    AccountComponent,
+    ConfigurationComponent,
+    WizardComponent,
+  ],
   providers: [],
   bootstrap: [AppComponent],
 })

@@ -2,9 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { NgxQrcodeElementTypes, NgxQrcodeErrorCorrectionLevels } from '@techiediaries/ngx-qrcode';
 import { AdminService } from '@app/services/admin';
 import { User } from '@app/model/user';
-import { FormGroup, FormControl } from '@angular/forms';
 import { FormBuilder } from '@angular/forms';
 import { Validators } from '@angular/forms';
+import { Output, EventEmitter } from '@angular/core';
 
 @Component({
   selector: 'configuration-account',
@@ -17,6 +17,8 @@ export class AccountComponent implements OnInit {
     password: ['', Validators.required],
     enableMerossLink: [false],
   });
+
+  @Output() configurationUpdatedEvent = new EventEmitter<string>();
 
   public hidePassword: boolean = true;
   public processing: boolean = false;
@@ -70,6 +72,7 @@ export class AccountComponent implements OnInit {
         this.processing = false;
         this.loadAccount(account);
         this.editConfiguration(false);
+        this.configurationUpdatedEvent.emit('ACCOUNT_CONFIGURED');
       });
 
     /*

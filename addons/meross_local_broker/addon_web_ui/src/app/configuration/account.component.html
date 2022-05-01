@@ -1,11 +1,10 @@
 <div class="configuration-container">
   <div class="account-container">
     <mat-card class="account-card">
-      <mat-card-subtitle>Device Pairing information </mat-card-subtitle>
       <mat-card-title>Account Configuration </mat-card-title>
       <mat-card-content>
         <div *ngIf="!reconfigureAccount">
-          <p>Click the following button to edit the account configuration.</p>
+          <p>An account is already configured. If you want to change it, click on the following button.</p>
           <button mat-raised-button color="primary" (click)="editConfiguration(true)">Edit configuration</button>
         </div>
         <form [formGroup]="accountForm" (ngSubmit)="onSubmit()" *ngIf="reconfigureAccount">
