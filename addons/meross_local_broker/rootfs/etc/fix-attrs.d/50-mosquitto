@@ -1,2 +1,1 @@
 /etc/mosquitto/certs true mosquitto 0755 0755
-/var/log/mosquitto true mosquitto 0755 0755

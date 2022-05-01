@@ -1,7 +1,9 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Device, DeviceOnlineStatus } from '@app/model/device';
+import { User } from '@app/model/user';
 import { SubdeviceStore } from '@app/providers/subdevice';
+import { ServiceStatus } from '@app/model/service';
 import { Subdevice } from '@app/model/subdevice';
 import { environment } from '@env/environment';
 import { Observable, of } from 'rxjs';
@@ -66,5 +68,67 @@ export class AdminService {
     return this.http
       .get<Subdevice[]>(environment.backend + '/_admin_/subdevices', { headers })
       .pipe(catchError(this.handleError<any[]>('listSubdevices', [])));
+  }
+
+  listServices(): Observable<ServiceStatus[]> {
+    var headers = new HttpHeaders();
+    headers.append('Content-Type', 'application/json; charset=utf-8');
+    return this.http
+      .get<ServiceStatus[]>(environment.backend + '/_admin_/services', { headers })
+      .pipe(catchError(this.handleError<any[]>('listServices', [])));
+  }
+
+  getServiceLog(serviceName: string): Observable<string[]> {
+    var headers = new HttpHeaders();
+    headers.append('Content-Type', 'application/json; charset=utf-8');
+    return this.http
+      .get<string[]>(environment.backend + '/_admin_/services/' + serviceName + '/log', { headers })
+      .pipe(catchError(this.handleError('getServiceLog', [])));
+  }
+
+  getAccountConfiguration(): Observable<User> {
+    var headers = new HttpHeaders();
+    headers.append('Content-Type', 'application/json; charset=utf-8');
+    return this.http
+      .get<User | any>(environment.backend + '/_admin_/configuration/account', { headers })
+      .pipe(catchError(this.handleError('getAccountConfiguration', null)));
+  }
+
+  updateAccountConfiguration(email: string, password: string, enableMerossLink: boolean): Observable<User> {
+    var headers = new HttpHeaders();
+    headers.append('Content-Type', 'application/json; charset=utf-8');
+    var data = {
+      email: email,
+      password: password,
+      enableMerossLink: enableMerossLink,
+    };
+
+    return this.http
+      .put<User | null>(environment.backend + '/_admin_/configuration/account', data, { headers })
+      .pipe(catchError(this.handleError('updateAccountConfiguration', null)));
+  }
+
+  private executeServiceCommand(serviceName: string, command: string): Observable<boolean> {
+    var headers = new HttpHeaders();
+    headers.append('Content-Type', 'application/json; charset=utf-8');
+    return this.http
+      .post<boolean>(
+        environment.backend + '/_admin_/services/' + serviceName + '/execute/' + command.toUpperCase(),
+        null,
+        { headers }
+      )
+      .pipe(catchError(this.handleError('executeServiceCommand', null)));
+  }
+
+  stopService(serviceName: string): Observable<boolean> {
+    return this.executeServiceCommand(serviceName, 'STOP');
+  }
+
+  startService(serviceName: string): Observable<boolean> {
+    return this.executeServiceCommand(serviceName, 'START');
+  }
+
+  restartService(serviceName: string): Observable<boolean> {
+    return this.executeServiceCommand(serviceName, 'RESTART');
   }
 }

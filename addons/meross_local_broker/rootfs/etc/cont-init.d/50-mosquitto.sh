@@ -3,7 +3,6 @@
 # Configures Meross service
 # ==============================================================================
 
-CONFIG_PATH=/data/options.json
 MQTT_CERTS_FOLDER_PATH=/data/mqtt/certs
 MQTT_CA_KEY_PATH="$MQTT_CERTS_FOLDER_PATH/ca.key"
 MQTT_CA_CRT_PATH="$MQTT_CERTS_FOLDER_PATH/ca.crt"
@@ -34,11 +33,11 @@ else
   bashio::log.info "All certificate files seems present."
 fi
 
-if [[ ! -d $MQTT_MOSQUITTO_LOG_DIR_PATH ]]; then
-  mkdir -p $MQTT_MOSQUITTO_LOG_DIR_PATH
-fi
-
 # Align permissions
 bashio::log.info "Aligning permissions for certificates"
 chown -vR mosquitto:mosquitto $MQTT_CERTS_FOLDER_PATH
-chown -vR mosquitto:mosquitto $MQTT_MOSQUITTO_LOG_DIR_PATH
+
+# Prepare log dir
+mkdir -p $MQTT_MOSQUITTO_LOG_DIR_PATH
+chown nobody:nogroup $MQTT_MOSQUITTO_LOG_DIR_PATH
+chmod 02755 $MQTT_MOSQUITTO_LOG_DIR_PATH

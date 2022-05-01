@@ -11,6 +11,7 @@ import { AdminService } from '@app/services/admin';
 import { MatSlideToggleChange } from '@angular/material/slide-toggle';
 import { Observable, Subscription } from 'rxjs';
 import { MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { User } from '@app/model/user';
 
 export interface SetNameDialogData {
   device: Device;
@@ -27,15 +28,24 @@ export class HomeComponent implements AfterViewInit, OnInit {
   deviceSource = new MatTableDataSource<Device>([]);
   subdeviceSource = new MatTableDataSource<Subdevice>([]);
   autoUpdate = true;
+  unconfigured = true;
 
   @ViewChild(MatPaginator) paginator: MatPaginator;
   @ViewChild(MatSort) sort: MatSort;
 
-  constructor(private deviceStore: DeviceStore, private subdeviceStore: SubdeviceStore, public dialog: MatDialog) {}
+  constructor(
+    private deviceStore: DeviceStore,
+    private subdeviceStore: SubdeviceStore,
+    private adminService: AdminService,
+    public dialog: MatDialog
+  ) {}
   ngOnInit(): void {
     // Update the device and subdevice lists once
     this.deviceStore.devices.subscribe((devices) => (this.deviceSource.data = devices));
     this.subdeviceStore.devices.subscribe((devices) => (this.subdeviceSource.data = devices));
+    this.adminService.getAccountConfiguration().subscribe((account: User) => {
+      this.unconfigured = !account;
+    });
   }
 
   ngAfterViewInit() {

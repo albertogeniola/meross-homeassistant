@@ -1,7 +1,8 @@
-Flask==1.1.2
+Flask==2.1.0
 SQLAlchemy==1.4.3
 paho-mqtt==1.5.1
 asyncio-mqtt==0.8.1
 flask-cors
-meross_iot==0.4.1.1rc1
+meross_iot==0.4.4.4
 expiringdict==1.2.1
+debugpy

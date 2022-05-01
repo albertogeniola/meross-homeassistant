@@ -1,23 +1,17 @@
 #!/usr/bin/with-contenv bashio
-
 pushd /opt/custom_broker >/dev/null
 
-# Start flask
-export FLASK_APP=http_api.py
-debug=$(bashio::config 'debug_mode')
+debug=${debug_mode:-false}
 
-if [[ $debug == true ]]; then
+# Start flask
+bashio::log.info "Starting flask..."
+if [[ $debug == "true" ]]; then
   bashio::log.info "Setting flask debug flags"
-  export FLASK_ENV=development
-  export FLASK_DEBUG=1
+  export ENABLE_DEBUG=True
+  export DEBUG_PORT=${debug_port:-10001}
+  exec python3 -m debugpy --listen 0.0.0.0:$DEBUG_PORT ./http_api.py
 else
   bashio::log.info "Setting flask production flags"
-  export FLASK_ENV=production
-  export FLASK_DEBUG=0
+  export ENABLE_DEBUG=False
+  exec python3 ./http_api.py
 fi
-
-bashio::log.info "Starting flask..."
-flask run --host=0.0.0.0 --port=2002
-bashio::log.warning "Flask terminated."
-
-popd >/dev/null

@@ -1,0 +1,17 @@
+{
+  "python.pythonPath": "/usr/bin/python3",
+  "editor.formatOnSave": true,
+  "python.linting.pycodestyleEnabled": true,
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}/addons/meross_local_broker/rootfs/opt/custom_broker"
+  ],
+  "python.linting.pylintPath": "pylint",
+  "python.linting.pylintEnabled": true,
+  "python.linting.pycodestyleArgs": ["--ignore=E501"],
+  "files.exclude": {
+    "**/*.pyc": true
+  },
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/addons/meross_local_broker/rootfs/opt/custom_broker"
+  ]
+}

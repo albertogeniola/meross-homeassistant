@@ -1,0 +1,54 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "RASPBERRY PI - REMOTE",
+      "type": "python",
+      "request": "attach",
+      "port": 6789,
+      "host": "192.168.1.22",
+      "pathMappings": [
+        {
+          "localRoot": "C:\\Users\\Alberto Geniola\\PycharmProjects\\meross-homeassistant",
+          "remoteRoot": "/config"
+        }
+      ]
+    },
+    {
+      "name": "Addon REMOTE (Win)",
+      "type": "python",
+      "request": "attach",
+      "port": 10001,
+      "host": "localhost",
+      "pathMappings": [
+        {
+          "localRoot": "C:\\Users\\Alberto Geniola\\PycharmProjects\\meross-homeassistant\\addons\\meross_local_broker\\rootfs\\opt\\custom_broker/",
+          "remoteRoot": "/opt/custom_broker"
+        }
+      ]
+    },
+    {
+      "name": "Addon REMOTE",
+      "type": "python",
+      "request": "attach",
+      "port": 10001,
+      "host": "localhost",
+      "pathMappings": [
+        {
+          "localRoot": "/workspaces/meross-homeassistant/addons/meross_local_broker/rootfs/opt/custom_broker/",
+          "remoteRoot": "/opt/custom_broker"
+        }
+      ]
+    },
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Launch Chrome against localhost",
+      "url": "http://localhost:4200",
+      "webRoot": "${workspaceFolder}/addons/meross_local_broker/addon_web_ui"
+    }
+  ]
+}

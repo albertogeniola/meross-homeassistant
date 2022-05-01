@@ -1,0 +1,63 @@
+<div class="container">
+  <mat-vertical-stepper linear="true" #stepper id="stepper">
+    <mat-step>
+      <ng-template matStepLabel>Credentials configuration</ng-template>
+      <configuration-account (configurationUpdatedEvent)="stepper.next()"></configuration-account>
+      <!--<button mat-button matStepperNext>Next</button>-->
+    </mat-step>
+    <mat-step>
+      <ng-template matStepLabel>Meross Pairer App</ng-template>
+      <p>Install the Meross Custom Pairer App on your Android Device.</p>
+      <div class="app-step-container">
+        <img src="assets/images/meross_pairer_qr.svg" width="200" />
+        <span> OR </span>
+        <a
+          href="https://play.google.com/store/apps/details?id=com.albertogeniola.merossconf&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1"
+        >
+          <img
+            alt="Get it on Google Play"
+            src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+            width="160"
+          />
+        </a>
+      </div>
+      <p>Once done, click on the following button.</p>
+      <button mat-raised-button matStepperNext color="accent">I have installed the app</button>
+    </mat-step>
+    <mat-step>
+      <ng-template matStepLabel>Login with custom pairer</ng-template>
+      <div class="login-step-container">
+        <ul>
+          <li>Open the custom pairer app you just downloaded and select "Login to Meross Local Addon"</li>
+          <li>Enable WiFi and connect to the same network where this Homeassistant addon is running.</li>
+          <li>
+            Tap on "Discovery": the "HTTP server hostname" filed should auto-populate itself by discovering this addon.
+            <i>If this does not happen, get the hostname from the URL bar and specify the port 2002.</i>
+          </li>
+          <li>Fill in the username and email fileds with the values chosen during the Step 1.</li>
+          <li>Tap on "Login", and make sure the login succeeds.</li>
+        </ul>
+        <button mat-raised-button matStepperNext color="accent">Login succeeded</button>
+      </div>
+    </mat-step>
+    <mat-step>
+      <ng-template matStepLabel>Par Meross devices</ng-template>
+      <div class="pair-step-container">
+        <p>You can now pair your Meross hardware devices with this local addon.</p>
+        <p>To do so, select the "Pair" option from the Meross Pairer menu and follow the app procedure.</p>
+        <p>
+          <b>Note: you must to reset your meross devices before being able to pair them with the Custom Pairer App.</b>
+        </p>
+      </div>
+    </mat-step>
+    <mat-step>
+      <ng-template matStepLabel>Configure HomeAssistant</ng-template>
+      <div class="ha-step-container">
+        <p>
+          You can now install and configure the Homeassistant Meross component to use this local addon as server rather
+          than the Official Meross cloud. (TBD)
+        </p>
+      </div>
+    </mat-step>
+  </mat-vertical-stepper>
+</div>

@@ -13,6 +13,12 @@ import { ShellModule } from './shell/shell.module';
 import { AboutModule } from './about/about.module';
 import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app-routing.module';
+import { AnsiparserPipe } from './ansiparser.pipe';
+import { StatusComponent } from './status/status.component';
+import { AccountComponent } from './configuration/account.component';
+import { NgxQRCodeModule } from '@techiediaries/ngx-qrcode';
+import { ConfigurationComponent } from './configuration/configuration.component';
+import { WizardComponent } from './wizard/wizard.component';
 
 @NgModule({
   imports: [
@@ -27,9 +33,17 @@ import { AppRoutingModule } from './app-routing.module';
     ShellModule,
     HomeModule,
     AboutModule,
-    AppRoutingModule, // must be imported as the last module as it contains the fallback route
+    NgxQRCodeModule,
+    AppRoutingModule,
   ],
-  declarations: [AppComponent],
+  declarations: [
+    AppComponent,
+    AnsiparserPipe,
+    StatusComponent,
+    AccountComponent,
+    ConfigurationComponent,
+    WizardComponent,
+  ],
   providers: [],
   bootstrap: [AppComponent],
 })

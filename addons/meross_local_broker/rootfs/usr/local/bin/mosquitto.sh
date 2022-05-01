@@ -11,5 +11,4 @@ bashio::log.info "Waiting for acl file..."
 while [ ! -f /etc/mosquitto/auth.acl ]; do sleep 1; done
 
 bashio::log.info "Starting mosquitto..."
-mosquitto -c $MQTT_MOSQUITTO_CONF_PATH
-bashio::log.warning "Mosquitto terminated."
+exec mosquitto -c $MQTT_MOSQUITTO_CONF_PATH

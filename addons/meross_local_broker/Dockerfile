@@ -1,8 +1,10 @@
-ARG BUILD_FROM=homeassistant/amd64-base-debian:buster
+#ARG BUILD_FROM=homeassistant/amd64-base-debian:buster
+ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 # Build arguments
-ARG BUILD_ARCH=amd64
+#ARG BUILD_ARCH=amd64
+ARG BUILD_ARCH
 ARG BUILD_DATE
 ARG BUILD_REF
 ARG BUILD_VERSION
@@ -12,7 +14,8 @@ ENV HIVEMQ='b2043e7fcbd5897a3799869d42c6202122221fbc' \
     LIBWEBSOCKETS='3.1.0' \
     MOSQUITTO='2.0.10' \
     MOSQUITTO_GO_AUTH='1.5.0' \
-    MOSQUTTO_DISCONNECT='0.0.1'
+    MOSQUTTO_DISCONNECT='0.0.1' \
+    GOVERSION=1.16.4
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -50,23 +53,30 @@ RUN apt-get update \
     logrotate \
   && pip3 install wheel
 
-# Setup GO source
+# Setup GO source # export GOARM=7 ;
 RUN mkdir -p /tmp/go \
   && export GOOS=linux \
   && if [ "${BUILD_ARCH}" = "armhf" ]; then \
+      export GOBIN_GOARCH=armv6l ; \
       export GOARCH=arm ; \
+      export GOARM=6 ; \
     elif [ "${BUILD_ARCH}" = "armv7" ]; then \
-      export GOARM=7 ; export GOARCH=arm ; \
+      export GOBIN_GOARCH=armv6l ; \
+      export GOARCH=arm ; \
+      export GOARM=7 ; \
     elif [ "${BUILD_ARCH}" = "aarch64" ]; then \
+      export GOBIN_GOARCH=arm64 ; \
       export GOARCH=arm64 ; \
     elif [ "${BUILD_ARCH}" = "i386" ]; then \
+      export GOBIN_GOARCH=386 ; \
       export GOARCH=386 ; \
     elif [ "${BUILD_ARCH}" = "amd64" ]; then \
+      export GOBIN_GOARCH=amd64 ; \
       export GOARCH=amd64 ; \
     else \
     echo 'NOT VALID BUILD'; exit 1; \
     fi \
-  && curl https://dl.google.com/go/go1.16.3.${GOOS}-${GOARCH}.tar.gz --output /tmp/go/go.tar.gz \
+  && curl https://dl.google.com/go/go${GOVERSION}.${GOOS}-${GOBIN_GOARCH}.tar.gz --output /tmp/go/go.tar.gz \
   && tar -C /usr/local -xzf /tmp/go/go.tar.gz \
   && export PATH=$PATH:/usr/local/go/bin \
   && git clone --branch "v${LIBWEBSOCKETS}" --depth=1 \
@@ -109,6 +119,9 @@ RUN mkdir -p /tmp/go \
   && cd /tmp \
   && git clone --depth 1 --branch "${MOSQUITTO_GO_AUTH}" \
         https://github.com/iegomez/mosquitto-go-auth.git \
+  && openssl s_client --showcerts -connect go.mongodb.org:443 \
+  && export GOPROXY='direct' \
+  && go env \
   && cd mosquitto-go-auth \
   && make \
   && cp /tmp/mosquitto-go-auth/pw /usr/share/mosquitto/pw \

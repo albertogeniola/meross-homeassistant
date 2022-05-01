@@ -1,0 +1,28 @@
+name: "Test Addon Build"
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Test build containers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v2
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: "12"
+      - name: Install node dependencies & build
+        working-directory: addons/meross_local_broker/addon_web_ui
+        run: |
+          npm install
+          npm run build
+      - name: Test build container
+        uses: home-assistant/builder@master
+        with:
+          args: |
+            --test \
+            --all \
+            --target addons/meross_local_broker \
+            --docker-hub albertogeniola

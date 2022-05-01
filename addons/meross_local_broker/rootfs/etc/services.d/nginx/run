@@ -5,4 +5,5 @@
 bashio::log.info "Starting the nginx daemon"
 
 # Create required folders
+exec 2>&1
 exec nginx -c /etc/nginx/ingress.conf

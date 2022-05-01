@@ -1,13 +1,14 @@
+from optparse import Option
 from typing import Dict, Optional
 
 from meross_iot.model.enums import OnlineStatus
-from sqlalchemy import Column, String, BigInteger, Integer, DateTime
+from sqlalchemy import Column, String, BigInteger, Integer, DateTime, Boolean
 from sqlalchemy import ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from database import Base
 from sqlalchemy.inspection import inspect
 
-from model.enums import BridgeStatus
+from model.enums import BridgeStatus, EventType
 
 
 class Serializer(object):
@@ -29,21 +30,24 @@ class User(Base, Serializer):
     salt = Column(String(64))
     password = Column(String(64))
     mqtt_key = Column(String(64))
+    enable_meross_link = Column(Boolean, default=False)
     owned_devices = relationship("Device", back_populates="owner_user")
 
-    def __init__(self, email: str, salt: str, password: str, mqtt_key: str, user_id: Optional[int], *args, **kwargs):
+    def __init__(self, email: str, salt: str, password: str, mqtt_key: str, user_id: Optional[int], enable_meross_link: Optional[bool] = False, *args, **kwargs):
         self.email = email
         self.salt = salt
         self.password = password
         self.mqtt_key = mqtt_key
         self.user_id = user_id
+        self.enable_meross_link = enable_meross_link
 
     def __repr__(self):
         return '<User %r (%r)>' % (self.user_id, self.email)
 
-    def serialize(self):
+    def serialize(self, ):
         d = Serializer.serialize(self)
         del d['password']
+        del d['salt']
         del d['owned_devices']
         return d
 
@@ -149,3 +153,16 @@ class SubDevice(Base, Serializer):
         d = Serializer.serialize(self)
         del d['parent_device']
         return d
+
+
+class Event(Base, Serializer):
+    __tablename__ = 'events'
+    __table_args__ = {'sqlite_autoincrement': True}
+    
+    event_id = Column(Integer, primary_key=True, autoincrement=True)
+    event_type = Column(Enum(EventType), nullable=False)
+    device_uuid = Column(String, nullable=True)
+    sub_device_id = Column(String, nullable=True)
+    user_id = Column(String, nullable=True)
+    details = Column(String, nullable=True)
+    

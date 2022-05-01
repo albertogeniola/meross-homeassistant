@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Start Home Assistant",
+      "label": "[DEVCONTAINER] Start Home Assistant",
       "type": "shell",
       "command": "supervisor_run",
       "group": {
@@ -13,6 +13,53 @@
         "reveal": "always",
         "panel": "new"
       },
+      "problemMatcher": []
+    },
+    {
+      "label": "[LOCAL] Build Addon container",
+      "type": "process",
+      "command": "bash.exe",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "args": [".local_debug/build_addon_locally.sh"],
+      "problemMatcher": []
+    },
+    {
+      "label": "[LOCAL] Run Addon container",
+      "type": "process",
+      "command": "bash.exe",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "args": [".local_debug/run_addon_locally.sh"],
+      "problemMatcher": []
+    },
+    {
+      "label": "[LOCAL] Run Addon container [REINIT]",
+      "type": "process",
+      "command": "bash.exe",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "args": [".local_debug/run_addon_locally_reinit.sh"],
+      "problemMatcher": []
+    },
+    {
+      "label": "[LOCAL] Run Web UI",
+      "type": "shell",
+      "command": "npm",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/addons/meross_local_broker/addon_web_ui"
+      },
+      "args": ["run", "start"],
       "problemMatcher": []
     }
   ]

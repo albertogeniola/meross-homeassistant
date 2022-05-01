@@ -170,6 +170,12 @@ class Broker:
             for d in payload.get('payload').get('bind'):
                 dbhelper.unbind_subdevice(subdevice_id=d.get('id'))
 
+        # Some devices require the broker to acknowledge their binding message in order to complete the process.
+        if payload.get('header', {}).get('namespace', {}) == 'Appliance.Control.Bind' \
+            and payload.get('header', {}).get('method', {}) == 'SET':
+            bind_ack, message_id = _build_mqtt_message(method='SETACK', namespace='Appliance.Control.Bind', header_from='/cloud/hook/subscribe', payload={}, dev_key=user.mqtt_key)
+            self.c.publish(topic=f"/appliance/{device_uuid}/subscribe", payload=bind_ack)
+
         # Forward the device push notification to the app channel
         l.debug("Local MQTT -> Local MQTT: forwarding push notification received from device %s to user %s",
                 device_uuid, user)

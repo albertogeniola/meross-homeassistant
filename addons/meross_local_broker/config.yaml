@@ -1,7 +1,8 @@
 name: "Meross Local Broker Addon"
+version: "0.0.1-alpha2"
 description: "Enables LAN-ONLY broker, avoiding Meross Cloud usage."
-version: "0.0.1"
 slug: "meross_local_broker"
+image: albertogeniola/{arch}-meross_homeassistant_broker
 arch:
   - aarch64
   - amd64
@@ -13,13 +14,20 @@ boot: auto
 ports:
   2001/tcp: 2001
   2002/tcp: 2002
+  10001/tcp: 10001
+ports_description:
+  2001/tcp: "MQTT Broker port"
+  2002/tcp: "HTTP API port"
+  10001/tcp: "Remote debugger port"
 ingress: true
 ingress_port: 8099
 host_network: true
 homeassistant: "1.0.0"
 options:
-  email: "meross_local@local"
-  password: "Changeme!"
+  resetdb: False
 schema:
-  email: "str"
-  password: "str"
+  resetdb: "bool"
+environment:
+  # TODO: remove/unset the following
+  debug: true
+  debug_port: 10001

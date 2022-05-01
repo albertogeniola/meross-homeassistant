@@ -3,4 +3,5 @@
 # Start mosquitto service
 # ==============================================================================
 bashio::log.info "Starting the Mosquitto daemon"
+exec 2>&1
 exec /usr/local/bin/mosquitto.sh

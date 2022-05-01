@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "ng": "ng",
-    "build": "npm run write:env -s && ng build --prod --base-href ./local_meross-offline-broker --output-path=../rootfs/var/www",
+    "build": "npm run write:env -s && ng build --prod --base-href ./ --output-path=../rootfs/var/www",
     "start": "npm run write:env -s && ng serve",
     "lint": "ng lint && stylelint \"src/**/*.scss\" --syntax scss && htmlhint \"src\" --config .htmlhintrc",
     "test": "npm run write:env -s && ng test",
@@ -21,6 +21,7 @@
   "dependencies": {
     "@angular/animations": "^11.0.8",
     "@angular/cdk": "^12.0.2",
+    "@angular/cli": "^11.0.6",
     "@angular/common": "^11.0.8",
     "@angular/compiler": "^11.0.8",
     "@angular/core": "^11.0.8",
@@ -32,14 +33,18 @@
     "@angular/platform-browser-dynamic": "^11.0.8",
     "@angular/router": "^11.0.8",
     "@ngx-translate/core": "^13.0.0",
+    "@techiediaries/ngx-qrcode": "^9.1.0",
+    "ansi-color-parse": "^0.1.5",
+    "ansicolor": "^1.1.100",
+    "ansispan": "0.0.4",
     "material-design-icons-iconfont": "^6.1.0",
     "rxjs": "^6.6.3",
+    "ts-qrcode": "0.0.4",
     "tslib": "^2.0.1",
     "zone.js": "~0.10.3"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^0.1100.6",
-    "@angular/cli": "~11.0.6",
     "@angular/compiler-cli": "^11.0.8",
     "@angular/language-service": "^11.0.8",
     "@biesbjerg/ngx-translate-extract": "^7.0.3",
