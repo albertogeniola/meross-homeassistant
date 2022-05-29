@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## 1.2.2 (2022-05-29)
+
+### Feature
+
+- Prepared component for integration with the Meross local-addon
+- Updated HACS badge URL (thanks to @wrt54g)
+
 ## 1.2.1 (2022-01-30)
 
 ### Feature
