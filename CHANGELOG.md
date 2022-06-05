@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## 1.2.4-rc0 (2022-06-05)
+
+### Feature
+
+- Updated low-level library to MerossIot v0.4.4.6
+
 ## 1.2.3 (2022-06-03)
 
 ### Feature
