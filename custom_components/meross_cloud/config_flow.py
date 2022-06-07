@@ -10,13 +10,16 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_HOST, CONF_PO
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.typing import DiscoveryInfoType
+from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig, SelectSelectorMode
 from meross_iot.http_api import MerossHttpClient
 from meross_iot.model.credentials import MerossCloudCreds
 from meross_iot.model.http.exception import UnauthorizedException, BadLoginException
 from requests.exceptions import ConnectTimeout
 
-from .common import DOMAIN, CONF_STORED_CREDS, CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, \
-    CONF_OPT_CUSTOM_USER_AGENT, HTTP_API_RE
+from .common import DOMAIN, CONF_STORED_CREDS, CONF_WORKING_MODE, CONF_WORKING_MODE_LOCAL_MODE, \
+    CONF_WORKING_MODE_CLOUD_MODE, \
+    CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, CONF_OPT_CUSTOM_USER_AGENT, HTTP_API_RE, MEROSS_CLOUD_API_URL, \
+    MEROSS_LOCAL_API_URL
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
@@ -30,29 +33,28 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize flow."""
-        self._http_api: str = "https://iot.meross.com"
+        self._http_api: Optional[str] = None
         self._username: Optional[str] = None
         self._password: Optional[str] = None
+        self._skip_cert_validation: Optional[bool] = None
 
     def _build_setup_schema(
-        self,
-        http_endpoint: str = None,
-        username: str = None,
-        password: str = None,
-        skip_cert_validation: bool = True
+            self,
+            http_endpoint: str = None,
+            username: str = None,
+            password: str = None,
+            skip_cert_validation: bool = None
     ) -> vol.Schema:
         http_endpoint_default = http_endpoint if http_endpoint is not None else self._http_api
         username_default = username if username is not None else self._username
         password_default = password if password is not None else self._password
+        skip_cert_validation_default = skip_cert_validation if skip_cert_validation is not None else self._skip_cert_validation
         return vol.Schema(
             {
                 vol.Required(CONF_HTTP_ENDPOINT, default=http_endpoint_default): str,
                 vol.Required(CONF_USERNAME, default=username_default): str,
                 vol.Required(CONF_PASSWORD, default=password_default): str,
-                vol.Required(CONF_MQTT_SKIP_CERT_VALIDATION,
-                             msg="Set this flag if using you local MQTT broker",
-                             default=skip_cert_validation,
-                             description="When set, Meross Manager skips MQTT certificate validation."): bool,
+                vol.Required(CONF_MQTT_SKIP_CERT_VALIDATION, default=skip_cert_validation_default): bool,
             }
         )
 
@@ -77,32 +79,65 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         api_host = discovery_info[CONF_HOST]
         api_port = discovery_info[CONF_PORT]
         api_url = f"http://{api_host}:{api_port}"
-        
+
         # Check if already configured
         await self.async_set_unique_id(api_url)
         self._abort_if_unique_id_configured(
             updates={CONF_HTTP_ENDPOINT: api_url}
         )
 
-        for entry in self._async_current_entries():            
+        for entry in self._async_current_entries():
             # Is this address or IP address already configured?
-            if CONF_HTTP_ENDPOINT in entry.data and entry.data[CONF_HTTP_ENDPOINT]==api_url:    
+            if CONF_HTTP_ENDPOINT in entry.data and entry.data[CONF_HTTP_ENDPOINT] == api_url:
                 return self.async_abort(reason="already_configured")
-        
+
         self._http_api = api_url
         return await self.async_step_user()
 
     async def async_step_user(self, user_input=None) -> Dict[str, Any]:
+        """Choose mode step handler"""
+        _LOGGER.debug("Starting ASYNC_STEP_CHOOSE_MODE")
+        if not user_input:
+            _LOGGER.debug("Empty user_input, showing mode selection form")
+            return self.async_show_form(
+                step_id="user",
+                data_schema=vol.Schema({vol.Required(CONF_WORKING_MODE, default=CONF_WORKING_MODE_CLOUD_MODE): SelectSelector(SelectSelectorConfig(
+                    options=[
+                        {"value": CONF_WORKING_MODE_CLOUD_MODE, "label": "Connect to Meross Official Cloud (requires internet)"},
+                        {"value": CONF_WORKING_MODE_LOCAL_MODE, "label": "Connect to LAN-only broker (requires Meross Local Addon)"}],
+                    mode=SelectSelectorMode.LIST,
+                ))}),
+                errors={})
+
+        mode = user_input.get(CONF_WORKING_MODE)
+        if mode == CONF_WORKING_MODE_CLOUD_MODE:
+            self._http_api = MEROSS_CLOUD_API_URL
+            self._skip_cert_validation = False
+            return self.async_show_form(
+                step_id="configure_manager",
+                data_schema=self._build_setup_schema(),
+                errors={},
+            )
+        elif mode == CONF_WORKING_MODE_LOCAL_MODE:
+            self._http_api = MEROSS_LOCAL_API_URL
+            self._skip_cert_validation = True
+            return self.async_show_form(
+                step_id="configure_manager",
+                data_schema=self._build_setup_schema(),
+                errors={},
+            )
+
+    async def async_step_configure_manager(self, user_input=None) -> Dict[str, Any]:
         """Handle a flow initialized by the user interface"""
         _LOGGER.debug("Starting ASYNC_STEP_USER")
         if not user_input:
             _LOGGER.debug("Empty user_input, showing default prefilled form")
             return self.async_show_form(
-                step_id="user",
+                step_id="configure_manager",
                 data_schema=self._build_setup_schema(),
                 errors={},
             )
-        
+
         _LOGGER.debug("UserInput was provided: form data will be populated with that")
         http_api_endpoint = user_input.get(CONF_HTTP_ENDPOINT)
         username = user_input.get(CONF_USERNAME)
@@ -112,12 +147,12 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # Check if we have everything we need
         if username is None or password is None or http_api_endpoint is None:
             return self.async_show_form(
-                step_id="user",
+                step_id="configure_manager",
                 data_schema=self._build_setup_schema(
                     http_endpoint=http_api_endpoint),
                 errors={"base": "missing_credentials"},
             )
-        
+
         # Check the base-url is valid
         match = HTTP_API_RE.fullmatch(http_api_endpoint)
 
@@ -130,7 +165,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if match is None:
             _LOGGER.error("Invalid Meross HTTTP API endpoint: %s", http_api_endpoint)
             return self.async_show_form(
-                step_id="user",
+                step_id="configure_manager",
                 data_schema=data_schema,
                 errors={"base": "invalid_http_endpoint"}
             )
@@ -151,21 +186,21 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         except (BadLoginException, UnauthorizedException) as ex:
             _LOGGER.error("Unable to connect to Meross HTTP api: %s", str(ex))
             return self.async_show_form(
-                step_id="user",
+                step_id="configure_manager",
                 data_schema=data_schema,
                 errors={"base": "invalid_credentials"}
             )
         except (UnauthorizedException, ConnectTimeout, HTTPError) as ex:
             _LOGGER.error("Unable to connect to Meross HTTP api: %s", str(ex))
             return self.async_show_form(
-                step_id="user",
+                step_id="configure_manager",
                 data_schema=data_schema,
                 errors={"base": "connection_error"}
             )
         except ClientConnectorSSLError as ex:
             _LOGGER.error("Unable to connect to Meross HTTP api: %s", str(ex))
             return self.async_show_form(
-                step_id="user",
+                step_id="configure_manager",
                 data_schema=data_schema,
                 errors={"base": "api_invalid_ssl_code"}
             )
@@ -173,20 +208,20 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.error("Connection ERROR to HTTP api: %s", str(ex))
             if isinstance(ex.os_error, ConnectionRefusedError):
                 return self.async_show_form(
-                    step_id="user",
+                    step_id="configure_manager",
                     data_schema=data_schema,
                     errors={"base": "api_connection_refused"}
                 )
             else:
                 return self.async_show_form(
-                    step_id="user",
+                    step_id="configure_manager",
                     data_schema=data_schema,
                     errors={"base": "client_connection_error"}
                 )
         except Exception as ex:
             _LOGGER.exception("Unable to connect to Meross HTTP api, ex: %s", str(ex))
             return self.async_show_form(
-                step_id="user",
+                step_id="configure_manager",
                 data_schema=data_schema,
                 errors={"base": "unknown_error"}
             )
@@ -226,7 +261,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     async def _test_authorization(
-        api_base_url: str, username: str, password: str
+            api_base_url: str, username: str, password: str
     ) -> MerossCloudCreds:
         client = await MerossHttpClient.async_from_user_password(
             api_base_url=api_base_url, email=username, password=password
@@ -265,7 +300,7 @@ class MerossOptionsFlowHandler(config_entries.OptionsFlow):
             saved_options = self.config_entry.options
 
         if saved_options == {}:
-            data_schema = self._build_options_schema()    
+            data_schema = self._build_options_schema()
         else:
             data_schema = self._build_options_schema(
                 custom_user_agent=saved_options.get(CONF_OPT_CUSTOM_USER_AGENT),
