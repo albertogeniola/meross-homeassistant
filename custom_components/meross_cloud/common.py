@@ -12,6 +12,9 @@ _LOGGER = logging.getLogger(__name__)
 # Constants
 MEROSS_CLOUD_API_URL = "https://iot.meross.com"
 MEROSS_LOCAL_API_URL = "http://homeassistant.local:2003"
+MEROSS_LOCAL_MDNS_API_SERVICE_TYPE = "_meross-api._tcp.local."
+MEROSS_LOCAL_MDNS_MQTT_SERVICE_TYPE = "_meross-mqtt._tcp.local."
+MEROSS_LOCAL_MDNS_SERVICE_TYPES = [MEROSS_LOCAL_MDNS_API_SERVICE_TYPE, MEROSS_LOCAL_MDNS_MQTT_SERVICE_TYPE]
 DOMAIN = "meross_cloud"
 ATTR_CONFIG = "config"
 MANAGER = "manager"
@@ -31,6 +34,7 @@ CONNECTION_TIMEOUT_THRESHOLD = 5
 
 CONF_STORED_CREDS = "stored_credentials"
 CONF_MQTT_SKIP_CERT_VALIDATION = "skip_mqtt_cert_validation"
+CONF_OVERRIDE_MQTT_ENDPOINT = "override_mqtt_endpoint"
 CONF_HTTP_ENDPOINT = "http_api_endpoint"
 CONF_WORKING_MODE = "working_mode"
 CONF_WORKING_MODE_CLOUD_MODE = "cloud_mode"
