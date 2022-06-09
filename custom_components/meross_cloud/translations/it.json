@@ -23,8 +23,7 @@
           "password": "Password",
           "username": "Indirizzo Email",
           "http_api_endpoint": "Endpoint HTTP",
-          "mqtt_hostname": "Hostname Server MQTT",
-          "mqtt_port": "Porta Server MQTT",
+          "override_mqtt_endpoint": "Indirizzo MQTT (host:port)",
           "skip_mqtt_cert_validation": "Salta la validazione SSL per MQTT"
         },
         "title": "Inserisci le credenziali del tuo account Meross"

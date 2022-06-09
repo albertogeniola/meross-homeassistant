@@ -11,10 +11,9 @@ from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo
 from components.zeroconf import ZeroconfServiceInfo
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry, OptionsFlow, ConfigError
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_HOST, CONF_PORT
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers.typing import DiscoveryInfoType
 from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig, SelectSelectorMode
 from meross_iot.http_api import MerossHttpClient
 from meross_iot.model.credentials import MerossCloudCreds
@@ -54,20 +53,30 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             password: str = None,
             override_mqtt_endpoint: str = None,
             skip_cert_validation: bool = None,
+            local_mode: bool = False
     ) -> vol.Schema:
         http_endpoint_default = http_endpoint if http_endpoint is not None else self._http_api
         username_default = username if username is not None else self._username
         password_default = password if password is not None else self._password
         skip_cert_validation_default = skip_cert_validation if skip_cert_validation is not None else self._skip_cert_validation
-        return vol.Schema(
-            {
+
+        if local_mode:
+            schema = vol.Schema({
+                vol.Required(CONF_HTTP_ENDPOINT, default=http_endpoint_default): str,
+                vol.Required(CONF_OVERRIDE_MQTT_ENDPOINT, default=override_mqtt_endpoint): str,
+                vol.Required(CONF_USERNAME, default=username_default): str,
+                vol.Required(CONF_PASSWORD, default=password_default): str,
+                vol.Required(CONF_MQTT_SKIP_CERT_VALIDATION, default=skip_cert_validation_default): bool,
+            })
+        else:
+            schema = vol.Schema({
                 vol.Required(CONF_HTTP_ENDPOINT, default=http_endpoint_default): str,
                 vol.Required(CONF_USERNAME, default=username_default): str,
                 vol.Required(CONF_PASSWORD, default=password_default): str,
-                vol.Optional(CONF_OVERRIDE_MQTT_ENDPOINT, default=override_mqtt_endpoint): str,
                 vol.Required(CONF_MQTT_SKIP_CERT_VALIDATION, default=skip_cert_validation_default): bool,
-            }
-        )
+            })
+
+        return schema
 
     async def async_step_reauth(self, user_input=None):
         """Perform reauth upon an API authentication error."""
@@ -138,6 +147,9 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 mqtt_count += 1
                 mqtt_endpoint_info = info
 
+        if mqtt_count < 1 or api_count <1:
+            raise ConfigError("No MQTT/API endpoints discovered.")
+
         if mqtt_count > 1 or api_count > 1:
             raise ConfigError("Multiple broker found on the network. This topology is unsupported.")
 
@@ -150,7 +162,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None) -> Dict[str, Any]:
         """Choose mode step handler"""
-        _LOGGER.debug("Starting ASYNC_STEP_CHOOSE_MODE")
+        _LOGGER.debug("Starting STEP_USER")
         if not user_input:
             _LOGGER.debug("Empty user_input, showing mode selection form")
             return self.async_show_form(
@@ -178,17 +190,17 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
             # Look for local brokers via zeroconf
             api, mqtt = await self._discover_services()
-
-            # Check if we got any valid result, and if so, populate the fields.
             return self.async_show_form(
                 step_id="configure_manager",
-                data_schema=self._build_setup_schema(http_endpoint=api, override_mqtt_endpoint=mqtt),
+                data_schema=self._build_setup_schema(http_endpoint=api, override_mqtt_endpoint=mqtt, local_mode=True),
                 errors={},
             )
+        else:
+            raise ConfigError("Invalid selection")
 
     async def async_step_configure_manager(self, user_input=None) -> Dict[str, Any]:
         """Handle a flow initialized by the user interface"""
-        _LOGGER.debug("Starting ASYNC_STEP_USER")
+        _LOGGER.debug("Starting CONFIGURE_MANAGER")
         if not user_input:
             _LOGGER.debug("Empty user_input, showing default prefilled form")
             return self.async_show_form(
@@ -201,6 +213,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         http_api_endpoint = user_input.get(CONF_HTTP_ENDPOINT)
         username = user_input.get(CONF_USERNAME)
         password = user_input.get(CONF_PASSWORD)
+        mqtt_host = user_input.get(CONF_OVERRIDE_MQTT_ENDPOINT)
         skip_cert_validation = user_input.get(CONF_MQTT_SKIP_CERT_VALIDATION)
 
         # Check if we have everything we need
@@ -290,6 +303,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_USERNAME: username,
             CONF_PASSWORD: password,
             CONF_HTTP_ENDPOINT: http_api_endpoint,
+            CONF_OVERRIDE_MQTT_ENDPOINT: mqtt_host,
             CONF_STORED_CREDS: {
                 "token": creds.token,
                 "key": creds.key,
