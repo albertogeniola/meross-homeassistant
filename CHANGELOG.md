@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+# 1.2.5rc0 (2022-06-12)
+
+- Merges 1.2.4-rc1 features with the latest master release (v1.2.4)  
+
 # 1.2.4 (2022-06-12)
 
 - Merges pull request #365 that fixes MSS3XX consumption readings
