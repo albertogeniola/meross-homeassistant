@@ -9,6 +9,6 @@
   "config_flow": true,
   "quality_scale": "platinum",
   "iot_class": "cloud_push",
-  "version": "1.2.0rc3",
+  "version": "1.2.4rc0",
   "zeroconf": ["_meross-api._tcp.local."]
 }
