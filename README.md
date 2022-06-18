@@ -112,12 +112,13 @@ available version is *0.0.1-alpha42*. Depending on the HA hosting system and on 
     <a href="https://user-images.githubusercontent.com/4648843/174433758-69c4eb07-c00e-49f5-b041-60f36f5fef93.png"><img src="https://user-images.githubusercontent.com/4648843/174433758-69c4eb07-c00e-49f5-b041-60f36f5fef93.png" width=300/><a>
 
 1. The wizard will guide you through the Account Setup, Meross App installation and pairing process. Make sure you are able to pair at least one device.
-    Note about Step 1, credentials setup: choose the username/password you will be using locally to pair your devices. If you don't plan to "link" the local addon to the 
-official meross broker, you can choose whatever credentials you like. For instance, you can set: 
+    Note about Step 1, credentials setup: choose the username/password you will be using locally to pair your devices. If you don't plan to "link" the local addon to the official meross broker, you can choose whatever credentials you like. For instance, you can set: 
         username: `meross@local`
         password: `changeme`
 1. When you have paired all the devices you want to manage locally, you can proceed with the setup of the Meross Component. 
-Navigate to the HA integration list, and proceed with the installation of the Meross Addon. During the setup phase, make sure to select "Local 
+Navigate to the HA integration list, and proceed with the installation of the Meross Addon. During the setup phase, make sure to select local addon setup option, not the one relying on the official Meross Broker.
+    
+** Disclaimer **: sometimes, for yet-unknown reasons, MSS310 fails to pair with the local addon broker. However, resetting and retrying the pairing procedure a second time usually works. More recent devices, as the mss210, seem not to suffer of the same problem.
 
 As you can imagine, there is a huge work behind that: first I need to reverse-engineer the Meross protocols, then I need to 
 implement any "logic-layer" implemented on Meross Systems on the new addon I am developing and, eventually, I have to make
