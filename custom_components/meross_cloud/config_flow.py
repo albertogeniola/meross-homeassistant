@@ -91,29 +91,6 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             )
         return await self.async_step_user()
 
-    async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> FlowResult:
-        """Handle zeroconf discovery."""
-        _LOGGER.info("Discovery info: %s", discovery_info)
-        # Returns something like the following
-        # {'host': '192.168.2.115', 'port': 2002, 'hostname': 'Meross Local Broker.local.', 'type': '_meross-api._tcp.local.', 'name': 'HTTP Local Broker._m...tcp.local.', 'properties': {'_raw': {}}}
-        api_host = discovery_info.host
-        api_port = discovery_info.port
-        api_url = f"http://{api_host}:{api_port}"
-
-        # Check if already configured
-        await self.async_set_unique_id(api_url)
-        self._abort_if_unique_id_configured(
-            updates={CONF_HTTP_ENDPOINT: api_url}
-        )
-
-        for entry in self._async_current_entries():
-            # Is this address or IP address already configured?
-            if CONF_HTTP_ENDPOINT in entry.data and entry.data[CONF_HTTP_ENDPOINT] == api_url:
-                return self.async_abort(reason="already_configured")
-
-        self._http_api = api_url
-        return await self.async_step_user()
-
     async def _resolve_service(self, zeroconf: Zeroconf, service_type: str, name: str):
         info = AsyncServiceInfo(service_type, name)
         await info.async_request(zeroconf, 3000)
