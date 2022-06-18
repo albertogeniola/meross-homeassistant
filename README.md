@@ -118,7 +118,7 @@ available version is *0.0.1-alpha42*. Depending on the HA hosting system and on 
 1. When you have paired all the devices you want to manage locally, you can proceed with the setup of the Meross Component. 
 Navigate to the HA integration list, and proceed with the installation of the Meross Addon. During the setup phase, make sure to select local addon setup option, not the one relying on the official Meross Broker.
     
-** Disclaimer **: sometimes, for yet-unknown reasons, MSS310 fails to pair with the local addon broker. However, resetting and retrying the pairing procedure a second time usually works. More recent devices, as the mss210, seem not to suffer of the same problem.
+**NOTE**: sometimes, for yet-unknown reasons, MSS310 fails to pair with the local addon broker. However, resetting and retrying the pairing procedure a second time usually works. More recent devices, as the mss210, seem not to suffer of the same problem.
 
 As you can imagine, there is a huge work behind that: first I need to reverse-engineer the Meross protocols, then I need to 
 implement any "logic-layer" implemented on Meross Systems on the new addon I am developing and, eventually, I have to make
