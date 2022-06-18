@@ -5,6 +5,7 @@
 # 1.2.5rc1 (2022-06-18)
 
 - Removed zeroconf HA discovery support as it is now managed via setup config flow.
+- This component is now working with the [Meross Local Addon](https://github.com/albertogeniola/ha-meross-local-broker) (still in alpha, though).
 
 # 1.2.5rc0 (2022-06-12)
 
