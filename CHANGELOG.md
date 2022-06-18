@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+# 1.2.5rc1 (2022-06-18)
+
+- Removed zeroconf HA discovery support as it is now managed via setup config flow.
+
 # 1.2.5rc0 (2022-06-12)
 
 - Merges 1.2.4-rc1 features with the latest master release (v1.2.4)  
