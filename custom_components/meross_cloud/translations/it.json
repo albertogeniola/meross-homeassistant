@@ -15,13 +15,16 @@
     },
     "step": {
       "user": {
+        "title": "Seleziona il broker",
+        "data": {}
+      },
+      "configure_manager": {
         "data": {
           "password": "Password",
           "username": "Indirizzo Email",
           "http_api_endpoint": "Endpoint HTTP",
-          "mqtt_hostname": "Hostname Server MQTT",
-          "mqtt_port": "Porta Server MQTT",
-          "skip_mqtt_cert_validation": "Skip MQTT certificate validation checks"
+          "override_mqtt_endpoint": "Indirizzo MQTT (host:port)",
+          "skip_mqtt_cert_validation": "Salta la validazione SSL per MQTT"
         },
         "title": "Inserisci le credenziali del tuo account Meross"
       },

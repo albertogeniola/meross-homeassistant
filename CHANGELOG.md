@@ -2,9 +2,30 @@
 
 <!--next-version-placeholder-->
 
+# 1.2.5rc1 (2022-06-18)
+
+- Removed zeroconf HA discovery support as it is now managed via setup config flow.
+- This component is now working with the [Meross Local Addon](https://github.com/albertogeniola/ha-meross-local-broker) (still in alpha, though).
+
+# 1.2.5rc0 (2022-06-12)
+
+- Merges 1.2.4-rc1 features with the latest master release (v1.2.4)  
+
 # 1.2.4 (2022-06-12)
 
 - Merges pull request #365 that fixes MSS3XX consumption readings
+
+## 1.2.4-rc1 (2022-06-06)
+
+### Feature
+
+- Updated low-level library to MerossIot v0.4.4.7
+
+## 1.2.4-rc0 (2022-06-05)
+
+### Feature
+
+- Updated low-level library to MerossIot v0.4.4.6
 
 ## 1.2.3 (2022-06-03)
 

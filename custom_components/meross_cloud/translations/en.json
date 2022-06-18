@@ -15,15 +15,18 @@
     },
     "step": {
       "user": {
+        "title": "Chose broker",
+        "data": {}
+      },
+      "configure_manager": {
+        "title": "Login to Meross Cloud",
         "data": {
-          "password": "Password",
           "username": "Email Address",
+          "password": "Password",
           "http_api_endpoint": "HTTP API Endpoint",
-          "mqtt_hostname": "MQTT Hostname",
-          "mqtt_port": "MQTT Port",
+          "override_mqtt_endpoint": "MQTT Address (host:port)",
           "skip_mqtt_cert_validation": "Skip MQTT certificate validation checks"
-        },
-        "title": "Fill in your Meross login information"
+        }
       },
       "reauth_confirm": {
         "title": "Reauthentication required",

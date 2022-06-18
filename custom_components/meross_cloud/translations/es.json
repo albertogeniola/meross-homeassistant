@@ -14,7 +14,7 @@
             "missing_credentials": "Proporciona las credenciales que faltan"
         },
         "step": {
-            "user": {
+            "configure_manager": {
                 "data": {
                     "password": "Contraseña",
                     "username": "Correo electrónico",

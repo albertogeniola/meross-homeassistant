@@ -46,7 +46,8 @@ from .common import (
     CONF_STORED_CREDS,
     LIMITER,
     CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, HTTP_API_RE,
-    HTTP_UPDATE_INTERVAL, DEVICE_LIST_COORDINATOR, calculate_id, DEFAULT_USER_AGENT, CONF_OPT_CUSTOM_USER_AGENT
+    HTTP_UPDATE_INTERVAL, DEVICE_LIST_COORDINATOR, calculate_id, DEFAULT_USER_AGENT, CONF_OPT_CUSTOM_USER_AGENT,
+    CONF_OVERRIDE_MQTT_ENDPOINT
 )
 from .version import MEROSS_IOT_VERSION
 
@@ -61,6 +62,7 @@ CONFIG_SCHEMA = vol.Schema(
                 vol.Required(CONF_PASSWORD): cv.string,
                 vol.Required(CONF_MQTT_SKIP_CERT_VALIDATION): cv.boolean,
                 vol.Optional(CONF_STORED_CREDS): cv.string,
+                vol.Optional(CONF_OVERRIDE_MQTT_ENDPOINT): cv.string
             }
         )
     },
@@ -102,6 +104,7 @@ class MerossCoordinator(DataUpdateCoordinator):
                  password: str,
                  cached_creds: Optional[MerossCloudCreds],
                  mqtt_skip_cert_validation: bool,
+                 mqtt_override_address: Optional[Tuple[str, int]],
                  update_interval: timedelta,
                  ua_header: str):
 
@@ -111,6 +114,7 @@ class MerossCoordinator(DataUpdateCoordinator):
         self._password = password
         self._cached_creds = cached_creds
         self._skip_cert_validation = mqtt_skip_cert_validation
+        self._mqtt_override_address = mqtt_override_address
         self._setup_done = False
         self._ua_header = ua_header
 
@@ -176,6 +180,7 @@ class MerossCoordinator(DataUpdateCoordinator):
         # Now that we are logged in at HTTP api level, instantiate the manager.
         self._manager = MerossManager(
             http_client=self._client,
+            mqtt_override_server=self._mqtt_override_address,
             auto_reconnect=True,
             mqtt_skip_cert_validation=self._skip_cert_validation,
         )
@@ -382,6 +387,9 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
     mqtt_skip_cert_validation = config_entry.data.get(CONF_MQTT_SKIP_CERT_VALIDATION, True)
     _LOGGER.warning("Skip MQTT cert validation option set to: %s", mqtt_skip_cert_validation)
 
+    mqtt_override_address = config_entry.data.get(CONF_OVERRIDE_MQTT_ENDPOINT)
+    _LOGGER.info("Override MQTT address set to: %s", "no" if mqtt_override_address else "yes -> %s" % mqtt_override_address)
+
     # Make sure we have all the needed requirements
     if http_api_endpoint is None or HTTP_API_RE.fullmatch(http_api_endpoint) is None:
         raise ConfigEntryAuthFailed("Missing or wrong HTTP_API_ENDPOINT")
@@ -389,6 +397,10 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
         raise ConfigEntryAuthFailed("Missing USERNAME/EMAIL parameter from configuration")
     if password is None:
         raise ConfigEntryAuthFailed("Missing PASSWORD parameter from configuration")
+    if mqtt_override_address is not None:
+        mqtt_host = mqtt_override_address.split(":")[0]
+        mqtt_port = int(mqtt_override_address.split(":")[1])
+        mqtt_override_address = (mqtt_host, mqtt_port)
 
     creds = None
     if str_creds is not None:
@@ -429,6 +441,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
             password=password,
             cached_creds=creds,
             mqtt_skip_cert_validation=mqtt_skip_cert_validation,
+            mqtt_override_address=mqtt_override_address,
             update_interval=timedelta(seconds=HTTP_UPDATE_INTERVAL),
             ua_header=ua_header
         )
