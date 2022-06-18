@@ -52,7 +52,7 @@ class GenericSensorWrapper(MerossDevice, SensorEntity):
             raise ValueError(f"The device {device} does not expose property {device_method_or_property}")
 
         self._device_method_or_property = device_method_or_property
-        self._attr_unit_of_measurement = measurement_unit
+        self._attr_native_unit_of_measurement = measurement_unit
         self._attr_device_class = sensor_class
         self._attr_state_class = state_class
 
