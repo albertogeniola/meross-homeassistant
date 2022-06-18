@@ -72,25 +72,14 @@ In particular Bulbs, Switches, Garage Door Openers and Smart Valves/Thermostat a
 <img src="docs/source/images/components/meross_cloud/switch-control.png" alt="Controlling switches" width=400> 
 </details>
  
-### Efficiency and adoption of Homeassistant best practices
-Since I'm aiming at making this component part of the official HA repo, I've put a lot of effort into following 
-HomeAssistant best practices, in particular:
-- Asynchronous functions when possible;
-- No polling: the library is event-based. It saves bandwidth and makes the UI much more reactive.
-- Robust to disconnection: the library handles network disruption;
-- Lovelace notification: supports UI persistent event notification;
+## :new: :rocket: A first version of the Local-Only Addon is HERE! :rocket:
+It took a bit, but eventually it's here. A very first **unstable** version of the Local Meross Addon has been developed.
+The latest version of this component, v1.2.5rc1, does support it and has been tested successfully with both a MSS210 and a MSS310 devices.
+Please note that the usage of the Local Addon is only advised for all the advanced users who are experiencing problems with Meross security
+team, complaining about high rate API calls to their systems. If you plan to use such devices off-grid, the Local Addon is what you are
+looking for. Again, be avised: it's still a work in progress and your devices might not work as expected (for now).
 
-
-## :new: :rocket: Local-Only Addon under development :rocket:
-I had promised to the community that I would have focused my development efforts in the local-addon, and... so I am doing :)
-As already mentioned many times, the reason why it takes so much time is because everything done here is the result of hours 
-and hours of procotol inspection sessions, reverse engineering and [hacking](https://en.wikipedia.org/wiki/Hacker_culture). 
-
-Just to rise the hype, here there are some screens of the on-going development addon, which is 75% completed:
-<img src="https://user-images.githubusercontent.com/4648843/117581720-9d2bb080-b0fe-11eb-802e-1f360d7c3c04.png" alt="Log Screenshot" width=250/>
-<img src="https://user-images.githubusercontent.com/4648843/117581724-9e5cdd80-b0fe-11eb-9822-a1cc4363a929.png" alt="Info Screenshot" width=250/>
-<img src="https://user-images.githubusercontent.com/4648843/117581904-aa956a80-b0ff-11eb-926c-132614eb9bda.png" alt="WebUi Screenshot" width=250/>
-
+You can find installation instructions for the Local Addon directly [here](https://github.com/albertogeniola/ha-meross-local-broker).
 
 ### What is the local-addon?
 Meross Plugin has gained great success and popularity among the HomeAssistant users. However, the Meross engineers are imposing
@@ -98,6 +87,37 @@ new limits on their MQTT broker system, which cause problems to the HA users who
 more than 10 devices connected to HA. For this reason, I am working on a new HomeAssistant addon, namely "Meross Local Addon", 
 which aims at re-implementing the Meross MQTT Broker and HTTP API layer locally to the addon. This would basically allow users
 to rely only on LAN-local connection, using HomeAssistant as command center. 
+
+### How to use the this Meross Component with the Local Addon?
+In order to take advantage of the Local Meross Addon, you need to follow the instructions below:
+1. Install or update the version of the Meross Custom Component via HACS (or manually, if you prefer) at least to version 1.2.5rc1, 
+which is the first one supporting the Meross Local Addon.
+1. Add the Meross Local Addon repository to your HomeAssistant installation. You can do that following the [instructions here]([url](https://github.com/albertogeniola/ha-meross-local-broker)) or simply press the following button
+
+    [![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Falbertogeniola%2Fmeross-local-homeassistant)
+1. Make sure the "Meross Local Addon for Homeassistant" appears in the section of "community addons" and, if so, install it. At the time of writing the latest
+available version is *0.0.1-alpha42*. Depending on the HA hosting system and on the internect connection speed, it can take up to 20 minutes for the installation to complete.
+
+    <a href="https://user-images.githubusercontent.com/4648843/174432626-51b6a569-2d95-464e-87bc-8a6fa702f9f1.png"><img src="https://user-images.githubusercontent.com/4648843/174432626-51b6a569-2d95-464e-87bc-8a6fa702f9f1.png" width=300/></a>
+    <a href="https://user-images.githubusercontent.com/4648843/174432630-031526ee-5f42-4d61-bfa2-e9badbc74675.png"><img src="https://user-images.githubusercontent.com/4648843/174432630-031526ee-5f42-4d61-bfa2-e9badbc74675.png" width=300/></a>
+1. Navigate to the configuration section of the "Meross Local Addon" and make sure the option reinit_db is OFF, while the option "advertise" is ON. Leave debug_mode OFF, unless you need to provide supplementary logging information to debug issues. Make sure you don't have any firewall blocking the network traffic to the ports indicated on this section, as the addon will receive traffic from both meross devices and pairer app on such ports.
+    
+    <a href="https://user-images.githubusercontent.com/4648843/174433609-0997e67d-adf5-4262-9c30-ea2eaae08169.png"><img src="https://user-images.githubusercontent.com/4648843/174433609-0997e67d-adf5-4262-9c30-ea2eaae08169.png" width=300></a>
+1. Navigate to the "info" panel of the addon and make sure the "Start at boot" option is ON. Also, make sure the "Show in menu" option is set to ON. Then, start the ADDON and wait at least 5 minutes. Depending on the device you are running on, the first boot may take up to 10 minutes to complete.
+
+    <a href="https://user-images.githubusercontent.com/4648843/174433626-f3cb7efb-b6aa-4930-9a13-ba7a95cae678.png"><img src="https://user-images.githubusercontent.com/4648843/174433626-f3cb7efb-b6aa-4930-9a13-ba7a95cae678.png" width=300/></a>
+1. Open "Meross Local Addon" web-interface (you can either click on "Open Web UI" or click on the left menu icon <img src="https://user-images.githubusercontent.com/4648843/174433435-3b723738-7e31-4146-9237-709bd9816be5.png" width=32>. Then, from the web-ui, click on "Wizard Setup" or on "Setup"  and follow the instructions to configure your addon. For now, it's advised not to use the "Official Meross Link", as it is still under development.
+
+    <a href="https://user-images.githubusercontent.com/4648843/174433687-deb0ee20-a4fc-4258-9553-cd5221a64b0e.png"><img src="https://user-images.githubusercontent.com/4648843/174433687-deb0ee20-a4fc-4258-9553-cd5221a64b0e.png" width=300/></a>
+    <a href="https://user-images.githubusercontent.com/4648843/174433758-69c4eb07-c00e-49f5-b041-60f36f5fef93.png"><img src="https://user-images.githubusercontent.com/4648843/174433758-69c4eb07-c00e-49f5-b041-60f36f5fef93.png" width=300/><a>
+
+1. The wizard will guide you through the Account Setup, Meross App installation and pairing process. Make sure you are able to pair at least one device.
+    Note about Step 1, credentials setup: choose the username/password you will be using locally to pair your devices. If you don't plan to "link" the local addon to the 
+official meross broker, you can choose whatever credentials you like. For instance, you can set: 
+        username: `meross@local`
+        password: `changeme`
+1. When you have paired all the devices you want to manage locally, you can proceed with the setup of the Meross Component. 
+Navigate to the HA integration list, and proceed with the installation of the Meross Addon. During the setup phase, make sure to select "Local 
 
 As you can imagine, there is a huge work behind that: first I need to reverse-engineer the Meross protocols, then I need to 
 implement any "logic-layer" implemented on Meross Systems on the new addon I am developing and, eventually, I have to make
