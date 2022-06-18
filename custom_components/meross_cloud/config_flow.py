@@ -8,7 +8,7 @@ from aiohttp import ClientConnectorSSLError, ClientConnectorError
 from zeroconf import ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo
 
-from components.zeroconf import ZeroconfServiceInfo
+from homeassistant.components.zeroconf import ZeroconfServiceInfo
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry, OptionsFlow, ConfigError
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
