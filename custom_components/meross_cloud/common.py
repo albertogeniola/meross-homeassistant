@@ -40,6 +40,11 @@ CONF_WORKING_MODE = "working_mode"
 CONF_WORKING_MODE_CLOUD_MODE = "cloud_mode"
 CONF_WORKING_MODE_LOCAL_MODE = "local_mode"
 
+UNKNOWN_ERROR = "unknown_error"
+MULTIPLE_BROKERS_FOUND = "multiple_brokers_found"
+MULTIPLE_APIS_FOUND = "multiple_apis_found"
+DIFFERENT_HOSTS_FOR_BROKER_AND_API = "different_hosts_for_broker_and_api"
+
 CONF_OPT_CUSTOM_USER_AGENT = "custom_user_agent"
 
 HA_SENSOR_POLL_INTERVAL_SECONDS = 30     # HA sensor polling interval

@@ -1,0 +1,30 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "RPI - DEBUG HA",
+      "type": "python",
+      "request": "attach",
+      "port": 6789,
+      "host": "192.168.1.22",
+      "justMyCode": false,
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "/usr/src/homeassistant"
+        },
+        {
+          "localRoot": "Z:/custom_components/meross_cloud/config_flow.py",
+          "remoteRoot": "/config/custom_components/meross_cloud/config_flow.py"
+        }
+        //{
+        //  "localRoot": "c:\\Users\\Alberto Geniola\\source\\repos\\meross-homeassistant\\custom_components\\meross_cloud",
+        //  "remoteRoot": "/config/custom_components/meross_cloud"
+        //}
+      ]
+    }
+  ]
+}

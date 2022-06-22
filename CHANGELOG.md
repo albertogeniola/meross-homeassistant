@@ -2,6 +2,11 @@
 
 <!--next-version-placeholder-->
 
+# 1.2.5rc3 (2022-06-23)
+
+- Set addon to run on host network to make mDNS work
+- Improve setup & UI experience
+
 # 1.2.5rc2 (2022-06-18)
 
 - Fix import error preventing the component from loading via HA
