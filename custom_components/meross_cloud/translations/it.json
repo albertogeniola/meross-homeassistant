@@ -11,7 +11,8 @@
       "unknown_error": "Si è verificato un errore inatteso",
       "api_connection_refused": "Impossibile connettersi al server API. Controlla l'indirizzo del server.",
       "client_connection_error": "Si è verificato un errore durante la connessione alle API HTTP",
-      "missing_credentials": "Per favore inserire le credenziali di accesso"
+      "missing_credentials": "Per favore inserire le credenziali di accesso",
+      "mdns_lookup_failed": "La ricerca automatica non è stata in grado di identificare gli indirizzi dei servizi API/MQTT. Sono stati inseriti quelli di default."
     },
     "step": {
       "user": {

@@ -2,8 +2,11 @@
 
 <!--next-version-placeholder-->
 
-# 1.2.5rc3 (2022-06-23)
+# 1.2.5rc (2022-06-23)
+- Set addon to run on internal network
+- Set default values for IP:PORT when using local addon and no mDNS info is gathered.
 
+# 1.2.5rc3 (2022-06-23)
 - Set addon to run on host network to make mDNS work
 - Improve setup & UI experience
 

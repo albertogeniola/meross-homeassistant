@@ -9,5 +9,5 @@
   "config_flow": true,
   "quality_scale": "platinum",
   "iot_class": "cloud_push",
-  "version": "1.2.5rc3"
+  "version": "1.2.5rc4"
 }

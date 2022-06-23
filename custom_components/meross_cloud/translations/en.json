@@ -11,7 +11,8 @@
       "unknown_error": "An unexpected error occurred",
       "api_connection_refused": "Cannot connect to HTTP(S) API server. Make sure the address is valid",
       "client_connection_error": "An error occurred while connecting to the HTTP API",
-      "missing_credentials": "Please provide missing credentials"
+      "missing_credentials": "Please provide missing credentials",
+      "mdns_lookup_failed": "The discovery was unable to automatically find MQTT/API addresses. Default values have been selected."
     },
     "step": {
       "user": {

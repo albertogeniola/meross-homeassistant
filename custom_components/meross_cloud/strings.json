@@ -26,7 +26,8 @@
       "connection_error": "Unable to connect to Meross.",
       "invalid_http_endpoint": "Invalid Meross HTTTP api endpoint",
       "api_invalid_ssl_code": "Invalid SSL response received by the server. Are you sure the server is exposed in HTTPS? Try plain http and see if this happens again.",
-      "api_connection_refused": "Cannot connect to HTTP(S) API server. Make sure the address is valid"
+      "api_connection_refused": "Cannot connect to HTTP(S) API server. Make sure the address is valid",
+      "mdns_lookup_failed": "The discovery was unable to find MQTT/API service. Default values have been selected."
     },
     "abort": {
       "single_instance_allowed": "Only a single configuration of Meross is allowed."
