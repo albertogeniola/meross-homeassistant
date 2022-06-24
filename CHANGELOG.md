@@ -2,6 +2,9 @@
 
 <!--next-version-placeholder-->
 
+# 1.2.5rc5 (2022-06-24)
+- Fix log error caused by wrong variable reference
+
 # 1.2.5rc (2022-06-23)
 - Set addon to run on internal network
 - Set default values for IP:PORT when using local addon and no mDNS info is gathered.

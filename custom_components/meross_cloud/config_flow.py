@@ -138,7 +138,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             elif info.type == MEROSS_LOCAL_MDNS_MQTT_SERVICE_TYPE:
                 mqtt_count += 1
                 mqtt_endpoint_info = info
-                _LOGGER.info("Found [%d] Local Meross MQTT service listening on %s:%d", mqtt_count, api_endpoint_info.server, api_endpoint_info.port)
+                _LOGGER.info("Found [%d] Local Meross MQTT service listening on %s:%d", mqtt_count, mqtt_endpoint_info.server, mqtt_endpoint_info.port)
 
         if mqtt_count < 1 or api_count <1:
             _LOGGER.info("The API/MQTT discovery was unable to find any relevant service.")
