@@ -406,6 +406,6 @@ class MerossOptionsFlowHandler(config_entries.OptionsFlow):
         return vol.Schema({
             vol.Optional(CONF_OPT_CUSTOM_USER_AGENT,
                          msg="Specify a custom user agent to be used when polling Meross HTTP API",
-                         default=custom_user_agent,
+                         #default=custom_user_agent,
                          description="Custom user-agent header to use when polling Meross HTTP API."): str
         })
