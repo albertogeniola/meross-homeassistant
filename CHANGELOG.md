@@ -4,6 +4,9 @@
 
 # 1.2.6 ()
 - Add roller shutter (MSR100) support
+- Add thermostat (MTS200) support
+- Implement support for LAN-LOCAL HTTP transport mode
+- Update dependency to low-level meross_iot library (0.4.5.0)
 
 # 1.2.5rc5 (2022-06-24)
 - Fix log error caused by wrong variable reference
