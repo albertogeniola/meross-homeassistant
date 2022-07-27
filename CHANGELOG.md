@@ -2,7 +2,7 @@
 
 <!--next-version-placeholder-->
 
-# 1.2.6 ()
+# 1.2.6 (2022-07-27)
 - Add roller shutter (MSR100) support
 - Add thermostat (MTS200) support
 - Implement support for LAN-LOCAL HTTP transport mode
