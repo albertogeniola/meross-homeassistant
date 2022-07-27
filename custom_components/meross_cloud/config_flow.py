@@ -25,8 +25,10 @@ from .common import DOMAIN, CONF_STORED_CREDS, CONF_WORKING_MODE, CONF_WORKING_M
     CONF_WORKING_MODE_CLOUD_MODE, \
     CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, CONF_OPT_CUSTOM_USER_AGENT, HTTP_API_RE, MEROSS_CLOUD_API_URL, \
     MEROSS_LOCAL_API_URL, MEROSS_LOCAL_MDNS_SERVICE_TYPES, MEROSS_LOCAL_MDNS_MQTT_SERVICE_TYPE, \
-    MEROSS_LOCAL_MDNS_API_SERVICE_TYPE, CONF_OVERRIDE_MQTT_ENDPOINT, MULTIPLE_APIS_FOUND, MULTIPLE_BROKERS_FOUND, UNKNOWN_ERROR, \
-    DIFFERENT_HOSTS_FOR_BROKER_AND_API, MEROSS_LOCAL_MQTT_BROKER_URI
+    MEROSS_LOCAL_MDNS_API_SERVICE_TYPE, CONF_OVERRIDE_MQTT_ENDPOINT, MULTIPLE_APIS_FOUND, MULTIPLE_BROKERS_FOUND, \
+    UNKNOWN_ERROR, \
+    DIFFERENT_HOSTS_FOR_BROKER_AND_API, MEROSS_LOCAL_MQTT_BROKER_URI, CONF_OPT_LAN, CONF_OPT_LAN_MQTT_ONLY, \
+    CONF_OPT_LAN_HTTP_FIRST, CONF_OPT_LAN_HTTP_FIRST_ONLY_GET, DEFAULT_USER_AGENT
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
@@ -388,24 +390,20 @@ class MerossOptionsFlowHandler(config_entries.OptionsFlow):
         if self.config_entry is not None:
             saved_options = self.config_entry.options
 
-        if saved_options == {}:
-            data_schema = self._build_options_schema()
-        else:
-            data_schema = self._build_options_schema(
-                custom_user_agent=saved_options.get(CONF_OPT_CUSTOM_USER_AGENT),
-            )
-
         return self.async_show_form(
-            step_id="init",
-            data_schema=data_schema
-        )
-
-    def _build_options_schema(self,
-                              custom_user_agent: str = None,
-                              ) -> vol.Schema:
-        return vol.Schema({
-            vol.Optional(CONF_OPT_CUSTOM_USER_AGENT,
-                         msg="Specify a custom user agent to be used when polling Meross HTTP API",
-                         default=custom_user_agent,
-                         description="Custom user-agent header to use when polling Meross HTTP API."): str
-        })
+                step_id="init",
+                data_schema=vol.Schema({
+                    vol.Optional(CONF_OPT_CUSTOM_USER_AGENT, default=saved_options.get(CONF_OPT_CUSTOM_USER_AGENT, DEFAULT_USER_AGENT)): str,
+                    vol.Required(CONF_OPT_LAN, default=saved_options.get(CONF_OPT_LAN, CONF_OPT_LAN_MQTT_ONLY)): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                {"value": CONF_OPT_LAN_MQTT_ONLY,
+                                 "label": "Do not rely on local HTTP communication at all, just use the MQTT broker"},
+                                {"value": CONF_OPT_LAN_HTTP_FIRST,
+                                 "label": "Attempt local HTTP communication first and fall-back to MQTT broker"},
+                                {"value": CONF_OPT_LAN_HTTP_FIRST_ONLY_GET,
+                                 "label": "Attempt local HTTP communication first only for GET commands, fall-back to MQTT broker"}
+                            ], mode=SelectSelectorMode.LIST)
+                    )
+                })
+            )

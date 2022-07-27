@@ -41,7 +41,8 @@
     "step": {
       "init": {
         "data": {
-          "custom_user_agent": "Header User-Agent personalizzato"
+          "custom_user_agent": "Header User-Agent personalizzato",
+          "lan_transport_mode": "Opzioni di comunicazione con i dispositivi"
         },
         "title": "Opzioni Meross Cloud"
       }

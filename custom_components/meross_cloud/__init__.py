@@ -47,7 +47,7 @@ from .common import (
     LIMITER,
     CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, HTTP_API_RE,
     HTTP_UPDATE_INTERVAL, DEVICE_LIST_COORDINATOR, calculate_id, DEFAULT_USER_AGENT, CONF_OPT_CUSTOM_USER_AGENT,
-    CONF_OVERRIDE_MQTT_ENDPOINT
+    CONF_OVERRIDE_MQTT_ENDPOINT, CONF_OPT_LAN, CONF_OPT_LAN_MQTT_ONLY, TRANSPORT_MODES_TO_ENUM
 )
 from .version import MEROSS_IOT_VERSION
 
@@ -515,13 +515,15 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
 async def update_listener(hass, entry):
     """Handle options update."""
     # Update options
+    custom_ua = entry.options.get(CONF_OPT_CUSTOM_USER_AGENT, DEFAULT_USER_AGENT)
+    transport_mode = entry.options.get(CONF_OPT_LAN, CONF_OPT_LAN_MQTT_ONLY)
+    manager_transport_mode = TRANSPORT_MODES_TO_ENUM[transport_mode]
+    manager: MerossManager = hass.data[DOMAIN][MANAGER]
+    manager.default_transport_mode = manager_transport_mode
     # So far, the underlying Meross Library requires some "monkey patching" to set the
     # http user agent to be used. It's not nice, but until a public setter gets exposed, we need
     # to do so.
-    custom_ua = entry.options.get(CONF_OPT_CUSTOM_USER_AGENT, DEFAULT_USER_AGENT)
-    manager: MerossManager = hass.data[DOMAIN][MANAGER]
     manager._http_client._ua_header = custom_ua
-    pass
 
 
 async def async_unload_entry(hass, entry):

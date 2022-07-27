@@ -2,6 +2,9 @@
 
 <!--next-version-placeholder-->
 
+# 1.2.6 ()
+- Add roller shutter (MSR100) support
+
 # 1.2.5rc5 (2022-06-24)
 - Fix log error caused by wrong variable reference
 
