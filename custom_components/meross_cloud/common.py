@@ -3,6 +3,7 @@ import re
 from typing import Dict, List
 
 from meross_iot.controller.device import BaseDevice
+from meross_iot.manager import TransportMode
 
 from . import version
 from .version import MEROSS_IOT_VERSION
@@ -47,6 +48,10 @@ MULTIPLE_APIS_FOUND = "multiple_apis_found"
 DIFFERENT_HOSTS_FOR_BROKER_AND_API = "different_hosts_for_broker_and_api"
 
 CONF_OPT_CUSTOM_USER_AGENT = "custom_user_agent"
+CONF_OPT_LAN = "lan_transport_mode"
+CONF_OPT_LAN_MQTT_ONLY = "conf_opt_lan_mqtt_only"
+CONF_OPT_LAN_HTTP_FIRST = "conf_opt_lan_http_first"
+CONF_OPT_LAN_HTTP_FIRST_ONLY_GET = "conf_opt_lan_http_first_only_get"
 
 HA_SENSOR_POLL_INTERVAL_SECONDS = 30     # HA sensor polling interval
 HTTP_UPDATE_INTERVAL = 120               # Meross Cloud "discovery" interval
@@ -59,6 +64,12 @@ ATTR_DROPPED_API_CALLS_PER_SECOND = "dropped_api_calls_per_second"
 HTTP_API_RE = re.compile("(http:\/\/|https:\/\/)?([^:]+)(:([0-9]+))?")
 
 DEFAULT_USER_AGENT = f"MerossHA/{version.MEROSS_INTEGRATION_VERSION}"
+
+TRANSPORT_MODES_TO_ENUM = {
+    CONF_OPT_LAN_MQTT_ONLY: TransportMode.MQTT_ONLY,
+    CONF_OPT_LAN_HTTP_FIRST: TransportMode.LAN_HTTP_FIRST,
+    CONF_OPT_LAN_HTTP_FIRST_ONLY_GET: TransportMode.LAN_HTTP_FIRST_ONLY_GET
+}
 
 
 def calculate_id(platform: str, uuid: str, channel: int, supplementary_classifiers: List[str] = None) -> str:

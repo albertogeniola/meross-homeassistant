@@ -38,7 +38,8 @@
     "step": {
       "init": {
         "data": {
-          "custom_user_agent": "Custom HTTP User Agent header for API polling"
+          "custom_user_agent": "Custom HTTP User Agent header for API polling",
+          "lan_transport_mode": "Device communication options"
         },
         "title": "Meross Cloud Options"
       }
