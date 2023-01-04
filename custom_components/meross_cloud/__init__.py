@@ -181,7 +181,6 @@ class MerossCoordinator(DataUpdateCoordinator):
         self._manager = MerossManager(
             http_client=self._client,
             mqtt_override_server=self._mqtt_override_address,
-            auto_reconnect=True,
             mqtt_skip_cert_validation=self._skip_cert_validation,
         )
 
