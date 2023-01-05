@@ -4,7 +4,7 @@
 ## 💣💣 BREAKING CHANGES FROM MEROSS API 💣💣
 In the past 24 hours, Meross has changed the signature of its HTTP API version (keeping the same API version in place). 
 **That did break every HomeAssistant integration version below 1.2.6 (included).**
-In order to solve the issue, you should upgrade to version **1.2.7** which includes the necessary changes to work again with the updated version of the Meross APIs.
+In order to solve the issue, you should upgrade to version **1.2.8** which includes the necessary changes to work again with the updated version of the Meross APIs.
 
 # Meross HomeAssistant component
 A full-featured Homeassistant component to drive Meross devices. 
