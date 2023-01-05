@@ -99,7 +99,7 @@ In order to take advantage of the Local Meross Addon, you need to follow the ins
 which is the first one supporting the Meross Local Addon.
 1. Add the Meross Local Addon repository to your HomeAssistant installation. You can do that following the [instructions here]([url](https://github.com/albertogeniola/ha-meross-local-broker)) or simply press the following button
 
-    [![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Falbertogeniola%2Fmeross-local-homeassistant)
+    [![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Falbertogeniola%2Fha-meross-local-broker)
 1. Make sure the "Meross Local Addon for Homeassistant" appears in the section of "community addons" and, if so, install it. At the time of writing the latest
 available version is *0.0.1-alpha42*. Depending on the HA hosting system and on the internect connection speed, it can take up to 20 minutes for the installation to complete.
 
