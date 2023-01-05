@@ -2,6 +2,9 @@
 
 <!--next-version-placeholder-->
 
+# 1.2.8rc2 (2022-01-05)
+- Update low-level library to v0.4.5.7, addressing issue #414
+
 # 1.2.8rc1 (2022-01-04)
 - Update low-level library to v0.4.5.6 to address SubDevice issues #414
 
