@@ -218,6 +218,7 @@ class MerossDevice(Entity):
         self._device = device
         self._channel_id = channel
         self._last_http_state = None
+        self._cb_async_remove_listener = None
 
         base_name = f"{device.name} ({device.type})"
         if supplementary_classifiers is not None:
@@ -311,12 +312,13 @@ class MerossDevice(Entity):
 
     async def async_added_to_hass(self) -> None:
         self._device.register_push_notification_handler_coroutine(self._async_push_notification_received)
-        self._coordinator.async_add_listener(self._http_data_changed)
+        self._cb_async_remove_listener = self._coordinator.async_add_listener(self._http_data_changed)
         self.hass.data[DOMAIN]["ADDED_ENTITIES_IDS"].add(self.unique_id)
 
     async def async_will_remove_from_hass(self) -> None:
         self._device.unregister_push_notification_handler_coroutine(self._async_push_notification_received)
-        self._coordinator.async_remove_listener(self._http_data_changed)
+        if self._cb_async_remove_listener is not None:
+            self._cb_async_remove_listener()
         self.hass.data[DOMAIN]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
 
 
@@ -470,7 +472,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
 
         # Register a handler for HTTP events so that we can check for new devices and trigger
         # a discovery when needed
-        meross_coordinator.async_add_listener(_http_api_polled)
+        config_entry.async_on_unload(meross_coordinator.async_add_listener(_http_api_polled))
         config_entry.async_on_unload(config_entry.add_update_listener(update_listener))
 
         return True
@@ -549,8 +551,6 @@ async def async_unload_entry(hass, entry):
     del hass.data[DOMAIN][MANAGER]
     hass.data[DOMAIN].clear()
     del hass.data[DOMAIN]
-
-    # TODO: unregister the http handler device_list_coordinator
 
     _LOGGER.info("Meross cloud component removal done.")
     return True
