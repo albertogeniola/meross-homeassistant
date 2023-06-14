@@ -95,10 +95,11 @@ class LightEntityWrapper(MerossDevice, LightEntity):
 
     @property
     def hs_color(self):
-        if self._device.get_supports_rgb(channel=self._channel_id):
-            rgb = self._device.get_rgb_color()
+        rgb = self._device.get_rgb_color(channel=self._channel_id)
+        if rgb is not None and isinstance(rgb, tuple) and len(rgb) == 3:
             return color_util.color_RGB_to_hs(*rgb)
-        return None
+        else:
+            return None  # Return None if RGB value is not available
 
     @property
     def color_temp(self):
