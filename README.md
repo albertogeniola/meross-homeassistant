@@ -1,11 +1,6 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 ![Build](https://img.shields.io/azure-devops/build/albertogeniola/c4128d1b-c23c-418d-95c5-2de061954ee5/3/master?style=for-the-badge)
 
-## 💣💣 BREAKING CHANGES FROM MEROSS API 💣💣
-In the past 24 hours, Meross has changed the signature of its HTTP API version (keeping the same API version in place). 
-**That did break every HomeAssistant integration version below 1.2.6 (included).**
-In order to solve the issue, you should upgrade to version **1.2.8** which includes the necessary changes to work again with the updated version of the Meross APIs.
-
 # Meross HomeAssistant component
 A full-featured Homeassistant component to drive Meross devices. 
 This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
