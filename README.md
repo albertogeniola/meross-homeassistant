@@ -126,6 +126,7 @@ Navigate to the HA integration list, and proceed with the installation of the Me
 **NOTE**: sometimes, for yet-unknown reasons, MSS310 fails to pair with the local addon broker. However, resetting and retrying the pairing procedure a second time usually works. More recent devices, as the mss210, seem not to suffer of the same problem.
 
 ### How to switch from a cloud based integration to a local integration
+_Credits to @olivermaor_
 When switching from a cloud based to a local integration, it is important that the correct sequence of steps is followed:
 1. Install the "Meross Local Addon", as described above, but do not start it yet.
 2. In the Settings - Integration panel, open the existing Meross IoT integration and copy or print the friendly names of the devices used.
@@ -138,13 +139,13 @@ When switching from a cloud based to a local integration, it is important that t
 9. Be sure you have paired all devices, and changed their "friendly names". Only then add the Meross IoT integration, and select the local broker, as described above. Your devices will be re-discovered with the correct friendly names, and can be integrated into HA.
 10. If you have followed these steps, all devices should again work with all scenes and automations as before.
 
-As you can imagine, there is a huge work behind that: first I need to reverse-engineer the Meross protocols, then I need to 
+## Supporting my work
+As you can imagine, there is a huge work behind this repo: first I need to reverse-engineer the Meross protocols, then I need to 
 implement any "logic-layer" implemented on Meross Systems on the new addon I am developing and, eventually, I have to make
 sure that everything works together. That means that I am not able to spend much time in solving issues that may arise in 
 the meantime, and for that I apologize. If you like this project and you want to support me, please consider donating:
 that motivates me and helps me buy _more ram_ which is absolutely necessary when developing on a virtualized environment.
 
-## Supporting my work
 By buying me a coffee, not only you make my development more efficient, but also motivate me to further improve 
 my work. On the other hand, buying me a beer will certainly make me happier: **a toast to you, supporter**!
 In case you are a pro and a strong opensource supporter, you might also consider [sponsoring my GitHub work](https://github.com/sponsors/albertogeniola).
