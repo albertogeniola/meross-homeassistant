@@ -122,6 +122,7 @@ Navigate to the HA integration list, and proceed with the installation of the Me
 
 ### How to switch from a cloud based integration to a local integration
 _Credits to @olivermaor_
+
 When switching from a cloud based to a local integration, it is important that the correct sequence of steps is followed:
 1. Install the "Meross Local Addon", as described above, but do not start it yet.
 2. In the Settings - Integration panel, open the existing Meross IoT integration and copy or print the friendly names of the devices used.
