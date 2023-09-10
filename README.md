@@ -13,7 +13,7 @@ On the other hand, if you don't have HACS installed or if you don't plan to inst
 
 ### Option A: Installing via HACS
 If you have HACS, well, it's piece of cake! 
-Just search for "Meross" (Full name is Meross Cloud IoT) in the default repository of HACS and it'll show up.
+Just search for "Meross" (Full name is Meross Integration) in the default repository of HACS and it'll show up.
 Click on Install. When the installation completes, **you must restart homeassistant** in order to make it work.
 As soon as HomeAssistant is restarted, you can proceed with __component setup__.
 
