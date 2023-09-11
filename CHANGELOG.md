@@ -2,6 +2,11 @@
 
 <!--next-version-placeholder-->
 
+# 1.2.9 (2023-09-11)
+- Update low-level library to v0.4.6.0rc2 to support new API endpoints
+- 
+
+
 # 1.2.8 (2022-01-05)
 - Update low-level library to v0.4.5.7, addressing issue #414
 

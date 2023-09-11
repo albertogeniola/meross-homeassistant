@@ -47,7 +47,8 @@ from .common import (
     LIMITER,
     CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, HTTP_API_RE,
     HTTP_UPDATE_INTERVAL, DEVICE_LIST_COORDINATOR, calculate_id, DEFAULT_USER_AGENT, CONF_OPT_CUSTOM_USER_AGENT,
-    CONF_OVERRIDE_MQTT_ENDPOINT, CONF_OPT_LAN, CONF_OPT_LAN_MQTT_ONLY, TRANSPORT_MODES_TO_ENUM
+    CONF_OVERRIDE_MQTT_ENDPOINT, CONF_OPT_LAN, CONF_OPT_LAN_MQTT_ONLY, TRANSPORT_MODES_TO_ENUM,
+    MEROSS_DEFAULT_CLOUD_API_URL
 )
 from .version import MEROSS_IOT_VERSION
 
@@ -324,7 +325,7 @@ async def get_or_renew_creds(
         email: str,
         password: str,
         stored_creds: MerossCloudCreds = None,
-        http_api_url: str = "https://iot.meross.com",
+        http_api_url: str = MEROSS_DEFAULT_CLOUD_API_URL,
         ua_header: str = DEFAULT_USER_AGENT
 ) -> Tuple[MerossHttpClient, List[HttpDeviceInfo], bool]:
     try:
@@ -334,7 +335,7 @@ async def get_or_renew_creds(
             )
         else:
             http_client = MerossHttpClient(
-                cloud_credentials=stored_creds, api_base_url=http_api_url, ua_header=ua_header
+                cloud_credentials=stored_creds, ua_header=ua_header
             )
 
         # Test device listing. If goes ok, return it immediately. There is no need to update the credentials
@@ -406,11 +407,14 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
     if str_creds is not None:
         issued_on = datetime.fromisoformat(str_creds.get("issued_on"))
         creds = MerossCloudCreds(
+            domain=str_creds.get("domain", MEROSS_DEFAULT_CLOUD_API_URL),
+            mqtt_domain=str_creds.get("mqtt_domain"),
             token=str_creds.get("token"),
             key=str_creds.get("key"),
             user_id=str_creds.get("user_id"),
             user_email=str_creds.get("user_email"),
             issued_on=issued_on,
+            mfa_lock_expire=str_creds.get("mfa_lock_expire", 0)
         )
         _LOGGER.info(
             f"Found application token issued on {creds.issued_on} to {creds.user_email}. Using it."

@@ -11,7 +11,7 @@ from .version import MEROSS_IOT_VERSION
 _LOGGER = logging.getLogger(__name__)
 
 # Constants
-MEROSS_CLOUD_API_URL = "https://iot.meross.com"
+MEROSS_DEFAULT_CLOUD_API_URL = "https://iot.meross.com"
 MEROSS_LOCAL_API_URL = "http://homeassistant.local:2003"
 MEROSS_LOCAL_MQTT_BROKER_URI = "homeassistant.local:2001"
 MEROSS_LOCAL_MDNS_API_SERVICE_TYPE = "_meross-api._tcp.local."

@@ -23,7 +23,7 @@ from homeassistant.components import zeroconf
 
 from .common import DOMAIN, CONF_STORED_CREDS, CONF_WORKING_MODE, CONF_WORKING_MODE_LOCAL_MODE, \
     CONF_WORKING_MODE_CLOUD_MODE, \
-    CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, CONF_OPT_CUSTOM_USER_AGENT, HTTP_API_RE, MEROSS_CLOUD_API_URL, \
+    CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, CONF_OPT_CUSTOM_USER_AGENT, HTTP_API_RE, MEROSS_DEFAULT_CLOUD_API_URL, \
     MEROSS_LOCAL_API_URL, MEROSS_LOCAL_MDNS_SERVICE_TYPES, MEROSS_LOCAL_MDNS_MQTT_SERVICE_TYPE, \
     MEROSS_LOCAL_MDNS_API_SERVICE_TYPE, CONF_OVERRIDE_MQTT_ENDPOINT, MULTIPLE_APIS_FOUND, MULTIPLE_BROKERS_FOUND, \
     UNKNOWN_ERROR, \
@@ -177,7 +177,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         mode = user_input.get(CONF_WORKING_MODE)
         if mode == CONF_WORKING_MODE_CLOUD_MODE:
             self._local_mode = False
-            self._http_api = MEROSS_CLOUD_API_URL
+            self._http_api = MEROSS_DEFAULT_CLOUD_API_URL
             self._skip_cert_validation = False
             return self.async_show_form(
                 step_id="configure_manager",
@@ -323,11 +323,14 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_HTTP_ENDPOINT: http_api_endpoint,
             CONF_OVERRIDE_MQTT_ENDPOINT: mqtt_host,
             CONF_STORED_CREDS: {
+                "domain": creds.domain,
+                "mqtt_domain": creds.mqtt_domain,
                 "token": creds.token,
                 "key": creds.key,
                 "user_id": creds.user_id,
                 "user_email": creds.user_email,
                 "issued_on": creds.issued_on.isoformat(),
+                "mfa_lock_expire": creds.mfa_lock_expire,
             },
             CONF_MQTT_SKIP_CERT_VALIDATION: skip_cert_validation
         }
