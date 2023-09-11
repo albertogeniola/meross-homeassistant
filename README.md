@@ -1,11 +1,6 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 ![Build](https://img.shields.io/azure-devops/build/albertogeniola/c4128d1b-c23c-418d-95c5-2de061954ee5/3/master?style=for-the-badge)
 
-## 💣💣 BREAKING CHANGES FROM MEROSS API 💣💣
-In the past 24 hours, Meross has changed the signature of its HTTP API version (keeping the same API version in place). 
-**That did break every HomeAssistant integration version below 1.2.6 (included).**
-In order to solve the issue, you should upgrade to version **1.2.8** which includes the necessary changes to work again with the updated version of the Meross APIs.
-
 # Meross HomeAssistant component
 A full-featured Homeassistant component to drive Meross devices. 
 This component is based on the underlying MerossIot library available [here](https://github.com/albertogeniola/MerossIot).
@@ -18,7 +13,7 @@ On the other hand, if you don't have HACS installed or if you don't plan to inst
 
 ### Option A: Installing via HACS
 If you have HACS, well, it's piece of cake! 
-Just search for "Meross" (Full name is Meross Cloud IoT) in the default repository of HACS and it'll show up.
+Just search for "Meross" (Full name is Meross Integration) in the default repository of HACS and it'll show up.
 Click on Install. When the installation completes, **you must restart homeassistant** in order to make it work.
 As soon as HomeAssistant is restarted, you can proceed with __component setup__.
 
@@ -125,13 +120,28 @@ Navigate to the HA integration list, and proceed with the installation of the Me
     
 **NOTE**: sometimes, for yet-unknown reasons, MSS310 fails to pair with the local addon broker. However, resetting and retrying the pairing procedure a second time usually works. More recent devices, as the mss210, seem not to suffer of the same problem.
 
-As you can imagine, there is a huge work behind that: first I need to reverse-engineer the Meross protocols, then I need to 
+### How to switch from a cloud based integration to a local integration
+_Credits to @olivermaor_
+
+When switching from a cloud based to a local integration, it is important that the correct sequence of steps is followed:
+1. Install the "Meross Local Addon", as described above, but do not start it yet.
+2. In the Settings - Integration panel, open the existing Meross IoT integration and copy or print the friendly names of the devices used.
+3. Go back to the Settings - Integration panel and delete the Meross IoT integration.
+4. Reboot Home Assistant.
+5. After the reboot has finished, access the file /config/.storage/core.entity_registry, and copy that file into the same directory as a backup (use a name like core.entity_registry_backup)
+6. After having backed up that file, open it (not the backup) with an editor, and find obsolete entries of entities which derive from the Meross IoT integration. Each entity is enclosed in a set of brackets (*{* *}*). Delete these entries, and only these entries, this including the respective brackets. Be careful: The entities are separated by commas, but after the last entry in the entire list, a comma may not be set.
+7. Save the amended file, and reboot Home Assistant. If you made mistakes editing the core.entity_registry file, you can still revert to the backup.
+8. Now start the "Meross Local Addon" and pair the Meross devices **one by one**, using the pairing app. After each device had been successsfully paired, rename it **in the addon**, using **exactly** the friendly name which the device had before, when you used the cloud integration. Wait until it shows "online", eventually refreshing the browser page. Only after having done that, pair the next device.
+9. Be sure you have paired all devices, and changed their "friendly names". Only then add the Meross IoT integration, and select the local broker, as described above. Your devices will be re-discovered with the correct friendly names, and can be integrated into HA.
+10. If you have followed these steps, all devices should again work with all scenes and automations as before.
+
+## Supporting my work
+As you can imagine, there is a huge work behind this repo: first I need to reverse-engineer the Meross protocols, then I need to 
 implement any "logic-layer" implemented on Meross Systems on the new addon I am developing and, eventually, I have to make
 sure that everything works together. That means that I am not able to spend much time in solving issues that may arise in 
 the meantime, and for that I apologize. If you like this project and you want to support me, please consider donating:
 that motivates me and helps me buy _more ram_ which is absolutely necessary when developing on a virtualized environment.
 
-## Supporting my work
 By buying me a coffee, not only you make my development more efficient, but also motivate me to further improve 
 my work. On the other hand, buying me a beer will certainly make me happier: **a toast to you, supporter**!
 In case you are a pro and a strong opensource supporter, you might also consider [sponsoring my GitHub work](https://github.com/sponsors/albertogeniola).
