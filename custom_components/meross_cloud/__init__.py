@@ -166,6 +166,7 @@ class MerossCoordinator(DataUpdateCoordinator):
             self.hass.config_entries.async_update_entry(
                 entry=self._entry,
                 data={
+                    CONF_HTTP_ENDPOINT: self._cached_creds.domain,
                     CONF_USERNAME: self._email,
                     CONF_PASSWORD: self._password,
                     CONF_STORED_CREDS: {
@@ -174,6 +175,8 @@ class MerossCoordinator(DataUpdateCoordinator):
                         "user_id": self._cached_creds.user_id,
                         "user_email": self._cached_creds.user_email,
                         "issued_on": self._cached_creds.issued_on.isoformat(),
+                        "domain": self._cached_creds.domain,
+                        "mqtt_domain": self._cached_creds.mqtt_domain
                     },
                 },
             )
@@ -329,18 +332,28 @@ async def get_or_renew_creds(
         ua_header: str = DEFAULT_USER_AGENT
 ) -> Tuple[MerossHttpClient, List[HttpDeviceInfo], bool]:
     try:
-        if stored_creds is None:
+        renewed = False
+        if stored_creds is None or stored_creds.domain.lower().strip() == MEROSS_DEFAULT_CLOUD_API_URL:
+            # In case the client is using the old API endpoint, force a re-auth against the new endpoint
             http_client = await MerossHttpClient.async_from_user_password(
                 email=email, password=password, api_base_url=http_api_url, ua_header=ua_header
             )
+            renewed = True
         else:
             http_client = MerossHttpClient(
                 cloud_credentials=stored_creds, ua_header=ua_header
             )
 
+        # The local addon api might not be able to provide the correct domain and mqtt values. In this case,
+        # we patch them here.
+        if http_api_url is not None and (http_client.cloud_credentials.domain is None or stored_creds.domain.lower().strip() == MEROSS_DEFAULT_CLOUD_API_URL):
+            _LOGGER.warning("Returned/Stored DOMAIN within existing credentials is <%s>. Patching the stored credentials with the correct value right away.", http_client.cloud_credentials.domain)
+            http_client.cloud_credentials.domain = http_api_url
+            renewed = True
+
         # Test device listing. If goes ok, return it immediately. There is no need to update the credentials
         http_devices = await http_client.async_list_devices()
-        return http_client, http_devices, False
+        return http_client, http_devices, renewed
 
     except TokenExpiredException as e:
         # In case the current token is expired or invalid, let's try to re-login.
