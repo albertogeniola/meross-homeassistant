@@ -286,7 +286,7 @@ class EnergySensorWrapper(GenericSensorWrapper):
 
     @property
     def should_poll(self) -> bool:
-        return False
+        return True
 
 # ----------------------------------------------
 # PLATFORM METHODS
