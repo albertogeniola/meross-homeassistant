@@ -23,7 +23,13 @@ Once installed, you should set up the Meross Cloud component to connect to the M
 Just navigate to \_settings -> Integrations, click "add" and then select "Meross Cloud IoT".
 A pop-up will appear, asking for the Meross API endpoint to use and your Meross credentials.
 
-The official meross cloud server is **https://iot.meross.com** (it is pre-filled by default).
+There are multiple official server endpoints, and you should select the one that is closest to your geo-region.
+The following table will help you get the right one:
+
+- Asia/Pacific: https://iotx-ap.meross.com
+- United States: https://iotx-us.meross.com
+- Europe: https://iotx-eu.meross.com
+
 The following animation shows how to do that.
 
 <a href="https://raw.githubusercontent.com/albertogeniola/meross-homeassistant/master/docs/source/images/components/meross_cloud/install-via-webui.gif">
@@ -32,7 +38,7 @@ The following animation shows how to do that.
 
 ### API rate limit
 
-Meross does implement strict API rate limits.
+__Meross does implement strict API rate limits__.
 When connecting an more than 5 Meross sensors/devices to HomeAssistant via this integration,
 the Meross security team might request you to release/decrease the API calling frequency.
 Therefore, you should avoid using high-frequency polling scripts/automations with Meross devices.

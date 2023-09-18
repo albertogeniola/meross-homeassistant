@@ -49,7 +49,7 @@ The following table summarizes the fields that the wizard will require you to fi
 
 |  Field Name                      | Example Value           | Description                                             | 
 |----------------------------------|-------------------------|---------------------------------------------------------|
-| HTTP Api Endpoint                | https://iot.meross.com  | Is the HTTP(s) API endpoint used by the Meross Manager. This might vary in accordance with your country | 
+| HTTP Api Endpoint                | One of the following: <br/> - https://iotx-ap.meross.com (for Asia/Pacific regions) <br/> - https://iotx-eu.meross.com (for Europe) <br/> - https://iotx-us.meross.com (for United States) | Is the HTTP(s) API endpoint used by the Meross Manager. This might vary in accordance with your country | 
 | Email Address                    | johndoe@gmail.com       | Your Meross account username/email. If connecting to the official Meross cloud, use the same from the Meross App |
 | Password                         | R4nd0mS3cret            | Your Meross account password. If connecting to the official Meross cloud, use the same from the Meross App |
 | Skip MQTT certificate validation | True (Checked)          | Configures MQTT certificate validation. When unchecked it requires a valid certificate to be exposed from the Meross Server. If checked, it skips the MQTT certificate validation. If connecting to the official Meross cloud, you can uncheck this. When connecting to local-lan or custom MQTT brokers, you might want to check this. |
