@@ -117,6 +117,9 @@ class ElectricitySensorDevice(ElectricityMixin, BaseDevice):
     """ Helper type """
     pass
 
+class EnergySensorDevice(ConsumptionXMixin, BaseDevice):
+    """ Helper type """
+    pass
 
 class PowerSensorWrapper(GenericSensorWrapper):
     _device: ElectricitySensorDevice
@@ -249,9 +252,9 @@ class VoltageSensorWrapper(GenericSensorWrapper):
         return True
 
 class EnergySensorWrapper(GenericSensorWrapper):
-    _device: ElectricitySensorDevice
+    _device: EnergySensorDevice
 
-    def __init__(self, device: ElectricitySensorDevice,
+    def __init__(self, device: EnergySensorDevice,
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
         super().__init__(sensor_class=DEVICE_CLASS_ENERGY,
                          measurement_unit="kWh",
@@ -269,9 +272,8 @@ class EnergySensorWrapper(GenericSensorWrapper):
         if self.online:
             await super().async_update()
 
-            if isinstance(self._device, ConsumptionXMixin):
-                _LOGGER.info(f"Refreshing energy metrics for device {self.name}")
-                self._daily_consumption = await self._device.async_get_daily_power_consumption(channel=self._channel_id)
+            _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
+            self._daily_consumption = await self._device.async_get_daily_power_consumption(channel=self._channel_id)
 
     @property
     def native_value(self) -> StateType:
@@ -307,6 +309,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
         humidity_temp_sensors = filter(lambda d: isinstance(d, Ms100Sensor), devices)
         mts100_temp_sensors = filter(lambda d: isinstance(d, Mts100v3Valve), devices)
         power_sensors = filter(lambda d: isinstance(d, ElectricityMixin), devices)
+        energy_sensors = filter(lambda d: isinstance(d, ConsumptionXMixin), devices)
 
         # Add MS100 Temperature & Humidity sensors
         for d in humidity_temp_sensors:
@@ -327,9 +330,11 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
                     CurrentSensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
                 new_entities.append(
                     VoltageSensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
-                if isinstance(d, ConsumptionXMixin):
-                    new_entities.append(
-                        EnergySensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
+
+        # Add Energy Sensors
+        for d in energy_sensors:
+                new_entities.append(
+                     EnergySensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
 
         unique_new_devs = filter(lambda d: d.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"], new_entities)
         async_add_entities(list(unique_new_devs), True)
