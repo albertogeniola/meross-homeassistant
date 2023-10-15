@@ -4,6 +4,7 @@ from datetime import timedelta
 from typing import Optional, Dict
 
 from meross_iot.controller.device import BaseDevice
+from meross_iot.controller.mixins.consumption import ConsumptionXMixin
 from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.controller.subdevice import Ms100Sensor, Mts100v3Valve
 from meross_iot.manager import MerossManager
@@ -11,10 +12,10 @@ from meross_iot.model.enums import OnlineStatus
 from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.http.device import HttpDeviceInfo
 
-from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT
+from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL_INCREASING
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_HUMIDITY, \
-    DEVICE_CLASS_POWER, POWER_WATT, DEVICE_CLASS_CURRENT, DEVICE_CLASS_VOLTAGE
+    DEVICE_CLASS_POWER, POWER_WATT, DEVICE_CLASS_CURRENT, DEVICE_CLASS_VOLTAGE, DEVICE_CLASS_ENERGY
 from homeassistant.const import PERCENTAGE
 from homeassistant.helpers.typing import StateType, HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -116,6 +117,9 @@ class ElectricitySensorDevice(ElectricityMixin, BaseDevice):
     """ Helper type """
     pass
 
+class EnergySensorDevice(ConsumptionXMixin, BaseDevice):
+    """ Helper type """
+    pass
 
 class PowerSensorWrapper(GenericSensorWrapper):
     _device: ElectricitySensorDevice
@@ -247,6 +251,44 @@ class VoltageSensorWrapper(GenericSensorWrapper):
     def should_poll(self) -> bool:
         return True
 
+class EnergySensorWrapper(GenericSensorWrapper):
+    _device: EnergySensorDevice
+
+    def __init__(self, device: EnergySensorDevice,
+                 device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
+        super().__init__(sensor_class=DEVICE_CLASS_ENERGY,
+                         measurement_unit="kWh",
+                         device_method_or_property='async_get_daily_power_consumption',
+                         state_class=STATE_CLASS_TOTAL_INCREASING,
+                         device=device,
+                         device_list_coordinator=device_list_coordinator,
+                         channel=channel)
+
+        # Device properties
+        self._daily_consumption = None
+
+    # For ElectricityMixin devices we need to explicitly call the async_Get_instant_metrics
+    async def async_update(self):
+        if self.online:
+            await super().async_update()
+
+            _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
+            self._daily_consumption = await self._device.async_get_daily_power_consumption(channel=self._channel_id)
+
+    @property
+    def native_value(self) -> StateType:
+        if self._daily_consumption is not None:
+            today = datetime.today()
+            total = 0
+            daystart = datetime(year=today.year, month=today.month, day=today.day, hour=0, second=0)
+            for x in self._daily_consumption:
+              if x['date'] == daystart:
+                total = x['total_consumption_kwh']
+            return total
+
+    @property
+    def should_poll(self) -> bool:
+        return True
 
 # ----------------------------------------------
 # PLATFORM METHODS
@@ -267,6 +309,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
         humidity_temp_sensors = filter(lambda d: isinstance(d, Ms100Sensor), devices)
         mts100_temp_sensors = filter(lambda d: isinstance(d, Mts100v3Valve), devices)
         power_sensors = filter(lambda d: isinstance(d, ElectricityMixin), devices)
+        energy_sensors = filter(lambda d: isinstance(d, ConsumptionXMixin), devices)
 
         # Add MS100 Temperature & Humidity sensors
         for d in humidity_temp_sensors:
@@ -287,6 +330,11 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
                     CurrentSensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
                 new_entities.append(
                     VoltageSensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
+
+        # Add Energy Sensors
+        for d in energy_sensors:
+                new_entities.append(
+                     EnergySensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
 
         unique_new_devs = filter(lambda d: d.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"], new_entities)
         async_add_entities(list(unique_new_devs), True)
