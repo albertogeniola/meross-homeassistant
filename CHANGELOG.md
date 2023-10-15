@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+# 1.2.10 (2023-10-15)
+- Using the latest API Endpoints from Meross
+- Supporting energy sensor for plugs (#460, thanks to @benoitm974)
+- Fixes component unloading issue (thanks to @TheHolyRoger)
+- Attention: this version is not compatible with local-only addon
+
 # 1.2.9b0 (2023-09-18)
 - Update low-level library to v0.4.6.0rc2 to support new API endpoints
 - Merged PR #447
