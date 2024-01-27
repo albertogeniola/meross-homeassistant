@@ -1,6 +1,8 @@
 # Changelog
 
 <!--next-version-placeholder-->
+# 1.2.12 (2024-01-27)
+- Merge PR #449, fixing #448. Credits to @mguilherme
 
 # 1.2.11 (2024-01-27)
 - Using the latest API Endpoints from Meross, version 0.4.6.0
