@@ -12,11 +12,8 @@ from meross_iot.model.enums import OnlineStatus
 from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.http.device import HttpDeviceInfo
 
-from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL_INCREASING
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_HUMIDITY, \
-    DEVICE_CLASS_POWER, POWER_WATT, DEVICE_CLASS_CURRENT, DEVICE_CLASS_VOLTAGE, DEVICE_CLASS_ENERGY
-from homeassistant.const import PERCENTAGE
+from homeassistant.components.sensor import SensorStateClass, SensorEntity, SensorDeviceClass
+from homeassistant.const import PERCENTAGE, UnitOfTemperature, UnitOfPower
 from homeassistant.helpers.typing import StateType, HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
@@ -67,10 +64,10 @@ class Ms100TemperatureSensorWrapper(GenericSensorWrapper):
     def __init__(self, device: Ms100Sensor, device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]],
                  channel: int = 0):
         super().__init__(
-            sensor_class=DEVICE_CLASS_TEMPERATURE,
-            measurement_unit=TEMP_CELSIUS,
+            sensor_class=SensorDeviceClass.TEMPERATURE,
+            measurement_unit=UnitOfTemperature.CELSIUS,
             device_method_or_property='last_sampled_temperature',
-            state_class=STATE_CLASS_MEASUREMENT,
+            state_class=SensorStateClass.MEASUREMENT,
             device=device,
             device_list_coordinator=device_list_coordinator,
             channel=channel)
@@ -79,10 +76,10 @@ class Ms100TemperatureSensorWrapper(GenericSensorWrapper):
 class Ms100HumiditySensorWrapper(GenericSensorWrapper):
     def __init__(self, device: Ms100Sensor, device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]],
                  channel: int = 0):
-        super().__init__(sensor_class=DEVICE_CLASS_HUMIDITY,
+        super().__init__(sensor_class=SensorDeviceClass.HUMIDITY,
                          measurement_unit=PERCENTAGE,
                          device_method_or_property='last_sampled_humidity',
-                         state_class=STATE_CLASS_MEASUREMENT,
+                         state_class=SensorStateClass.MEASUREMENT,
                          device=device,
                          device_list_coordinator=device_list_coordinator,
                          channel=channel)
@@ -93,10 +90,10 @@ class Mts100TemperatureSensorWrapper(GenericSensorWrapper):
 
     def __init__(self, device: Mts100v3Valve,
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]]):
-        super().__init__(sensor_class=DEVICE_CLASS_TEMPERATURE,
-                         measurement_unit=TEMP_CELSIUS,
+        super().__init__(sensor_class=SensorDeviceClass.TEMPERATURE,
+                         measurement_unit=UnitOfTemperature.CELSIUS,
                          device_method_or_property='last_sampled_temperature',
-                         state_class=STATE_CLASS_MEASUREMENT,
+                         state_class=SensorStateClass.MEASUREMENT,
                          device_list_coordinator=device_list_coordinator,
                          device=device)
 
@@ -126,10 +123,10 @@ class PowerSensorWrapper(GenericSensorWrapper):
 
     def __init__(self, device: ElectricitySensorDevice,
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
-        super().__init__(sensor_class=DEVICE_CLASS_POWER,
-                         measurement_unit=POWER_WATT,
+        super().__init__(sensor_class=SensorDeviceClass.POWER,
+                         measurement_unit=UnitOfPower.WATT,
                          device_method_or_property='get_last_sample',
-                         state_class=STATE_CLASS_MEASUREMENT,
+                         state_class=SensorStateClass.MEASUREMENT,
                          device=device,
                          device_list_coordinator=device_list_coordinator,
                          channel=channel)
@@ -169,10 +166,10 @@ class CurrentSensorWrapper(GenericSensorWrapper):
 
     def __init__(self, device: ElectricitySensorDevice,
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
-        super().__init__(sensor_class=DEVICE_CLASS_CURRENT,
+        super().__init__(sensor_class=SensorDeviceClass.CURRENT,
                          measurement_unit="A",
                          device_method_or_property='get_last_sample',
-                         state_class=STATE_CLASS_MEASUREMENT,
+                         state_class=SensorStateClass.MEASUREMENT,
                          device=device,
                          device_list_coordinator=device_list_coordinator,
                          channel=channel)
@@ -213,10 +210,10 @@ class VoltageSensorWrapper(GenericSensorWrapper):
 
     def __init__(self, device: ElectricitySensorDevice,
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
-        super().__init__(sensor_class=DEVICE_CLASS_VOLTAGE,
+        super().__init__(sensor_class=SensorDeviceClass.VOLTAGE,
                          measurement_unit="V",
                          device_method_or_property='get_last_sample',
-                         state_class=STATE_CLASS_MEASUREMENT,
+                         state_class=SensorStateClass.MEASUREMENT,
                          device=device,
                          device_list_coordinator=device_list_coordinator,
                          channel=channel)
@@ -256,10 +253,10 @@ class EnergySensorWrapper(GenericSensorWrapper):
 
     def __init__(self, device: EnergySensorDevice,
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
-        super().__init__(sensor_class=DEVICE_CLASS_ENERGY,
+        super().__init__(sensor_class=SensorDeviceClass.ENERGY,
                          measurement_unit="kWh",
                          device_method_or_property='async_get_daily_power_consumption',
-                         state_class=STATE_CLASS_TOTAL_INCREASING,
+                         state_class=SensorStateClass.TOTAL_INCREASING,
                          device=device,
                          device_list_coordinator=device_list_coordinator,
                          channel=channel)

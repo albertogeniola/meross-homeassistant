@@ -9,8 +9,7 @@ from meross_iot.manager import MerossManager
 from meross_iot.model.http.device import HttpDeviceInfo
 
 # Conditional Light import with backwards compatibility
-from homeassistant.components.cover import CoverEntity, SUPPORT_STOP
-from homeassistant.components.cover import DEVICE_CLASS_GARAGE, DEVICE_CLASS_SHUTTER, SUPPORT_OPEN, SUPPORT_CLOSE
+from homeassistant.components.cover import CoverEntity, CoverEntityFeature, CoverDeviceClass
 from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
@@ -56,12 +55,12 @@ class GarageOpenerEntityWrapper(MerossDevice, CoverEntity):
     @property
     def device_class(self):
         """Return the class of this device, from component DEVICE_CLASSES."""
-        return DEVICE_CLASS_GARAGE
+        return CoverDeviceClass.GARAGE
 
     @property
     def supported_features(self):
         """Flag supported features."""
-        return SUPPORT_OPEN | SUPPORT_CLOSE
+        return CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE
 
     @property
     def is_closed(self):
@@ -122,14 +121,14 @@ class RollerShutterEntityWrapper(MerossDevice, CoverEntity):
     @property
     def device_class(self):
         """Return the class of this device, from component DEVICE_CLASSES."""
-        return DEVICE_CLASS_SHUTTER
+        return CoverDeviceClass.SHUTTER
 
     @property
     def supported_features(self):
         """Flag supported features."""
         # So far, the Roller Shutter RST100 supports position, but it looks like it is fake and not reliable.
         # So we don't support that on HA neither.
-        return SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_STOP
+        return CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
 
     @property
     def is_closed(self):

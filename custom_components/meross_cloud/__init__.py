@@ -392,7 +392,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
     _LOGGER.info("Loaded %s: %s", CONF_HTTP_ENDPOINT, http_api_endpoint)
 
     email = config_entry.data.get(CONF_USERNAME)
-    _LOGGER.info("Loaded %s: %s", CONF_USERNAME, http_api_endpoint)
+    _LOGGER.info("Loaded %s: %s", CONF_USERNAME, email)
 
     password = config_entry.data.get(CONF_PASSWORD)
     _LOGGER.info("Loaded %s: %s", CONF_PASSWORD, "******")
@@ -404,7 +404,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
     _LOGGER.warning("Skip MQTT cert validation option set to: %s", mqtt_skip_cert_validation)
 
     mqtt_override_address = config_entry.data.get(CONF_OVERRIDE_MQTT_ENDPOINT)
-    _LOGGER.info("Override MQTT address set to: %s", "no" if mqtt_override_address else "yes -> %s" % mqtt_override_address)
+    _LOGGER.info("Override MQTT address set to: %s", "no" if mqtt_override_address is None else "yes -> %s" % mqtt_override_address)
 
     # Make sure we have all the needed requirements
     if http_api_endpoint is None or HTTP_API_RE.fullmatch(http_api_endpoint) is None:

@@ -7,7 +7,7 @@ from meross_iot.manager import MerossManager
 from meross_iot.model.enums import SprayMode
 from meross_iot.model.http.device import HttpDeviceInfo
 
-from homeassistant.components.fan import FanEntity, SUPPORT_PRESET_MODE
+from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
@@ -70,7 +70,7 @@ class HumidifierEntityWrapper(MerossDevice, FanEntity):
 
     @property
     def supported_features(self) -> int:
-        return SUPPORT_PRESET_MODE
+        return FanEntityFeature.PRESET_MODE
 
     @property
     def is_on(self) -> Optional[bool]:

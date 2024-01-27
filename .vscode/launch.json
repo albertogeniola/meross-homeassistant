@@ -5,11 +5,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "RPI - DEBUG HA",
+      "name": "RPI - (MEROSSIOT_BETA) DEBUG HA",
       "type": "python",
       "request": "attach",
       "port": 6789,
-      "host": "192.168.1.22",
+      "host": "192.168.41.10",
       "justMyCode": false,
       "pathMappings": [
         {
@@ -17,13 +17,27 @@
           "remoteRoot": "/usr/src/homeassistant"
         },
         {
-          "localRoot": "Z:/custom_components/meross_cloud/config_flow.py",
-          "remoteRoot": "/config/custom_components/meross_cloud/config_flow.py"
+          "localRoot": "Z:/custom_components/meross_cloud/",
+          "remoteRoot": "/config/custom_components/meross_cloud/"
         }
         //{
         //  "localRoot": "c:\\Users\\Alberto Geniola\\source\\repos\\meross-homeassistant\\custom_components\\meross_cloud",
         //  "remoteRoot": "/config/custom_components/meross_cloud"
         //}
+      ]
+    },
+    {
+      "name": "RPI - (MEROSSIOT_HACS) DEBUG HA",
+      "type": "python",
+      "request": "attach",
+      "port": 6789,
+      "host": "192.168.41.10",
+      "justMyCode": false,
+      "pathMappings": [
+        {
+          "localRoot": "c:\\Users\\Alberto Geniola\\source\\repos\\meross-homeassistant\\custom_components\\meross_cloud",
+          "remoteRoot": "/config/custom_components/meross_cloud"
+        }
       ]
     }
   ]

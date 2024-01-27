@@ -2,6 +2,11 @@
 
 <!--next-version-placeholder-->
 
+# 1.2.11 (2024-01-27)
+- Using the latest API Endpoints from Meross, version 0.4.6.0
+- Fix logging errors
+- Fix deprecated constants usage
+
 # 1.2.10 (2023-10-15)
 - Using the latest API Endpoints from Meross
 - Supporting energy sensor for plugs (#460, thanks to @benoitm974)
