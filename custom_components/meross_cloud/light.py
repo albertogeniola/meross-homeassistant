@@ -3,9 +3,10 @@ from typing import Optional, Dict
 
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.light import LightMixin
+from meross_iot.controller.mixins.diffuser_light import DiffuserLightMixin
 from meross_iot.manager import MerossManager
 from meross_iot.model.http.device import HttpDeviceInfo
-
+from meross_iot.model.enums import DiffuserLightMode
 import homeassistant.util.color as color_util
 # Conditional Light import with backwards compatibility
 from homeassistant.components.light import LightEntity
@@ -19,11 +20,84 @@ from .common import (DOMAIN, MANAGER, HA_LIGHT, DEVICE_LIST_COORDINATOR)
 _LOGGER = logging.getLogger(__name__)
 
 
+class MerossOilDiffuserLightDevice(DiffuserLightMixin, BaseDevice):
+    """
+    Type hints helper
+    """
+    pass
+
+
 class MerossLightDevice(LightMixin, BaseDevice):
     """
     Type hints helper
     """
     pass
+
+
+class DiffuserLightEntityWrapper(MerossDevice, LightEntity):
+    """Wrapper class to adapt the Meross OilDiffuserLight"""
+    _device: MerossOilDiffuserLightDevice
+
+    def __init__(self,
+                 channel: int,
+                 device: MerossOilDiffuserLightDevice,
+                 device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]]):
+
+        super().__init__(
+            device=device,
+            channel=channel,
+            device_list_coordinator=device_list_coordinator,
+            platform=HA_LIGHT)
+
+    async def async_turn_off(self, **kwargs) -> None:
+        await self._device.async_turn_off(channel=self._channel_id, skip_rate_limits=True)
+
+    async def async_turn_on(self, **kwargs) -> None:
+        if not self.is_on:
+            await self._device.async_turn_on(channel=self._channel_id, skip_rate_limits=True)
+
+        if ATTR_HS_COLOR in kwargs:
+            h, s = kwargs[ATTR_HS_COLOR]
+            rgb = color_util.color_hsv_to_RGB(h, s, 100)
+            _LOGGER.debug("color change: rgb=%r -- h=%r s=%r" % (rgb, h, s))
+            await self._device.async_set_light_mode(channel=self._channel_id, mode=DiffuserLightMode.FIXED_RGB, rgb=rgb, onoff=True, skip_rate_limits=True)
+        elif ATTR_COLOR_TEMP in kwargs:
+            mired = kwargs[ATTR_COLOR_TEMP]
+            norm_value = (mired - self.min_mireds) / (self.max_mireds - self.min_mireds)
+            temperature = 100 - (norm_value * 100)
+            _LOGGER.debug("temperature change: mired=%r meross=%r" % (mired, temperature))
+            await self._device.async_set_light_mode(channel=self._channel_id, mode=DiffuserLightMode.FIXED_LUMINANCE, onoff=True, rgb=65293, brightness=temperature, skip_rate_limits=True)
+
+        # Brightness must always be set, so take previous luminance if not explicitly set now.
+        if ATTR_BRIGHTNESS in kwargs:
+            brightness = kwargs[ATTR_BRIGHTNESS] * 100 / 255
+            _LOGGER.debug("brightness change: %r" % brightness)
+            await self._device.async_set_light_mode(channel=self._channel_id, luminance=brightness, skip_rate_limits=True)
+
+    @property
+    def is_on(self) -> Optional[bool]:
+        return self._device.get_light_is_on(channel=self._channel_id)
+
+    @property
+    def supported_features(self):
+        # For now, we assume OilDiffuserLight supports all the following features.
+        # From Meross API it is in fact impossible to determine which exact features are supported by the device.
+        return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_COLOR_TEMP
+
+    @property
+    def hs_color(self):
+        rgb = self._device.get_light_rgb_color(channel=self._channel_id)
+        if rgb is not None and isinstance(rgb, tuple) and len(rgb) == 3:
+            return color_util.color_RGB_to_hs(*rgb)
+        else:
+            return None  # Return None if RGB value is not available
+
+    @property
+    def brightness(self):
+        luminance = self._device.get_light_brightness()
+        if luminance is not None:
+            return float(luminance) / 100 * 255
+        return None
 
 
 class LightEntityWrapper(MerossDevice, LightEntity):
@@ -119,11 +193,19 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
 
         new_entities = []
 
-        devs = filter(lambda d: isinstance(d, LightMixin), devices)
-        for d in devs:
+        light_devs = filter(lambda d: isinstance(d, LightMixin), devices)
+        for d in light_devs:
             channels = [c.index for c in d.channels] if len(d.channels) > 0 else [0]
             for channel_index in channels:
                 w = LightEntityWrapper(device=d, channel=channel_index, device_list_coordinator=coordinator)
+                if w.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:
+                    new_entities.append(w)
+
+        diffuser_devs = filter(lambda d: isinstance(d, DiffuserLightMixin), devices)
+        for d in diffuser_devs:
+            channels = [c.index for c in d.channels] if len(d.channels) > 0 else [0]
+            for channel_index in channels:
+                w = DiffuserLightEntityWrapper(device=d, channel=channel_index, device_list_coordinator=coordinator)
                 if w.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:
                     new_entities.append(w)
 
