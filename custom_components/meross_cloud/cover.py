@@ -9,7 +9,13 @@ from meross_iot.manager import MerossManager
 from meross_iot.model.http.device import HttpDeviceInfo
 
 # Conditional Light import with backwards compatibility
-from homeassistant.components.cover import CoverEntity, CoverEntityFeature, CoverDeviceClass
+from homeassistant.components.cover import (
+    CoverEntity,
+    CoverEntityFeature,
+    CoverDeviceClass,
+    ATTR_POSITION,
+)
+
 from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
@@ -128,7 +134,7 @@ class RollerShutterEntityWrapper(MerossDevice, CoverEntity):
         """Flag supported features."""
         # So far, the Roller Shutter RST100 supports position, but it looks like it is fake and not reliable.
         # So we don't support that on HA neither.
-        return CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
+        return CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP | CoverEntityFeature.SET_POSITION
 
     @property
     def current_cover_position(self):
@@ -148,6 +154,12 @@ class RollerShutterEntityWrapper(MerossDevice, CoverEntity):
         status = self._device.get_status(channel=self._channel_id)
         return status == RollerShutterState.OPENING
 
+    async def async_set_cover_position(self, position: int):
+        await self._device.async_set_position(position=position, channel=self._channel_id)
+
+    def set_cover_position(self, **kwargs):
+        position = round(kwargs.get(ATTR_POSITION) or 0)
+        self.hass.async_add_executor_job(self.async_set_cover_position, int(position)) 
 
 async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_entities):
     def entity_adder_callback():
