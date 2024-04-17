@@ -132,7 +132,7 @@ class RollerShutterEntityWrapper(MerossDevice, CoverEntity):
 
     @property
     def current_cover_position(self):
-        return self._device.get_position(channel=self._channel_id) or 50
+        return self._device.get_position(channel=self._channel_id)
 
     @property
     def is_closed(self):
