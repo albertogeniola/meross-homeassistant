@@ -2,6 +2,10 @@
 Note! Last version breaks support for FAN entity for smart Meross Humidifier.
 You'll need to add it again to HA if previously configured.
 
+# 1.3.1b1 (2024-04-25)
+- Implement MFA support (addressing #467)
+- Avoid storing username/password credentials (addressing #486)
+
 <!--next-version-placeholder-->
 # 1.3.0 (2024-04-25)
 - Add support for Meross OilDiffuser
