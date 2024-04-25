@@ -42,6 +42,7 @@ CONF_HTTP_ENDPOINT = "http_api_endpoint"
 CONF_WORKING_MODE = "working_mode"
 CONF_WORKING_MODE_CLOUD_MODE = "cloud_mode"
 CONF_WORKING_MODE_LOCAL_MODE = "local_mode"
+CONF_MFA_CODE = "mfa_code"
 
 UNKNOWN_ERROR = "unknown_error"
 MULTIPLE_BROKERS_FOUND = "multiple_brokers_found"

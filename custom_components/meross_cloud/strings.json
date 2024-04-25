@@ -13,7 +13,8 @@
           "password": "Password",
           "http_api_endpoint": "HTTP API Endpoint",
           "override_mqtt_endpoint": "MQTT Address (host:port)",
-          "skip_mqtt_cert_validation": "Skip MQTT certificate validation checks"
+          "skip_mqtt_cert_validation": "Skip MQTT certificate validation checks",
+          "mfa_code": "MFA Code"
         }
       },
       "reauth_confirm": {
@@ -27,7 +28,8 @@
       "invalid_http_endpoint": "Invalid Meross HTTTP api endpoint",
       "api_invalid_ssl_code": "Invalid SSL response received by the server. Are you sure the server is exposed in HTTPS? Try plain http and see if this happens again.",
       "api_connection_refused": "Cannot connect to HTTP(S) API server. Make sure the address is valid",
-      "mdns_lookup_failed": "The discovery was unable to find MQTT/API service. Default values have been selected."
+      "mdns_lookup_failed": "The discovery was unable to find MQTT/API service. Default values have been selected.",
+      "missing_mfa": "Your account requires MFA code to proceed. Please provide it."
     },
     "abort": {
       "single_instance_allowed": "Only a single configuration of Meross is allowed."

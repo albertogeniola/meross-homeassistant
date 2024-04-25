@@ -16,14 +16,14 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig, SelectSelectorMode
 from meross_iot.http_api import MerossHttpClient
 from meross_iot.model.credentials import MerossCloudCreds
-from meross_iot.model.http.exception import UnauthorizedException, BadLoginException
+from meross_iot.model.http.exception import UnauthorizedException, MissingMFA, BadLoginException
 from requests.exceptions import ConnectTimeout
 from homeassistant.components import zeroconf
 
-
 from .common import DOMAIN, CONF_STORED_CREDS, CONF_WORKING_MODE, CONF_WORKING_MODE_LOCAL_MODE, \
-    CONF_WORKING_MODE_CLOUD_MODE, \
-    CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, CONF_OPT_CUSTOM_USER_AGENT, HTTP_API_RE, MEROSS_DEFAULT_CLOUD_API_URL, \
+    CONF_WORKING_MODE_CLOUD_MODE, CONF_MFA_CODE, \
+    CONF_HTTP_ENDPOINT, CONF_MQTT_SKIP_CERT_VALIDATION, CONF_OPT_CUSTOM_USER_AGENT, HTTP_API_RE, \
+    MEROSS_DEFAULT_CLOUD_API_URL, \
     MEROSS_LOCAL_API_URL, MEROSS_LOCAL_MDNS_SERVICE_TYPES, MEROSS_LOCAL_MDNS_MQTT_SERVICE_TYPE, \
     MEROSS_LOCAL_MDNS_API_SERVICE_TYPE, CONF_OVERRIDE_MQTT_ENDPOINT, MULTIPLE_APIS_FOUND, MULTIPLE_BROKERS_FOUND, \
     UNKNOWN_ERROR, \
@@ -35,7 +35,7 @@ PARALLEL_UPDATES = 1
 
 
 class ConfigUiException(Exception):
-    def __init__(self, error_code = UNKNOWN_ERROR, *args: object) -> None:
+    def __init__(self, error_code=UNKNOWN_ERROR, *args: object) -> None:
         super().__init__(*args)
         self._code = error_code
 
@@ -66,7 +66,8 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             username: str = None,
             password: str = None,
             override_mqtt_endpoint: str = None,
-            skip_cert_validation: bool = None
+            skip_cert_validation: bool = None,
+            requires_mfa: bool = False
     ) -> vol.Schema:
         http_endpoint_default = http_endpoint if http_endpoint is not None else self._http_api
         mqtt_endpoint_default = override_mqtt_endpoint if override_mqtt_endpoint is not None else self._mqtt_boker
@@ -75,22 +76,23 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         skip_cert_validation_default = skip_cert_validation if skip_cert_validation is not None else self._skip_cert_validation
 
         if self._local_mode:
-            schema = vol.Schema({
+            schema_params = {
                 vol.Required(CONF_HTTP_ENDPOINT, default=http_endpoint_default): str,
                 vol.Required(CONF_OVERRIDE_MQTT_ENDPOINT, default=mqtt_endpoint_default): str,
                 vol.Required(CONF_USERNAME, default=username_default): str,
                 vol.Required(CONF_PASSWORD, default=password_default): str,
-                vol.Required(CONF_MQTT_SKIP_CERT_VALIDATION, default=skip_cert_validation_default): bool,
-            })
+            }
         else:
-            schema = vol.Schema({
+            schema_params = {
                 vol.Required(CONF_HTTP_ENDPOINT, default=http_endpoint_default): str,
                 vol.Required(CONF_USERNAME, default=username_default): str,
                 vol.Required(CONF_PASSWORD, default=password_default): str,
-                vol.Required(CONF_MQTT_SKIP_CERT_VALIDATION, default=skip_cert_validation_default): bool,
-            })
+            }
 
-        return schema
+        if requires_mfa:
+            schema_params[vol.Required(CONF_MFA_CODE)] = str
+        schema_params[vol.Required(CONF_MQTT_SKIP_CERT_VALIDATION, default=skip_cert_validation_default)] = bool
+        return vol.Schema(schema_params)
 
     async def async_step_reauth(self, user_input=None):
         """Perform reauth upon an API authentication error."""
@@ -112,7 +114,8 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if info:
             self._discovered_services.append(info)
 
-    def _async_on_service_state_change(self, zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange) -> None:
+    def _async_on_service_state_change(self, zeroconf: Zeroconf, service_type: str, name: str,
+                                       state_change: ServiceStateChange) -> None:
         _LOGGER.debug("MDNS discovery state: %s, service type: %s, name: %s", str(state_change), service_type, name)
         if state_change is not ServiceStateChange.Added:
             return
@@ -122,7 +125,8 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def _discover_services(self) -> Tuple[Optional[str], Optional[str]]:
         self._discovered_services.clear()
         aiozc = await zeroconf.async_get_async_instance(self.hass)
-        browser = AsyncServiceBrowser(aiozc.zeroconf, MEROSS_LOCAL_MDNS_SERVICE_TYPES, handlers=[self._async_on_service_state_change])
+        browser = AsyncServiceBrowser(aiozc.zeroconf, MEROSS_LOCAL_MDNS_SERVICE_TYPES,
+                                      handlers=[self._async_on_service_state_change])
         # Wait a bit to collect MDNS responses and then stop the browser
         await asyncio.sleep(5)
         await browser.async_cancel()
@@ -136,19 +140,21 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if info.type == MEROSS_LOCAL_MDNS_API_SERVICE_TYPE:
                 api_count += 1
                 api_endpoint_info = info
-                _LOGGER.info("Found [%d] Local Meross API service listening on %s:%d", api_count, api_endpoint_info.server, api_endpoint_info.port)
+                _LOGGER.info("Found [%d] Local Meross API service listening on %s:%d", api_count,
+                             api_endpoint_info.server, api_endpoint_info.port)
             elif info.type == MEROSS_LOCAL_MDNS_MQTT_SERVICE_TYPE:
                 mqtt_count += 1
                 mqtt_endpoint_info = info
-                _LOGGER.info("Found [%d] Local Meross MQTT service listening on %s:%d", mqtt_count, mqtt_endpoint_info.server, mqtt_endpoint_info.port)
+                _LOGGER.info("Found [%d] Local Meross MQTT service listening on %s:%d", mqtt_count,
+                             mqtt_endpoint_info.server, mqtt_endpoint_info.port)
 
-        if mqtt_count < 1 or api_count <1:
+        if mqtt_count < 1 or api_count < 1:
             _LOGGER.info("The API/MQTT discovery was unable to find any relevant service.")
             return None, None
 
         if mqtt_count > 1:
             raise ConfigUiException(MULTIPLE_BROKERS_FOUND)
-        
+
         if api_count > 1:
             raise ConfigUiException(MULTIPLE_APIS_FOUND)
 
@@ -166,12 +172,16 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.debug("Empty user_input, showing mode selection form")
             return self.async_show_form(
                 step_id="user",
-                data_schema=vol.Schema({vol.Required(CONF_WORKING_MODE, default=CONF_WORKING_MODE_CLOUD_MODE): SelectSelector(SelectSelectorConfig(
-                    options=[
-                        {"value": CONF_WORKING_MODE_CLOUD_MODE, "label": "Connect to Meross Official Cloud (requires internet)"},
-                        {"value": CONF_WORKING_MODE_LOCAL_MODE, "label": "Connect to LAN-only broker (requires Meross Local Addon)"}],
-                    mode=SelectSelectorMode.LIST,
-                ))}),
+                data_schema=vol.Schema({
+                    vol.Required(CONF_WORKING_MODE, default=CONF_WORKING_MODE_CLOUD_MODE): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                {"value": CONF_WORKING_MODE_CLOUD_MODE,
+                                 "label": "Connect to Meross Official Cloud (requires internet)"},
+                                {"value": CONF_WORKING_MODE_LOCAL_MODE,
+                                 "label": "Connect to LAN-only broker (requires Meross Local Addon)"}],
+                            mode=SelectSelectorMode.LIST,
+                        ))}),
                 errors={})
 
         mode = user_input.get(CONF_WORKING_MODE)
@@ -197,10 +207,10 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 api, mqtt = await self._discover_services()
             except ConfigUiException as e:
                 return self.async_show_form(
-                step_id="configure_manager",
-                data_schema=self._build_setup_schema(http_endpoint=api, override_mqtt_endpoint=mqtt),
-                errors={"base": e.code},
-            )
+                    step_id="configure_manager",
+                    data_schema=self._build_setup_schema(http_endpoint=api, override_mqtt_endpoint=mqtt),
+                    errors={"base": e.code},
+                )
 
             # If no service was found, set an error
             errors = {}
@@ -232,6 +242,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         password = user_input.get(CONF_PASSWORD)
         mqtt_host = user_input.get(CONF_OVERRIDE_MQTT_ENDPOINT)
         skip_cert_validation = user_input.get(CONF_MQTT_SKIP_CERT_VALIDATION)
+        mfa_code = user_input.get(CONF_MFA_CODE)
 
         data_schema = self._build_setup_schema(
             http_endpoint=http_api_endpoint,
@@ -269,9 +280,22 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # Test the connection to the Meross Cloud.
         try:
             creds = await self._test_authorization(
-                api_base_url=http_api_endpoint, username=username, password=password
+                api_base_url=http_api_endpoint, username=username, password=password, mfa_code=mfa_code
             )
             _LOGGER.info("HTTP API successful tested against %s.", http_api_endpoint)
+        except MissingMFA as ex:
+            data_schema = self._build_setup_schema(
+                http_endpoint=http_api_endpoint,
+                username=username,
+                password=password,
+                override_mqtt_endpoint=mqtt_host,
+                requires_mfa=True
+            )
+            return self.async_show_form(
+                step_id="configure_manager",
+                data_schema=data_schema,
+                errors={"base": "missing_mfa"}
+            )
         except (BadLoginException, UnauthorizedException) as ex:
             _LOGGER.error("Unable to connect to Meross HTTP api: %s", str(ex))
             _LOGGER.debug("Passing data_schema: %s", str(data_schema))
@@ -355,10 +379,10 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     async def _test_authorization(
-            api_base_url: str, username: str, password: str
+            api_base_url: str, username: str, password: str, mfa_code: str = None
     ) -> MerossCloudCreds:
         client = await MerossHttpClient.async_from_user_password(
-            api_base_url=api_base_url, email=username, password=password
+            api_base_url=api_base_url, email=username, password=password, mfa_code=mfa_code
         )
         return client.cloud_credentials
 
@@ -394,19 +418,21 @@ class MerossOptionsFlowHandler(config_entries.OptionsFlow):
             saved_options = self.config_entry.options
 
         return self.async_show_form(
-                step_id="init",
-                data_schema=vol.Schema({
-                    vol.Optional(CONF_OPT_CUSTOM_USER_AGENT, default=saved_options.get(CONF_OPT_CUSTOM_USER_AGENT, DEFAULT_USER_AGENT)): str,
-                    vol.Required(CONF_OPT_LAN, default=saved_options.get(CONF_OPT_LAN, CONF_OPT_LAN_MQTT_ONLY)): SelectSelector(
-                        SelectSelectorConfig(
-                            options=[
-                                {"value": CONF_OPT_LAN_MQTT_ONLY,
-                                 "label": "Do not rely on local HTTP communication at all, just use the MQTT broker"},
-                                {"value": CONF_OPT_LAN_HTTP_FIRST,
-                                 "label": "Attempt local HTTP communication first and fall-back to MQTT broker"},
-                                {"value": CONF_OPT_LAN_HTTP_FIRST_ONLY_GET,
-                                 "label": "Attempt local HTTP communication first only for GET commands, fall-back to MQTT broker"}
-                            ], mode=SelectSelectorMode.LIST)
-                    )
-                })
-            )
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Optional(CONF_OPT_CUSTOM_USER_AGENT,
+                             default=saved_options.get(CONF_OPT_CUSTOM_USER_AGENT, DEFAULT_USER_AGENT)): str,
+                vol.Required(CONF_OPT_LAN,
+                             default=saved_options.get(CONF_OPT_LAN, CONF_OPT_LAN_MQTT_ONLY)): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            {"value": CONF_OPT_LAN_MQTT_ONLY,
+                             "label": "Do not rely on local HTTP communication at all, just use the MQTT broker"},
+                            {"value": CONF_OPT_LAN_HTTP_FIRST,
+                             "label": "Attempt local HTTP communication first and fall-back to MQTT broker"},
+                            {"value": CONF_OPT_LAN_HTTP_FIRST_ONLY_GET,
+                             "label": "Attempt local HTTP communication first only for GET commands, fall-back to MQTT broker"}
+                        ], mode=SelectSelectorMode.LIST)
+                )
+            })
+        )
