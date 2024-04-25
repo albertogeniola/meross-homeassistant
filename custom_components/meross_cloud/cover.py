@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 from meross_iot.controller.device import BaseDevice
 from meross_iot.model.enums import RollerShutterState
@@ -32,7 +32,7 @@ class GarageOpenerEntityWrapper(MerossDevice, CoverEntity):
 
     def __init__(self,
                  channel: int,
-                 device: MerossGarageDevice,
+                 device: Union[MerossGarageDevice, GarageOpenerMixin],
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]]):
         super().__init__(
             device=device,
@@ -92,7 +92,7 @@ class RollerShutterEntityWrapper(MerossDevice, CoverEntity):
 
     def __init__(self,
                  channel: int,
-                 device: MerossRollerShutterDevice,
+                 device: Union[MerossRollerShutterDevice, RollerShutterTimerMixin],
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]]):
         super().__init__(
             device=device,
@@ -129,6 +129,10 @@ class RollerShutterEntityWrapper(MerossDevice, CoverEntity):
         # So far, the Roller Shutter RST100 supports position, but it looks like it is fake and not reliable.
         # So we don't support that on HA neither.
         return CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
+
+    @property
+    def current_cover_position(self):
+        return self._device.get_position(channel=self._channel_id)
 
     @property
     def is_closed(self):
