@@ -1,4 +1,8 @@
 # Changelog
+# 1.3.0 (2024-04-25)
+- Add support for Meross OilDiffuser
+- Refactor Meross Humidifier
+- Update low level library to version 0.4.7.0
 
 <!--next-version-placeholder-->
 # 1.2.12 (2024-01-27)
