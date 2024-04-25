@@ -248,7 +248,8 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             http_endpoint=http_api_endpoint,
             username=username,
             password=password,
-            override_mqtt_endpoint=mqtt_host
+            override_mqtt_endpoint=mqtt_host,
+            requires_mfa=mfa_code is not None
         )
 
         # Check if we have everything we need
@@ -342,8 +343,6 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         # TODO: Test MQTT connection?
         data = {
-            CONF_USERNAME: username,
-            CONF_PASSWORD: password,
             CONF_HTTP_ENDPOINT: http_api_endpoint,
             CONF_OVERRIDE_MQTT_ENDPOINT: mqtt_host,
             CONF_STORED_CREDS: {

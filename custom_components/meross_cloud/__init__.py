@@ -59,8 +59,6 @@ CONFIG_SCHEMA = vol.Schema(
         DOMAIN: vol.Schema(
             {
                 vol.Required(CONF_HTTP_ENDPOINT): cv.string,
-                vol.Required(CONF_USERNAME): cv.string,
-                vol.Required(CONF_PASSWORD): cv.string,
                 vol.Required(CONF_MQTT_SKIP_CERT_VALIDATION): cv.boolean,
                 vol.Optional(CONF_STORED_CREDS): cv.string,
                 vol.Optional(CONF_OVERRIDE_MQTT_ENDPOINT): cv.string
@@ -101,9 +99,7 @@ class MerossCoordinator(DataUpdateCoordinator):
                  hass: HomeAssistantType,
                  config_entry: ConfigEntry,
                  http_api_endpoint: str,
-                 email: str,
-                 password: str,
-                 cached_creds: Optional[MerossCloudCreds],
+                 creds: MerossCloudCreds,
                  mqtt_skip_cert_validation: bool,
                  mqtt_override_address: Optional[Tuple[str, int]],
                  update_interval: timedelta,
@@ -111,9 +107,7 @@ class MerossCoordinator(DataUpdateCoordinator):
 
         self._entry = config_entry
         self._http_api_endpoint = http_api_endpoint
-        self._email = email
-        self._password = password
-        self._cached_creds = cached_creds
+        self._cached_creds = creds
         self._skip_cert_validation = mqtt_skip_cert_validation
         self._mqtt_override_address = mqtt_override_address
         self._setup_done = False
@@ -147,11 +141,9 @@ class MerossCoordinator(DataUpdateCoordinator):
         # Test the stored credentials if any. In case the credentials are invalid
         # try to retrieve a new token
         try:
-            self._client, http_devices, creds_renewed = await get_or_renew_creds(
+            self._client, http_devices, creds_renewed = await get_or_test_creds(
                 http_api_url=self._http_api_endpoint,
-                email=self._email,
-                password=self._password,
-                stored_creds=self._cached_creds,
+                creds=self._cached_creds,
                 ua_header=self._ua_header
             )
         except (BadLoginException, TokenExpiredException, UnauthorizedException) as err:
@@ -167,8 +159,6 @@ class MerossCoordinator(DataUpdateCoordinator):
                 entry=self._entry,
                 data={
                     CONF_HTTP_ENDPOINT: self._cached_creds.domain,
-                    CONF_USERNAME: self._email,
-                    CONF_PASSWORD: self._password,
                     CONF_STORED_CREDS: {
                         "token": self._cached_creds.token,
                         "key": self._cached_creds.key,
@@ -326,51 +316,27 @@ class MerossDevice(Entity):
         self.hass.data[DOMAIN]["ADDED_ENTITIES_IDS"].remove(self.unique_id)
 
 
-async def get_or_renew_creds(
-        email: str,
-        password: str,
-        stored_creds: MerossCloudCreds = None,
+async def get_or_test_creds(
+        creds: MerossCloudCreds = None,
         http_api_url: str = MEROSS_DEFAULT_CLOUD_API_URL,
         ua_header: str = DEFAULT_USER_AGENT
 ) -> Tuple[MerossHttpClient, List[HttpDeviceInfo], bool]:
-    try:
-        renewed = False
-        if stored_creds is None or stored_creds.domain.lower().strip() == MEROSS_DEFAULT_CLOUD_API_URL:
-            # In case the client is using the old API endpoint, force a re-auth against the new endpoint
-            http_client = await MerossHttpClient.async_from_user_password(
-                email=email, password=password, api_base_url=http_api_url, ua_header=ua_header
-            )
-            renewed = True
-        else:
-            http_client = MerossHttpClient(
-                cloud_credentials=stored_creds, ua_header=ua_header
-            )
 
-        # The local addon api might not be able to provide the correct domain and mqtt values. In this case,
-        # we patch them here.
-        if http_api_url is not None and (http_client.cloud_credentials.domain is None or stored_creds.domain.lower().strip() == MEROSS_DEFAULT_CLOUD_API_URL):
-            _LOGGER.warning("Returned/Stored DOMAIN within existing credentials is <%s>. Patching the stored credentials with the correct value right away.", http_client.cloud_credentials.domain)
-            http_client.cloud_credentials.domain = http_api_url
-            renewed = True
+    renewed = False
+    http_client = MerossHttpClient(
+        cloud_credentials=creds, ua_header=ua_header
+    )
 
-        # Test device listing. If goes ok, return it immediately. There is no need to update the credentials
-        http_devices = await http_client.async_list_devices()
-        return http_client, http_devices, renewed
+    # The local addon api might not be able to provide the correct domain and mqtt values. In this case,
+    # we patch them here.
+    if http_api_url is not None and (http_client.cloud_credentials.domain is None or creds.domain.lower().strip() == MEROSS_DEFAULT_CLOUD_API_URL):
+        _LOGGER.warning("Returned/Stored DOMAIN within existing credentials is <%s>. Patching the stored credentials with the correct value right away.", http_client.cloud_credentials.domain)
+        http_client.cloud_credentials.domain = http_api_url
+        renewed = True
 
-    except TokenExpiredException as e:
-        # In case the current token is expired or invalid, let's try to re-login.
-        _LOGGER.exception(
-            "Current token has been refused by the Meross Cloud. Trying to generate a new one with "
-            "stored user credentials..."
-        )
-
-        # Build a new client with username/password rather than using stored credentials
-        http_client = await MerossHttpClient.async_from_user_password(
-            email=email, password=password, api_base_url=http_api_url, ua_header=ua_header
-        )
-        http_devices = await http_client.async_list_devices()
-
-        return http_client, http_devices, True
+    # Test device listing. If goes ok, return it immediately. This will make API fail and ask re-login
+    http_devices = await http_client.async_list_devices()
+    return http_client, http_devices, renewed
 
 
 def _http_info_changed(known: Collection[HttpDeviceInfo], discovered: Collection[HttpDeviceInfo]) -> bool:
@@ -391,12 +357,6 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
     http_api_endpoint = config_entry.data.get(CONF_HTTP_ENDPOINT)
     _LOGGER.info("Loaded %s: %s", CONF_HTTP_ENDPOINT, http_api_endpoint)
 
-    email = config_entry.data.get(CONF_USERNAME)
-    _LOGGER.info("Loaded %s: %s", CONF_USERNAME, email)
-
-    password = config_entry.data.get(CONF_PASSWORD)
-    _LOGGER.info("Loaded %s: %s", CONF_PASSWORD, "******")
-
     str_creds = config_entry.data.get(CONF_STORED_CREDS)
     _LOGGER.info("Loaded %s: %s", CONF_STORED_CREDS, "******")
 
@@ -409,39 +369,28 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
     # Make sure we have all the needed requirements
     if http_api_endpoint is None or HTTP_API_RE.fullmatch(http_api_endpoint) is None:
         raise ConfigEntryAuthFailed("Missing or wrong HTTP_API_ENDPOINT")
-    if email is None:
-        raise ConfigEntryAuthFailed("Missing USERNAME/EMAIL parameter from configuration")
-    if password is None:
-        raise ConfigEntryAuthFailed("Missing PASSWORD parameter from configuration")
+    if str_creds is None:
+        raise ConfigEntryAuthFailed("Missing credentials. Please re-authenticate.")
     if mqtt_override_address is not None:
         mqtt_host = mqtt_override_address.split(":")[0]
         mqtt_port = int(mqtt_override_address.split(":")[1])
         mqtt_override_address = (mqtt_host, mqtt_port)
 
-    creds = None
-    if str_creds is not None:
-        issued_on = datetime.fromisoformat(str_creds.get("issued_on"))
-        creds = MerossCloudCreds(
-            domain=str_creds.get("domain", MEROSS_DEFAULT_CLOUD_API_URL),
-            mqtt_domain=str_creds.get("mqtt_domain"),
-            token=str_creds.get("token"),
-            key=str_creds.get("key"),
-            user_id=str_creds.get("user_id"),
-            user_email=str_creds.get("user_email"),
-            issued_on=issued_on,
-            mfa_lock_expire=str_creds.get("mfa_lock_expire", 0)
-        )
-        _LOGGER.info(
-            f"Found application token issued on {creds.issued_on} to {creds.user_email}. Using it."
-        )
+    issued_on = datetime.fromisoformat(str_creds.get("issued_on"))
+    creds = MerossCloudCreds(
+        domain=str_creds.get("domain", MEROSS_DEFAULT_CLOUD_API_URL),
+        mqtt_domain=str_creds.get("mqtt_domain"),
+        token=str_creds.get("token"),
+        key=str_creds.get("key"),
+        user_id=str_creds.get("user_id"),
+        user_email=str_creds.get("user_email"),
+        issued_on=issued_on,
+        mfa_lock_expire=str_creds.get("mfa_lock_expire", 0)
+    )
 
     # Initialize the HASS structure
     hass.data[DOMAIN] = {}
     hass.data[DOMAIN]["ADDED_ENTITIES_IDS"] = set()
-    # Keep a registry of added sensors
-    # TODO: Do the same for other platforms?
-    # TODO: Is this still needed?
-    hass.data[DOMAIN][HA_SENSOR] = dict()
 
     # Retrieve options we need
     ua_header = config_entry.options.get(CONF_OPT_CUSTOM_USER_AGENT, DEFAULT_USER_AGENT)
@@ -456,9 +405,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
             hass=hass,
             config_entry=config_entry,
             http_api_endpoint=http_api_endpoint,
-            email=email,
-            password=password,
-            cached_creds=creds,
+            creds=creds,
             mqtt_skip_cert_validation=mqtt_skip_cert_validation,
             mqtt_override_address=mqtt_override_address,
             update_interval=timedelta(seconds=HTTP_UPDATE_INTERVAL),
