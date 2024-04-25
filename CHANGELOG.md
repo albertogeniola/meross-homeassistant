@@ -1,10 +1,14 @@
 # Changelog
+Note! Last version breaks support for FAN entity for smart Meross Humidifier.
+You'll need to add it again to HA if previously configured.
+
+<!--next-version-placeholder-->
 # 1.3.0 (2024-04-25)
 - Add support for Meross OilDiffuser
 - Refactor Meross Humidifier
 - Update low level library to version 0.4.7.0
+- Addressing #484 
 
-<!--next-version-placeholder-->
 # 1.2.12 (2024-01-27)
 - Merge PR #449, fixing #448. Credits to @mguilherme
 
