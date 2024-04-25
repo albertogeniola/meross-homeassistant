@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Tuple, Mapping, Any, Dict, Optional, Collection
 
-import async_timeout
+import asyncio
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
@@ -128,7 +128,7 @@ class MerossCoordinator(DataUpdateCoordinator):
 
     async def _async_fetch_http_data(self):
         try:
-            async with async_timeout.timeout(10):
+            async with asyncio.timeout(10):
                 # Fetch devices and compose a quick-access dictionary
                 devices = await self._client.async_list_devices()
                 return {device.uuid: device for device in devices}
