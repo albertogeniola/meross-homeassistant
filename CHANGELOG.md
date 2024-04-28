@@ -5,6 +5,8 @@ You'll need to add it again to HA if previously configured.
 # 1.3.1 (2024-04-28)
 - Fix light platform deprecations
 - Fix climate platform deprecations
+- Add OPENING and CLOSING transient states for garage openers (#493)
+- 
 
 # 1.3.1beta1 (2024-04-25)
 - Implement MFA support (addressing #467)
