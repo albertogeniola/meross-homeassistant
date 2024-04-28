@@ -207,7 +207,8 @@ class MerossDevice(Entity):
                  channel: int,
                  device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]],
                  platform: str,
-                 supplementary_classifiers: Optional[List[str]] = None):
+                 supplementary_classifiers: Optional[List[str]] = None,
+                 override_channel_name: str = None):
         self._coordinator = device_list_coordinator
         self._device = device
         self._channel_id = channel
@@ -222,11 +223,14 @@ class MerossDevice(Entity):
         else:
             self._id = calculate_id(platform=platform, uuid=device.internal_id, channel=channel)
 
-        if device.channels is not None and len(device.channels) > 0:
+        if override_channel_name:
+            channel_name = override_channel_name
+        elif device.channels is not None and len(device.channels) > 0:
             channel_data = device.channels[channel]
-            self._entity_name = f"{base_name} - {channel_data.name}"
+            channel_name = channel_data.name
         else:
-            self._entity_name = base_name
+            channel_name = None
+        self._entity_name = f"{base_name} - {channel_name}" if channel_name is not None else base_name
 
     @property
     def should_poll(self) -> bool:
