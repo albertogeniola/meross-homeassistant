@@ -2,6 +2,10 @@
 Note! Last version breaks support for FAN entity for smart Meross Humidifier.
 You'll need to add it again to HA if previously configured.
 
+# 1.3.1 (2024-04-28)
+- Fix light platform deprecations
+- Fix climate platform deprecations
+
 # 1.3.1beta1 (2024-04-25)
 - Implement MFA support (addressing #467)
 - Avoid storing username/password credentials (addressing #486)
