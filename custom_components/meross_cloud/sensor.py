@@ -144,7 +144,7 @@ class PowerSensorWrapper(GenericSensorWrapper):
                 now = datetime.utcnow()
                 if power_info is None or (now - power_info.sample_timestamp).total_seconds() > 10:
                     # Force device refresh
-                    _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
+                    _LOGGER.debug(f"Refreshing instant metrics for device {self.name}")
                     await self._device.async_get_instant_metrics(channel=self._channel_id)
                 else:
                     # Use the cached value
@@ -183,7 +183,7 @@ class CurrentSensorWrapper(GenericSensorWrapper):
                 now = datetime.utcnow()
                 if power_info is None or (now - power_info.sample_timestamp).total_seconds() > 10:
                     # Force device refresh
-                    _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
+                    _LOGGER.debug(f"Refreshing instant metrics for device {self.name}")
                     await self._device.async_get_instant_metrics(channel=self._channel_id)
                 else:
                     # Use the cached value
@@ -227,7 +227,7 @@ class VoltageSensorWrapper(GenericSensorWrapper):
                 now = datetime.utcnow()
                 if power_info is None or (now - power_info.sample_timestamp).total_seconds() > 10:
                     # Force device refresh
-                    _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
+                    _LOGGER.debug(f"Refreshing instant metrics for device {self.name}")
                     await self._device.async_get_instant_metrics(channel=self._channel_id)
                 else:
                     # Use the cached value
@@ -269,7 +269,7 @@ class EnergySensorWrapper(GenericSensorWrapper):
         if self.online:
             await super().async_update()
 
-            _LOGGER.info(f"Refreshing instant metrics for device {self.name}")
+            _LOGGER.debug(f"Refreshing instant metrics for device {self.name}")
             self._daily_consumption = await self._device.async_get_daily_power_consumption(channel=self._channel_id)
 
     @property
