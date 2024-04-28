@@ -1,8 +1,9 @@
 import logging
+from enum import Enum
 from typing import Any, Dict, Union
 
 from meross_iot.controller.device import BaseDevice
-from meross_iot.model.enums import RollerShutterState
+from meross_iot.model.enums import RollerShutterState, Namespace
 from meross_iot.controller.mixins.garage import GarageOpenerMixin
 from meross_iot.controller.mixins.roller_shutter import RollerShutterTimerMixin
 from meross_iot.manager import MerossManager
@@ -31,10 +32,16 @@ class MerossGarageDevice(GarageOpenerMixin, BaseDevice):
     pass
 
 
+class CoverTransientStatus(Enum):
+    CLOSING = 1,
+    OPENING = 2
+
+
 class GarageOpenerEntityWrapper(MerossDevice, CoverEntity):
     """Wrapper class to adapt the Meross Garage Opener into the Homeassistant platform"""
 
     _device: MerossGarageDevice
+    _cover_transient_status: CoverTransientStatus | None = None
 
     def __init__(self,
                  channel: int,
@@ -48,9 +55,13 @@ class GarageOpenerEntityWrapper(MerossDevice, CoverEntity):
 
     async def async_close_cover(self, **kwargs):
         await self._device.async_close(channel=self._channel_id, skip_rate_limits=True)
+        self._cover_transient_status = CoverTransientStatus.CLOSING
+        self.async_schedule_update_ha_state(force_refresh=False)
 
     async def async_open_cover(self, **kwargs):
         await self._device.async_open(channel=self._channel_id, skip_rate_limits=True)
+        self._cover_transient_status = CoverTransientStatus.OPENING
+        self.async_schedule_update_ha_state(force_refresh=False)
 
     def open_cover(self, **kwargs: Any) -> None:
         self.hass.async_add_executor_job(self.async_open_cover, **kwargs)
@@ -73,15 +84,18 @@ class GarageOpenerEntityWrapper(MerossDevice, CoverEntity):
         open_status = self._device.get_is_open(channel=self._channel_id)
         return not open_status
 
+    async def _async_push_notification_received(self, namespace: Namespace, data: dict, device_internal_id: str):
+        if namespace == Namespace.GARAGE_DOOR_STATE:
+            self._cover_transient_status = None
+        await super()._async_push_notification_received(namespace=namespace, data=data, device_internal_id=device_internal_id)
+
     @property
     def is_closing(self):
-        # Not supported yet
-        return None
-    
+        return self._cover_transient_status is not None and self._cover_transient_status == CoverTransientStatus.CLOSING
+
     @property
     def is_opening(self):
-        # Not supported yet
-        return None
+        return self._cover_transient_status is not None and self._cover_transient_status == CoverTransientStatus.OPENING
 
 
 class MerossRollerShutterDevice(RollerShutterTimerMixin, BaseDevice):
@@ -159,7 +173,7 @@ class RollerShutterEntityWrapper(MerossDevice, CoverEntity):
 
     def set_cover_position(self, **kwargs):
         position = round(kwargs.get(ATTR_POSITION) or 0)
-        self.hass.async_add_executor_job(self.async_set_cover_position, int(position)) 
+        self.hass.async_add_executor_job(self.async_set_cover_position, int(position))
 
 
 async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_entities):
@@ -195,6 +209,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
     coordinator.async_add_listener(entity_adder_callback)
     # Run the entity adder a first time during setup
     entity_adder_callback()
+
 
 # TODO: Implement entry unload
 # TODO: Unload entry
