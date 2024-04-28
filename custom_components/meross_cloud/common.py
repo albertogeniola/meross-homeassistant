@@ -63,7 +63,7 @@ ATTR_API_CALLS_PER_SECOND = "api_calls_per_second"
 ATTR_DELAYED_API_CALLS_PER_SECOND = "delayed_api_calls_per_second"
 ATTR_DROPPED_API_CALLS_PER_SECOND = "dropped_api_calls_per_second"
 
-HTTP_API_RE = re.compile("(http:\/\/|https:\/\/)?([^:]+)(:([0-9]+))?")
+HTTP_API_RE = re.compile("(http://|https://)?([^:]+)(:([0-9]+))?")
 
 DEFAULT_USER_AGENT = f"MerossHA/{version.MEROSS_INTEGRATION_VERSION}"
 
