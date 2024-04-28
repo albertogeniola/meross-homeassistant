@@ -8,10 +8,9 @@ from meross_iot.manager import MerossManager
 from meross_iot.model.http.device import HttpDeviceInfo
 from meross_iot.model.enums import DiffuserLightMode
 import homeassistant.util.color as color_util
-# Conditional Light import with backwards compatibility
 from homeassistant.components.light import LightEntity
-from homeassistant.components.light import SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_COLOR_TEMP, \
-    ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS
+from homeassistant.components.light import ColorMode, \
+    ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS, ATTR_RGB_COLOR
 from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
@@ -37,6 +36,9 @@ class MerossLightDevice(LightMixin, BaseDevice):
 class DiffuserLightEntityWrapper(MerossDevice, LightEntity):
     """Wrapper class to adapt the Meross OilDiffuserLight"""
     _device: MerossOilDiffuserLightDevice
+    # For now, we assume OilDiffuserLight supports all the following features.
+    # From Meross API it is in fact impossible to determine which exact features are supported by the device.
+    _attr_supported_color_modes = {ColorMode.WHITE, ColorMode.RGB, ColorMode.COLOR_TEMP}
 
     def __init__(self,
                  channel: int,
@@ -79,12 +81,6 @@ class DiffuserLightEntityWrapper(MerossDevice, LightEntity):
         return self._device.get_light_is_on(channel=self._channel_id)
 
     @property
-    def supported_features(self):
-        # For now, we assume OilDiffuserLight supports all the following features.
-        # From Meross API it is in fact impossible to determine which exact features are supported by the device.
-        return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_COLOR_TEMP
-
-    @property
     def hs_color(self):
         rgb = self._device.get_light_rgb_color(channel=self._channel_id)
         if rgb is not None and isinstance(rgb, tuple) and len(rgb) == 3:
@@ -123,7 +119,9 @@ class LightEntityWrapper(MerossDevice, LightEntity):
             await self._device.async_turn_on(channel=self._channel_id, skip_rate_limits=True)
 
         # Color is taken from either of these 2 values, but not both.
-        if ATTR_HS_COLOR in kwargs:
+        if ATTR_RGB_COLOR in kwargs:
+            await self._device.async_set_light_color(channel=self._channel_id, rgb=kwargs[ATTR_RGB_COLOR], onoff=True, skip_rate_limits=True)
+        elif ATTR_HS_COLOR in kwargs:
             h, s = kwargs[ATTR_HS_COLOR]
             rgb = color_util.color_hsv_to_RGB(h, s, 100)
             _LOGGER.debug("color change: rgb=%r -- h=%r s=%r" % (rgb, h, s))
@@ -142,15 +140,17 @@ class LightEntityWrapper(MerossDevice, LightEntity):
             await self._device.async_set_light_color(channel=self._channel_id, luminance=brightness, skip_rate_limits=True)
 
     @property
-    def supported_features(self):
-        flags = 0
+    def supported_color_modes(self) -> set[ColorMode] | set[str] | None:
+        res = set()
         if self._device.get_supports_luminance(channel=self._channel_id):
-            flags |= SUPPORT_BRIGHTNESS
+            res.add(ColorMode.WHITE)
         if self._device.get_supports_rgb(channel=self._channel_id):
-            flags |= SUPPORT_COLOR
+            res.add(ColorMode.RGB)
         if self._device.get_supports_temperature(channel=self._channel_id):
-            flags |= SUPPORT_COLOR_TEMP
-        return flags
+            res.add(ColorMode.COLOR_TEMP)
+        if len(res) < 1:
+            res.add(ColorMode.ONOFF)
+        return res
 
     @property
     def is_on(self) -> Optional[bool]:
@@ -166,6 +166,18 @@ class LightEntityWrapper(MerossDevice, LightEntity):
             return float(luminance) / 100 * 255
 
         return None
+
+    @property
+    def color_mode(self) -> ColorMode | str | None:
+        """Return the color mode of the light."""
+        # TODO: we need support from low-level library in order to keep track of mode that haas been set.
+        if self._device.get_supports_rgb(channel=self._channel_id):
+            return ColorMode.RGB
+        elif self._device.get_supports_luminance(channel=self._channel_id):
+            return ColorMode.WHITE
+        if self._device.get_supports_temperature(channel=self._channel_id):
+            return ColorMode.COLOR_TEMP
+        return ColorMode.ONOFF
 
     @property
     def hs_color(self):
