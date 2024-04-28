@@ -23,6 +23,10 @@ _LOGGER = logging.getLogger(__name__)
 class ValveEntityWrapper(MerossDevice, ClimateEntity):
     """Wrapper class to adapt the Meross devices into the Homeassistant platform"""
     _device: Mts100v3Valve
+    _enable_turn_on_off_backwards_compatibility = False
+    # For now, we assume that every Meross Valve supports the following modes.
+    # This might be improved in the future by looking at the device abilities via get_abilities()
+    _flags = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
 
     def __init__(self,
                  channel: int,
@@ -33,10 +37,6 @@ class ValveEntityWrapper(MerossDevice, ClimateEntity):
             channel=channel,
             device_list_coordinator=device_list_coordinator,
             platform=HA_CLIMATE)
-
-        # For now, we assume that every Meross Thermostat supports the following modes.
-        # This might be improved in the future by looking at the device abilities via get_abilities()
-        self._flags = ClimateEntityFeature.TARGET_TEMPERATURE  | ClimateEntityFeature.PRESET_MODE
 
     async def async_set_hvac_mode(self, hvac_mode: str) -> None:
         # Turn on the device if not already on
@@ -135,6 +135,12 @@ class ValveEntityWrapper(MerossDevice, ClimateEntity):
     def supported_features(self):
         return self._flags
 
+    async def async_turn_off(self) -> None:
+        await self.async_set_hvac_mode(HVACMode.OFF)
+
+    async def async_turn_on(self) -> None:
+        await self.async_set_hvac_mode(HVACMode.HEATING)
+
 
 class MerossThermostatDevice(ThermostatModeMixin, BaseDevice):
     """
@@ -146,6 +152,8 @@ class MerossThermostatDevice(ThermostatModeMixin, BaseDevice):
 class ThermostatEntityWrapper(MerossDevice, ClimateEntity):
     """Wrapper class to adapt the Meross thermostat-enabled devices into the Homeassistant platform"""
     _device: MerossThermostatDevice
+    _enable_turn_on_off_backwards_compatibility = False
+    _flags = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF  # | ClimateEntityFeature.PRESET_MODE
 
     def __init__(self,
                  channel: int,
@@ -156,7 +164,6 @@ class ThermostatEntityWrapper(MerossDevice, ClimateEntity):
             channel=channel,
             device_list_coordinator=device_list_coordinator,
             platform=HA_CLIMATE)
-        self._flags = ClimateEntityFeature.TARGET_TEMPERATURE # | ClimateEntityFeature.PRESET_MODE
 
     async def async_set_hvac_mode(self, hvac_mode: str) -> None:
         # Turn on the device if not already on
@@ -244,6 +251,12 @@ class ThermostatEntityWrapper(MerossDevice, ClimateEntity):
     @property
     def supported_features(self):
         return self._flags
+
+    async def async_turn_off(self) -> None:
+        await self.async_set_hvac_mode(HVACMode.OFF)
+
+    async def async_turn_on(self) -> None:
+        await self.async_set_hvac_mode(HVACMode.HEATING)
 
 
 async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_entities):
