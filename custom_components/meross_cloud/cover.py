@@ -2,6 +2,7 @@ import logging
 from enum import Enum
 from typing import Any, Dict, Union
 
+from homeassistant.core import HomeAssistant
 from meross_iot.controller.device import BaseDevice
 from meross_iot.model.enums import RollerShutterState, Namespace
 from meross_iot.controller.mixins.garage import GarageOpenerMixin
@@ -17,7 +18,6 @@ from homeassistant.components.cover import (
     ATTR_POSITION,
 )
 
-from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
 from .common import (DOMAIN, MANAGER, HA_COVER, DEVICE_LIST_COORDINATOR)
@@ -176,7 +176,7 @@ class RollerShutterEntityWrapper(MerossDevice, CoverEntity):
         self.hass.async_add_executor_job(self.async_set_cover_position, int(position))
 
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     def entity_adder_callback():
         """Discover and adds new Meross entities"""
         manager: MerossManager = hass.data[DOMAIN][MANAGER]

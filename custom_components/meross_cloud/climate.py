@@ -1,6 +1,7 @@
 import logging
 from typing import Optional, List, Dict
 
+from homeassistant.core import HomeAssistant
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.thermostat import ThermostatModeMixin
 from meross_iot.controller.subdevice import Mts100v3Valve
@@ -12,7 +13,6 @@ from meross_iot.model.http.device import HttpDeviceInfo
 from homeassistant.const import UnitOfTemperature
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate import ClimateEntityFeature, HVACMode, HVACAction
-from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
 from .common import (DOMAIN, MANAGER, HA_CLIMATE, DEVICE_LIST_COORDINATOR)
@@ -259,7 +259,7 @@ class ThermostatEntityWrapper(MerossDevice, ClimateEntity):
         await self.async_set_hvac_mode(HVACMode.HEATING)
 
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     def entity_adder_callback():
         """Discover and adds new Meross entities"""
         manager: MerossManager = hass.data[DOMAIN][MANAGER]  # type

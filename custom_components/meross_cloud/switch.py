@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from typing import Optional, Dict
 
+from homeassistant.core import HomeAssistant
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.consumption import ConsumptionXMixin
 from meross_iot.controller.mixins.electricity import ElectricityMixin
@@ -15,7 +16,6 @@ from meross_iot.model.enums import DNDMode
 
 # Conditional import for switch device
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
 from .common import (DOMAIN, MANAGER, DEVICE_LIST_COORDINATOR, HA_SWITCH)
@@ -136,7 +136,7 @@ class DndEntityWrapper(MerossDevice, SwitchEntity):
         self._dnd_mode = DNDMode.DND_DISABLED
 
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     def entity_adder_callback():
         """Discover and adds new Meross entities"""
         manager: MerossManager = hass.data[DOMAIN][MANAGER]  # type

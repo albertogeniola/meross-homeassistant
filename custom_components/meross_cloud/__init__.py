@@ -1,25 +1,24 @@
 """Meross devices platform loader"""
+import asyncio
 import logging
 from datetime import datetime, timedelta
-from typing import List, Tuple, Mapping, Any, Dict, Optional, Collection
+from typing import List, Tuple, Dict, Optional, Collection
 
-import asyncio
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady, ConfigEntryAuthFailed
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from meross_iot.controller.device import BaseDevice
 from meross_iot.http_api import MerossHttpClient, ErrorCodes
 from meross_iot.manager import MerossManager
 from meross_iot.model.credentials import MerossCloudCreds
 from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.http.device import HttpDeviceInfo
-from meross_iot.controller.device import BaseDevice
 from meross_iot.model.http.exception import (
     TokenExpiredException,
     TooManyTokensException,
@@ -96,7 +95,7 @@ def print_startup_message(http_devices: List[HttpDeviceInfo]):
 
 class MerossCoordinator(DataUpdateCoordinator):
     def __init__(self,
-                 hass: HomeAssistantType,
+                 hass: HomeAssistant,
                  config_entry: ConfigEntry,
                  http_api_endpoint: str,
                  creds: MerossCloudCreds,
@@ -350,7 +349,7 @@ def _http_info_changed(known: Collection[HttpDeviceInfo], discovered: Collection
     return len(unknown) > 0
 
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry: ConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     """
     This class is called by the HomeAssistant framework when a configuration entry is provided.
     For us, the configuration entry is the username-password credentials that the user

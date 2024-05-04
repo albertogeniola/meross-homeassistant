@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Optional, List, Dict
 
+from homeassistant.core import HomeAssistant
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.spray import SprayMixin
 from meross_iot.controller.mixins.diffuser_spray import DiffuserSprayMixin
@@ -9,7 +10,6 @@ from meross_iot.model.enums import SprayMode, DiffuserSprayMode
 from meross_iot.model.http.device import HttpDeviceInfo
 
 from homeassistant.components.humidifier import HumidifierEntity, HumidifierEntityFeature, HumidifierDeviceClass
-from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
 from .common import (DOMAIN, MANAGER, HA_HUMIDIFIER, DEVICE_LIST_COORDINATOR)
@@ -143,7 +143,7 @@ class OilDiffuserEntityWrapper(MerossDevice, HumidifierEntity):
         return mode != DiffuserSprayMode.OFF
 
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     def entity_adder_callback():
         """Discover and adds new Meross entities"""
         manager: MerossManager = hass.data[DOMAIN][MANAGER]  # type

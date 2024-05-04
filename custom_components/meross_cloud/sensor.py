@@ -3,6 +3,7 @@ from datetime import datetime
 from datetime import timedelta
 from typing import Optional, Dict
 
+from homeassistant.core import HomeAssistant
 from meross_iot.controller.device import BaseDevice, GenericSubDevice, HubDevice
 from meross_iot.controller.mixins.consumption import ConsumptionXMixin
 from meross_iot.controller.mixins.electricity import ElectricityMixin
@@ -14,7 +15,7 @@ from meross_iot.model.http.device import HttpDeviceInfo
 
 from homeassistant.components.sensor import SensorStateClass, SensorEntity, SensorDeviceClass
 from homeassistant.const import PERCENTAGE, UnitOfTemperature, UnitOfPower
-from homeassistant.helpers.typing import StateType, HomeAssistantType
+from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
 from .common import (DOMAIN, MANAGER, log_exception, HA_SENSOR,
@@ -327,7 +328,7 @@ class BatterySensorWrapper(GenericSensorWrapper):
 # ----------------------------------------------
 # PLATFORM METHODS
 # ----------------------------------------------
-async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     def entity_adder_callback():
         """Discover and adds new Meross entities"""
         manager: MerossManager = hass.data[DOMAIN][MANAGER]  # type

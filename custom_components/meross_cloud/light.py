@@ -1,6 +1,7 @@
 import logging
 from typing import Optional, Dict
 
+from homeassistant.core import HomeAssistant
 from meross_iot.controller.device import BaseDevice
 from meross_iot.controller.mixins.light import LightMixin
 from meross_iot.controller.mixins.diffuser_light import DiffuserLightMixin
@@ -11,7 +12,6 @@ import homeassistant.util.color as color_util
 from homeassistant.components.light import LightEntity
 from homeassistant.components.light import ColorMode, \
     ATTR_HS_COLOR, ATTR_COLOR_TEMP, ATTR_BRIGHTNESS, ATTR_RGB_COLOR
-from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
 from .common import (DOMAIN, MANAGER, HA_LIGHT, DEVICE_LIST_COORDINATOR)
@@ -196,7 +196,7 @@ class LightEntityWrapper(MerossDevice, LightEntity):
         return None
 
 
-async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     def entity_adder_callback():
         """Discover and adds new Meross entities"""
         manager: MerossManager = hass.data[DOMAIN][MANAGER]  # type
