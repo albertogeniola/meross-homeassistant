@@ -2,7 +2,7 @@
 Note! Last version breaks support for FAN entity for smart Meross Humidifier.
 You'll need to add it again to HA if previously configured.
 
-# 1.3.2 (2024-05-04)
+# 1.3.2beta1 (2024-05-04)
 - Using MerossIot v0.4.7.2b3 which should add support for HomeKit Hubs (addressing #435 and possibly #400)
 - Add support for BatteryLevel sensors for Meross SubDevices
 - Address #499
