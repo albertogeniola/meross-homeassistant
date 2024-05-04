@@ -3,7 +3,7 @@ from datetime import datetime
 from datetime import timedelta
 from typing import Optional, Dict
 
-from meross_iot.controller.device import BaseDevice
+from meross_iot.controller.device import BaseDevice, GenericSubDevice, HubDevice
 from meross_iot.controller.mixins.consumption import ConsumptionXMixin
 from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.controller.subdevice import Ms100Sensor, Mts100v3Valve
@@ -114,9 +114,11 @@ class ElectricitySensorDevice(ElectricityMixin, BaseDevice):
     """ Helper type """
     pass
 
+
 class EnergySensorDevice(ConsumptionXMixin, BaseDevice):
     """ Helper type """
     pass
+
 
 class PowerSensorWrapper(GenericSensorWrapper):
     _device: ElectricitySensorDevice
@@ -248,6 +250,7 @@ class VoltageSensorWrapper(GenericSensorWrapper):
     def should_poll(self) -> bool:
         return True
 
+
 class EnergySensorWrapper(GenericSensorWrapper):
     _device: EnergySensorDevice
 
@@ -287,6 +290,40 @@ class EnergySensorWrapper(GenericSensorWrapper):
     def should_poll(self) -> bool:
         return True
 
+
+class BatterySensorWrapper(GenericSensorWrapper):
+    _device: GenericSubDevice
+
+    def __init__(self, device: GenericSubDevice,
+                 device_list_coordinator: DataUpdateCoordinator[Dict[str, HttpDeviceInfo]], channel: int = 0):
+        super().__init__(sensor_class=SensorDeviceClass.BATTERY,
+                         measurement_unit="%",
+                         device_method_or_property='async_get_battery_life',
+                         state_class=SensorStateClass.MEASUREMENT,
+                         device=device,
+                         device_list_coordinator=device_list_coordinator,
+                         channel=channel)
+
+        # Device properties
+        self._battery_percentage = None
+
+    async def async_update(self):
+        if self.online:
+            await super().async_update()
+
+            _LOGGER.debug(f"Refreshing battery state info for device {self.name}")
+            self._battery_percentage = await self._device.async_get_battery_life()
+
+    @property
+    def native_value(self) -> StateType:
+        if self._battery_percentage is not None:
+            return self._battery_percentage.remaining_charge
+
+    @property
+    def should_poll(self) -> bool:
+        return True
+
+
 # ----------------------------------------------
 # PLATFORM METHODS
 # ----------------------------------------------
@@ -307,6 +344,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
         mts100_temp_sensors = filter(lambda d: isinstance(d, Mts100v3Valve), devices)
         power_sensors = filter(lambda d: isinstance(d, ElectricityMixin), devices)
         energy_sensors = filter(lambda d: isinstance(d, ConsumptionXMixin), devices)
+        subdevs = filter(lambda d: isinstance(d, GenericSubDevice), devices)
 
         # Add MS100 Temperature & Humidity sensors
         for d in humidity_temp_sensors:
@@ -330,8 +368,14 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry, async_add_ent
 
         # Add Energy Sensors
         for d in energy_sensors:
+            channels = [c.index for c in d.channels] if len(d.channels) > 0 else [0]
+            for channel_index in channels:
                 new_entities.append(
                      EnergySensorWrapper(device=d, device_list_coordinator=coordinator, channel=channel_index))
+
+        # Add battery level sensors for subdevices
+        for s in subdevs:
+            new_entities.append(BatterySensorWrapper(device=s, device_list_coordinator=coordinator, channel=0))
 
         unique_new_devs = filter(lambda d: d.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"], new_entities)
         async_add_entities(list(unique_new_devs), True)
