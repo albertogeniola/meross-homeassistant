@@ -387,8 +387,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
         key=str_creds.get("key"),
         user_id=str_creds.get("user_id"),
         user_email=str_creds.get("user_email"),
-        issued_on=issued_on,
-        mfa_lock_expire=str_creds.get("mfa_lock_expire", 0)
+        issued_on=issued_on
     )
 
     # Initialize the HASS structure
