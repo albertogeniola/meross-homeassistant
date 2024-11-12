@@ -290,12 +290,12 @@ class MerossDevice(Entity):
             _LOGGER.warning(f"Received unbind event. Removing device %s from HA", self.name)
             await self.platform.async_remove_entity(self.entity_id)
         elif namespace == Namespace.SYSTEM_ONLINE:
-            _LOGGER.warning(f"Device %s reported online event.", self.name)
+            _LOGGER.info(f"Device %s reported online event.", self.name)
             online = OnlineStatus(int(data.get('online').get('status')))
             update_state = True
             full_update = online == OnlineStatus.ONLINE
         elif namespace == Namespace.HUB_ONLINE:
-            _LOGGER.warning(f"Device {self.name} reported (HUB) online event.")
+            _LOGGER.info(f"Device {self.name} reported (HUB) online event.")
             online = OnlineStatus(int(data.get('status')))
             update_state = True
             full_update = online == OnlineStatus.ONLINE
