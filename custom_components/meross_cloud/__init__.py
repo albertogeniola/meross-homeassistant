@@ -165,7 +165,7 @@ class MerossCoordinator(DataUpdateCoordinator):
                         "user_email": self._cached_creds.user_email,
                         "issued_on": self._cached_creds.issued_on.isoformat(),
                         "domain": self._cached_creds.domain,
-                        "mqtt_domain": self._cached_creds.mqtt_domain
+                        "mqtt_domain": [self._cached_creds.mqtt_domain] if isinstance(self._cached_creds.mqtt_domain, str) else [None]
                     },
                 },
             )
