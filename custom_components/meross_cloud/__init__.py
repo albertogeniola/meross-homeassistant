@@ -290,12 +290,12 @@ class MerossDevice(Entity):
             _LOGGER.warning(f"Received unbind event. Removing device %s from HA", self.name)
             await self.platform.async_remove_entity(self.entity_id)
         elif namespace == Namespace.SYSTEM_ONLINE:
-            _LOGGER.warning(f"Device %s reported online event.", self.name)
+            _LOGGER.info(f"Device %s reported online event.", self.name)
             online = OnlineStatus(int(data.get('online').get('status')))
             update_state = True
             full_update = online == OnlineStatus.ONLINE
         elif namespace == Namespace.HUB_ONLINE:
-            _LOGGER.warning(f"Device {self.name} reported (HUB) online event.")
+            _LOGGER.info(f"Device {self.name} reported (HUB) online event.")
             online = OnlineStatus(int(data.get('status')))
             update_state = True
             full_update = online == OnlineStatus.ONLINE
@@ -364,7 +364,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     _LOGGER.info("Loaded %s: %s", CONF_STORED_CREDS, "******")
 
     mqtt_skip_cert_validation = config_entry.data.get(CONF_MQTT_SKIP_CERT_VALIDATION, True)
-    _LOGGER.warning("Skip MQTT cert validation option set to: %s", mqtt_skip_cert_validation)
+    _LOGGER.info("Skip MQTT cert validation option set to: %s", mqtt_skip_cert_validation)
 
     mqtt_override_address = config_entry.data.get(CONF_OVERRIDE_MQTT_ENDPOINT)
     _LOGGER.info("Override MQTT address set to: %s", "no" if mqtt_override_address is None else "yes -> %s" % mqtt_override_address)
@@ -387,8 +387,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
         key=str_creds.get("key"),
         user_id=str_creds.get("user_id"),
         user_email=str_creds.get("user_email"),
-        issued_on=issued_on,
-        mfa_lock_expire=str_creds.get("mfa_lock_expire", 0)
+        issued_on=issued_on
     )
 
     # Initialize the HASS structure

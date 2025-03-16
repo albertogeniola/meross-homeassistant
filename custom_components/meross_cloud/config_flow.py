@@ -352,8 +352,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 "key": creds.key,
                 "user_id": creds.user_id,
                 "user_email": creds.user_email,
-                "issued_on": creds.issued_on.isoformat(),
-                "mfa_lock_expire": creds.mfa_lock_expire,
+                "issued_on": creds.issued_on.isoformat()
             },
             CONF_MQTT_SKIP_CERT_VALIDATION: skip_cert_validation
         }
