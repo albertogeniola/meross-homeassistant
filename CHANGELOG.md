@@ -2,7 +2,7 @@
 Note! Last version breaks support for FAN entity for smart Meross Humidifier.
 You'll need to add it again to HA if previously configured.
 
-# 1.3.3 (2025-03-16)
+# 1.3.4 (2025-03-16)
 - Updated meross_iot dependency to 0.4.9.0 which fixes issues with paho-mqtt
 
 # 1.3.2beta1 (2024-05-04)
