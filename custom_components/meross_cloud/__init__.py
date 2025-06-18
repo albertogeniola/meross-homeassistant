@@ -422,10 +422,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
         hass.data[DOMAIN][DEVICE_LIST_COORDINATOR] = meross_coordinator
 
         # Once the manager is ok and the first discovery was issued, we can proceed with platforms setup.
-        for platform in MEROSS_PLATFORMS:
-            hass.async_create_task(
-                hass.config_entries.async_forward_entry_setup(config_entry, platform)
-            )
+        await hass.config_entries.async_forward_entry_setups(config_entry, MEROSS_PLATFORMS)
 
         def _http_api_polled(*args, **kwargs):
             # Whenever a new HTTP device is seen, we issue a discovery
