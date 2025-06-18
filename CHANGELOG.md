@@ -2,6 +2,9 @@
 Note! Last version breaks support for FAN entity for smart Meross Humidifier.
 You'll need to add it again to HA if previously configured.
 
+# 1.3.7 (2025-06-18)
+- Merge #555 to fix config_entries.async_forward_entry_setup deprecation (thanks @Easen!)
+
 # 1.3.6 (2025-03-17)
 - Updated meross_iot dependency to 0.4.9.0 which fixes issues with paho-mqtt
 - Set Min HA version to 2025.3
