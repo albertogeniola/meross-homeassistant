@@ -1,3 +1,6 @@
+# 1.3.9 (2025-08-22)
+- Address #563: let HA re-authenticate in case of expired token or password change
+
 # 1.3.8 (2025-08-22)
 - Address #552, #568 and similar.
 

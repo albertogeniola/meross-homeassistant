@@ -469,13 +469,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
             log_exception(msg, logger=_LOGGER)
             raise ConfigEntryNotReady()
 
-    except Exception as e:
-        log_exception(
-            "An exception occurred while setting up the meross manager. Setup will be retried...",
-            logger=_LOGGER,
-        )
-        raise ConfigEntryNotReady()
-
 
 async def update_listener(hass, entry):
     """Handle options update."""
