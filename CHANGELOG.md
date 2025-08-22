@@ -1,6 +1,5 @@
-# Changelog
-Note! Last version breaks support for FAN entity for smart Meross Humidifier.
-You'll need to add it again to HA if previously configured.
+# 1.3.8 (2025-08-22)
+- Address #552, #568 and similar.
 
 # 1.3.7 (2025-06-18)
 - Merge #555 to fix config_entries.async_forward_entry_setup deprecation (thanks @Easen!)
