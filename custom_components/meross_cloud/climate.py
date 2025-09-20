@@ -1,19 +1,18 @@
 import logging
-from typing import Optional, List, Dict
-
+from homeassistant.components.climate import ClimateEntity
+from homeassistant.components.climate import ClimateEntityFeature, HVACMode, HVACAction
+# Conditional import for switch device
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from meross_iot.controller.device import BaseDevice
-from meross_iot.controller.mixins.thermostat import ThermostatModeMixin
+from meross_iot.controller.mixins.thermostat import ThermostatModeMixin, ThermostatModeBMixin
 from meross_iot.controller.subdevice import Mts100v3Valve
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import ThermostatV3Mode, ThermostatMode
 from meross_iot.model.http.device import HttpDeviceInfo
+from typing import Optional, List, Dict
 
-# Conditional import for switch device
-from homeassistant.const import UnitOfTemperature
-from homeassistant.components.climate import ClimateEntity
-from homeassistant.components.climate import ClimateEntityFeature, HVACMode, HVACAction
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
 from .common import (DOMAIN, MANAGER, HA_CLIMATE, DEVICE_LIST_COORDINATOR)
 
@@ -266,9 +265,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         coordinator = hass.data[DOMAIN][DEVICE_LIST_COORDINATOR]
         devices = manager.find_devices()
         new_entities = []
-        valves = filter(lambda d: isinstance(d, Mts100v3Valve), devices)
-        thermostats = filter(lambda d: isinstance(d, ThermostatModeMixin), devices)
 
+        # Handle smart valves
+        valves = filter(lambda d: isinstance(d, Mts100v3Valve), devices)
         for d in valves:
             channels = [c.index for c in d.channels] if len(d.channels) > 0 else [0]
             for channel_index in channels:
@@ -276,6 +275,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 if w.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:
                     new_entities.append(w)
 
+        # Handle classic thermostats
+        thermostats = filter(lambda d: isinstance(d, ThermostatModeMixin), devices)
         for d in thermostats:
             channels = [c.index for c in d.channels] if len(d.channels) > 0 else [0]
             for channel_index in channels:
@@ -283,6 +284,17 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 if w.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:
                     new_entities.append(w)
 
+        # Handle ModeB thermostats
+        thermostats = filter(lambda d: isinstance(d, ThermostatModeBMixin), devices)
+        for d in thermostats:
+            channels = [c.index for c in d.channels] if len(d.channels) > 0 else [0]
+            for channel_index in channels:
+                w = ThermostatEntityWrapper(device=d, channel=channel_index,
+                                            device_list_coordinator=coordinator)
+                if w.unique_id not in hass.data[DOMAIN]["ADDED_ENTITIES_IDS"]:
+                    new_entities.append(w)
+
+        # Add all entities to HA
         async_add_entities(new_entities, True)
 
     coordinator = hass.data[DOMAIN][DEVICE_LIST_COORDINATOR]
