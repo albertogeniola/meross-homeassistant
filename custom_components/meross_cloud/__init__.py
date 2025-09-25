@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady, ConfigEntryAuthFailed
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util.ssl import get_default_context, get_default_no_verify_context
 from meross_iot.controller.device import BaseDevice
 from meross_iot.http_api import MerossHttpClient, ErrorCodes
 from meross_iot.manager import MerossManager
@@ -107,7 +108,7 @@ class MerossCoordinator(DataUpdateCoordinator):
         self._entry = config_entry
         self._http_api_endpoint = http_api_endpoint
         self._cached_creds = creds
-        self._skip_cert_validation = mqtt_skip_cert_validation
+        self._mqtt_ssl_context = get_default_no_verify_context() if mqtt_skip_cert_validation else get_default_context()
         self._mqtt_override_address = mqtt_override_address
         self._setup_done = False
         self._ua_header = ua_header
@@ -175,7 +176,7 @@ class MerossCoordinator(DataUpdateCoordinator):
             http_client=self._client,
             mqtt_override_server=self._mqtt_override_address,
             auto_reconnect=True,
-            mqtt_skip_cert_validation=self._skip_cert_validation,
+            ssl_context=self._mqtt_ssl_context
         )
 
         # Since we already have fetched for the DeviceList, publish it right away
