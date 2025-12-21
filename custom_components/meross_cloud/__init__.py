@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady, ConfigEntryAuthFailed
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
 from meross_iot.controller.device import BaseDevice
 from meross_iot.http_api import MerossHttpClient, ErrorCodes
 from meross_iot.manager import MerossManager
@@ -270,13 +271,18 @@ class MerossDevice(Entity):
 
     @property
     def device_info(self):
-        return {
-            'identifiers': {(DOMAIN, self._device.internal_id)},
-            'name': self._device.name,
-            'manufacturer': 'Meross',
-            'model': self._device.type + " " + self._device.hardware_version,
-            'sw_version': self._device.firmware_version
+        info = {
+            "identifiers": {(DOMAIN, self._device.internal_id)},
+            "name": self._device.name,
+            "manufacturer": "Meross",
+            "model": self._device.type + " " + self._device.hardware_version,
+            "sw_version": self._device.firmware_version,
         }
+
+        if mac := self._device.mac_address:
+            info["connections"] = {(CONNECTION_NETWORK_MAC, format_mac(mac))}
+
+        return info
 
     @property
     def available(self) -> bool:
