@@ -38,7 +38,7 @@ class DiffuserLightEntityWrapper(MerossDevice, LightEntity):
     _device: MerossOilDiffuserLightDevice
     # For now, we assume OilDiffuserLight supports all the following features.
     # From Meross API it is in fact impossible to determine which exact features are supported by the device.
-    _attr_supported_color_modes = {ColorMode.WHITE, ColorMode.RGB, ColorMode.COLOR_TEMP}
+    _attr_supported_color_modes = {ColorMode.BRIGHTNESS, ColorMode.RGB, ColorMode.COLOR_TEMP}
 
     def __init__(self,
                  channel: int,
@@ -143,7 +143,7 @@ class LightEntityWrapper(MerossDevice, LightEntity):
     def supported_color_modes(self) -> set[ColorMode] | set[str] | None:
         res = set()
         if self._device.get_supports_luminance(channel=self._channel_id):
-            res.add(ColorMode.WHITE)
+            res.add(ColorMode.BRIGHTNESS)
         if self._device.get_supports_rgb(channel=self._channel_id):
             res.add(ColorMode.RGB)
         if self._device.get_supports_temperature(channel=self._channel_id):
@@ -174,7 +174,7 @@ class LightEntityWrapper(MerossDevice, LightEntity):
         if self._device.get_supports_rgb(channel=self._channel_id):
             return ColorMode.RGB
         elif self._device.get_supports_luminance(channel=self._channel_id):
-            return ColorMode.WHITE
+            return ColorMode.BRIGHTNESS
         if self._device.get_supports_temperature(channel=self._channel_id):
             return ColorMode.COLOR_TEMP
         return ColorMode.ONOFF
