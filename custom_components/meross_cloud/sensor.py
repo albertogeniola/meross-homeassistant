@@ -274,7 +274,10 @@ class EnergySensorWrapper(GenericSensorWrapper):
             await super().async_update()
 
             _LOGGER.debug(f"Refreshing instant metrics for device {self.name}")
-            self._daily_consumption = await self._device.async_get_daily_power_consumption(channel=self._channel_id)
+            try:
+                self._daily_consumption = await self._device.async_get_daily_power_consumption(channel=self._channel_id)
+            except CommandTimeoutError:
+                log_exception(logger=_LOGGER, device=self._device)
 
     @property
     def native_value(self) -> StateType:

@@ -11,6 +11,7 @@ from meross_iot.controller.mixins.light import LightMixin
 from meross_iot.controller.mixins.dnd import SystemDndMixin
 from meross_iot.controller.mixins.toggle import ToggleXMixin, ToggleMixin
 from meross_iot.manager import MerossManager
+from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.http.device import HttpDeviceInfo
 from meross_iot.model.enums import DNDMode
 
@@ -18,7 +19,7 @@ from meross_iot.model.enums import DNDMode
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MerossDevice
-from .common import (DOMAIN, MANAGER, DEVICE_LIST_COORDINATOR, HA_SWITCH)
+from .common import (DOMAIN, MANAGER, DEVICE_LIST_COORDINATOR, HA_SWITCH, log_exception)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,10 +62,16 @@ class SwitchEntityWrapper(MerossDevice, SwitchEntity):
 
             # If the device supports power reading, update it
             if isinstance(self._device, ElectricityMixin):
-                self._last_power_sample = await self._device.async_get_instant_metrics(channel=self._channel_id)
+                try:
+                    self._last_power_sample = await self._device.async_get_instant_metrics(channel=self._channel_id)
+                except CommandTimeoutError:
+                    log_exception(logger=_LOGGER, device=self._device)
 
             if isinstance(self._device, ConsumptionXMixin):
-                self._daily_consumption = await self._device.async_get_daily_power_consumption(channel=self._channel_id)
+                try:
+                    self._daily_consumption = await self._device.async_get_daily_power_consumption(channel=self._channel_id)
+                except CommandTimeoutError:
+                    log_exception(logger=_LOGGER, device=self._device)
 
     @property
     def is_on(self) -> bool:
