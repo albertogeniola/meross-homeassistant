@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Tuple, Dict, Optional, Collection
 
+import aiohttp
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
@@ -148,6 +149,9 @@ class MerossCoordinator(DataUpdateCoordinator):
         except (BadLoginException, TokenExpiredException, UnauthorizedException) as err:
             raise ConfigEntryAuthFailed from err
         except HttpApiError as err:
+            raise ConfigEntryNotReady(f"Error communicating with API: {err}") from err
+        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+            # Transient transport failure: retry setup rather than give up
             raise ConfigEntryNotReady(f"Error communicating with API: {err}") from err
 
         # If a new token was issued, store it into the current entry
@@ -468,6 +472,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
             )
             log_exception(msg, logger=_LOGGER)
             raise ConfigEntryNotReady()
+
+    except (aiohttp.ClientError, asyncio.TimeoutError) as ex:
+        # Cloud unreachable at setup time (DNS not up yet at boot, WAN down):
+        # retry with backoff instead of failing the entry permanently
+        msg = "Could not reach the Meross cloud while setting up the integration."
+        log_exception(msg, logger=_LOGGER)
+        raise ConfigEntryNotReady(msg) from ex
 
 
 async def update_listener(hass, entry):
