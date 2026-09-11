@@ -1,0 +1,2 @@
+pytest-homeassistant-custom-component==0.13.364
+meross_iot==0.4.10.4

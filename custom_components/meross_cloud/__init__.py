@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Tuple, Dict, Optional, Collection
 
+import aiohttp
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
@@ -20,6 +21,7 @@ from meross_iot.model.enums import OnlineStatus, Namespace
 from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.model.http.device import HttpDeviceInfo
 from meross_iot.model.http.exception import (
+    AuthenticatedPostException,
     TokenExpiredException,
     TooManyTokensException,
     UnauthorizedException,
@@ -52,6 +54,25 @@ from .common import (
 from .version import MEROSS_IOT_VERSION
 
 _LOGGER = logging.getLogger(__name__)
+
+# Transport-level failures worth retrying instead of failing the entry until the next restart:
+# - OSError: ConnectionRefusedError/ConnectionResetError, socket.gaierror, EINVAL from an unscoped
+#   IPv6 link-local address (ha-meross-local-broker#63), paho's synchronous client.connect() to the
+#   MQTT broker, and TimeoutError raised by asyncio.timeout() (TimeoutError subclasses OSError).
+# - aiohttp.ClientError: ClientConnectorError (also an OSError), ClientConnectorDNSError,
+#   ServerDisconnectedError, ClientPayloadError/ContentTypeError while a proxy is (re)starting.
+# - AuthenticatedPostException: meross_iot raises this *base* class for any non-200 status (e.g. the
+#   502/503/504 the local add-on's nginx returns while Flask is down). HttpApiError is its subclass
+#   and must keep being matched by the more specific except clauses that precede this tuple.
+# Never widen this to Exception: ConfigEntryNotReady/ConfigEntryAuthFailed raised inside the try
+# blocks must propagate, and asyncio.CancelledError (a BaseException) must never be swallowed.
+RETRYABLE_TRANSPORT_ERRORS = (AuthenticatedPostException, aiohttp.ClientError, OSError, TimeoutError)
+
+# Upper bound for the first devList call during setup. aiohttp defaults are sock_connect=30s /
+# total=300s and the local add-on's nginx uses proxy_read_timeout 1200s, so a hung backend could
+# otherwise stall the entry (and HA startup) for minutes. 30s = aiohttp's own connect budget and 3x
+# the 10s used by the periodic poll; HA's first retry follows a few seconds later anyway.
+SETUP_HTTP_TIMEOUT_SECONDS = 30
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -132,6 +153,13 @@ class MerossCoordinator(DataUpdateCoordinator):
             raise ConfigEntryAuthFailed from err
         except HttpApiError as err:
             raise UpdateFailed(f"Error communicating with API: {err}")
+        except RETRYABLE_TRANSPORT_ERRORS as err:
+            # Transient transport failure: entities go unavailable, polling continues. Without this,
+            # a 502 or a bare OSError is logged by the coordinator as an "Unexpected error" traceback.
+            raise UpdateFailed(
+                f"Cannot reach the Meross HTTP API at {self._http_api_endpoint}: "
+                f"{type(err).__name__}: {err}"
+            ) from err
 
     async def initial_setup(self):
         if self._setup_done:
@@ -140,15 +168,30 @@ class MerossCoordinator(DataUpdateCoordinator):
         # Test the stored credentials if any. In case the credentials are invalid
         # try to retrieve a new token
         try:
-            self._client, http_devices, creds_renewed = await get_or_test_creds(
-                http_api_url=self._http_api_endpoint,
-                creds=self._cached_creds,
-                ua_header=self._ua_header
-            )
+            async with asyncio.timeout(SETUP_HTTP_TIMEOUT_SECONDS):
+                self._client, http_devices, creds_renewed = await get_or_test_creds(
+                    http_api_url=self._http_api_endpoint,
+                    creds=self._cached_creds,
+                    ua_header=self._ua_header
+                )
         except (BadLoginException, TokenExpiredException, UnauthorizedException) as err:
             raise ConfigEntryAuthFailed from err
         except HttpApiError as err:
             raise ConfigEntryNotReady(f"Error communicating with API: {err}") from err
+        except RETRYABLE_TRANSPORT_ERRORS as err:
+            # Transient transport failure (DNS not up yet, WAN down, connection refused/reset,
+            # unscoped IPv6 address, timeout, or a non-200 reply such as the 502 the local add-on's
+            # nginx returns while Flask is still starting): retry setup rather than give up.
+            # HA logs ConfigEntryNotReady at INFO only, so this WARNING is what the user will see.
+            _LOGGER.warning(
+                "Could not reach the Meross HTTP API at %s (%s: %s). Home Assistant will retry the "
+                "setup automatically.",
+                self._http_api_endpoint, type(err).__name__, err,
+            )
+            raise ConfigEntryNotReady(
+                f"Cannot reach the Meross HTTP API at {self._http_api_endpoint}: "
+                f"{type(err).__name__}: {err}"
+            ) from err
 
         # If a new token was issued, store it into the current entry
         if creds_renewed:
@@ -401,6 +444,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
                         str(DEFAULT_USER_AGENT))
         ua_header = DEFAULT_USER_AGENT
 
+    meross_coordinator = None
     try:
         # Setup the coordinator
         meross_coordinator = MerossCoordinator(
@@ -468,6 +512,29 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
             )
             log_exception(msg, logger=_LOGGER)
             raise ConfigEntryNotReady()
+
+    except RETRYABLE_TRANSPORT_ERRORS as ex:
+        # Cloud/broker unreachable at setup time (DNS not up yet at boot, WAN down, local add-on
+        # still starting): retry with backoff instead of failing the entry permanently.
+        # Only reachable after get_or_test_creds() succeeded: MerossManager.async_device_discovery()
+        # makes a second devList call, Hub/getSubDevices calls and, for online devices, MQTT commands
+        # whose paho client.connect() is synchronous and raises OSError subclasses directly when the
+        # broker is not accepting connections yet.
+        # HA does not call async_unload_entry on ConfigEntryNotReady, so release the manager (paho
+        # client thread / broker connection) here or every retry leaks one.
+        if meross_coordinator is not None and meross_coordinator.manager is not None:
+            try:
+                meross_coordinator.manager.close()
+            except Exception:  # best effort, we are already failing setup
+                _LOGGER.debug("Manager cleanup after failed setup raised", exc_info=True)
+        _LOGGER.warning(
+            "Meross setup could not reach %s or the MQTT broker (%s: %s). Home Assistant will retry "
+            "the setup automatically.",
+            http_api_endpoint, type(ex).__name__, ex,
+        )
+        raise ConfigEntryNotReady(
+            f"Cannot reach Meross services ({http_api_endpoint} / MQTT): {type(ex).__name__}: {ex}"
+        ) from ex
 
 
 async def update_listener(hass, entry):
