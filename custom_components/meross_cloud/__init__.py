@@ -10,6 +10,7 @@ from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady, ConfigEntryAuthFailed
+from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from meross_iot.controller.device import BaseDevice
@@ -515,6 +516,31 @@ async def async_unload_entry(hass, entry):
 async def async_remove_entry(hass, entry) -> None:
     # TODO
     pass
+
+
+async def async_remove_config_entry_device(
+        hass: HomeAssistant, config_entry: ConfigEntry, device_entry: DeviceEntry
+) -> bool:
+    """
+    Called by Home Assistant when the user manually requests the removal of a device from the UI.
+    We only allow the removal of devices that are no longer known/reported by the Meross manager
+    (e.g. devices removed from the Meross account), so that users can clean up stale/orphaned
+    devices without the risk of accidentally deleting one that is still active.
+    """
+    manager: Optional[MerossManager] = hass.data.get(DOMAIN, {}).get(MANAGER)
+    if manager is None:
+        # Integration is not fully set up: do not allow removal to avoid inconsistent state
+        return False
+
+    device_uuid = next(
+        (identifier for domain, identifier in device_entry.identifiers if domain == DOMAIN),
+        None,
+    )
+    if device_uuid is None:
+        return False
+
+    known_devices = manager.find_devices(internal_ids=(device_uuid,))
+    return len(known_devices) == 0
 
 
 async def async_setup(hass, config):
