@@ -48,7 +48,6 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle Meross config flow."""
 
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_PUSH
 
     def __init__(self) -> None:
         """Initialize flow."""
