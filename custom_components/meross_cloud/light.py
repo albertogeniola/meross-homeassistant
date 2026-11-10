@@ -26,16 +26,17 @@ MEROSS_MAX_KELVIN = 6500
 
 
 def _kelvin_to_meross_temperature(kelvin: float) -> int:
-    """Convert Kelvin to Meross 1..100 scale (100 = coldest)."""
-    norm_value = (kelvin - MEROSS_MIN_KELVIN) / (MEROSS_MAX_KELVIN - MEROSS_MIN_KELVIN)
-    norm_value = max(0.0, min(1.0, norm_value))
-    return max(1, min(100, round(norm_value * 100)))
+    """Convert Kelvin using the existing mired-linear Meross scale."""
+    kelvin = max(MEROSS_MIN_KELVIN, min(MEROSS_MAX_KELVIN, kelvin))
+    norm_value = (1_000_000 / kelvin - 153) / (500 - 153)
+    return max(1, min(100, round(100 - norm_value * 100)))
 
 
 def _meross_temperature_to_kelvin(temperature: float) -> int:
-    """Convert Meross 1..100 scale (100 = coldest) to Kelvin."""
+    """Convert the existing mired-linear Meross scale to Kelvin."""
     norm_value = max(0.0, min(1.0, float(temperature) / 100.0))
-    return round(MEROSS_MIN_KELVIN + norm_value * (MEROSS_MAX_KELVIN - MEROSS_MIN_KELVIN))
+    kelvin = round(1_000_000 / (153 + (1 - norm_value) * (500 - 153)))
+    return max(MEROSS_MIN_KELVIN, min(MEROSS_MAX_KELVIN, kelvin))
 
 
 class MerossOilDiffuserLightDevice(DiffuserLightMixin, BaseDevice):
