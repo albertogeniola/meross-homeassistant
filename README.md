@@ -1,13 +1,12 @@
-# MSL120D repair branch
+# MSL120D temperature-control fix
 
-This fork contains a Meross MSL120D bulb-control repair based on release v1.3.12.
-**Hardware testing was only and strictly on MSL120D bulbs; the complete live command sequence exercised one physical bulb. Other models are unverified.**
+Restores Kelvin temperature commands and correct colour-mode feedback in Meross Cloud IoT v1.3.12.
 
-Read [what failed, how it was fixed, and how it was tested](docs/MSL120D-REPAIR.md). This was a combined human/AI debugging effort. The document explains each contribution and the testing limitations.
+**Hardware testing was only and strictly on MSL120D bulbs; the full live command sequence exercised one physical bulb. Other models remain unverified.**
 
-The bulb wrapper is the exact file tested on the live system. Diffuser temperature handling remains outside the repair scope. This branch is a contribution candidate, not an official release.
+[Patch explanation, test results, and upstream integration instructions](docs/MSL120D-REPAIR.md).
 
-Run focused simulated-device tests with `python3 -m unittest discover -s tests -v` (Python 3.11+). They do not exercise the full Home Assistant runtime.
+Developed through combined human/AI debugging. Run the focused tests with `python3 -m unittest discover -s tests -v` (Python 3.11+).
 
 ---
 
