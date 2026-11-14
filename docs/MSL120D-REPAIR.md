@@ -75,7 +75,8 @@ The screenshot shows the dashboard used during the MSL120D tests. The example re
 
 ## Credit
 
-Developed through combined human/AI debugging of the Home Assistant API, integration, Meross library, and live MSL120D behaviour. Human experience and testing direction were combined with AI-assisted code analysis, implementation and test execution.
+This was a bastard to fix.
 
-<!-- -->
+Developed through combined human/AI debugging of the Home Assistant API, integration, Meross library and live MSL120D behaviour. Human experience and testing direction were combined with AI-assisted code analysis, implementation and test execution. Checked by a Real Human (me!).
+
 :-)
