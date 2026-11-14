@@ -1,0 +1,138 @@
+{
+  "hardware_scope": "Only and strictly Meross MSL120D; command tests exercised one physical bulb.",
+  "environment": {
+    "home_assistant_core": "2026.11.1",
+    "home_assistant_os": "18.4",
+    "meross_cloud": "1.3.12",
+    "meross_iot": "0.4.10.4"
+  },
+  "results": [
+    {
+      "test": "2000K / 10%",
+      "requested": {
+        "color_temp_kelvin": 2000,
+        "brightness_pct": 10
+      },
+      "reported": {
+        "color_mode": "color_temp",
+        "color_temp_kelvin": 2000,
+        "brightness": 26,
+        "rgb_color": [
+          255,
+          137,
+          14
+        ]
+      }
+    },
+    {
+      "test": "2200K / 10%",
+      "requested": {
+        "color_temp_kelvin": 2200,
+        "brightness_pct": 10
+      },
+      "reported": {
+        "color_mode": "color_temp",
+        "color_temp_kelvin": 2201,
+        "brightness": 26,
+        "rgb_color": [
+          255,
+          146,
+          39
+        ]
+      }
+    },
+    {
+      "test": "2700K / 10%",
+      "requested": {
+        "color_temp_kelvin": 2700,
+        "brightness_pct": 10
+      },
+      "reported": {
+        "color_mode": "color_temp",
+        "color_temp_kelvin": 2700,
+        "brightness": 26,
+        "rgb_color": [
+          255,
+          167,
+          87
+        ]
+      }
+    },
+    {
+      "test": "4000K / 10%",
+      "requested": {
+        "color_temp_kelvin": 4000,
+        "brightness_pct": 10
+      },
+      "reported": {
+        "color_mode": "color_temp",
+        "color_temp_kelvin": 3982,
+        "brightness": 26,
+        "rgb_color": [
+          255,
+          205,
+          165
+        ]
+      }
+    },
+    {
+      "test": "6535K / 10%",
+      "requested": {
+        "color_temp_kelvin": 6535,
+        "brightness_pct": 10
+      },
+      "reported": {
+        "color_mode": "color_temp",
+        "color_temp_kelvin": 6535,
+        "brightness": 26,
+        "rgb_color": [
+          255,
+          255,
+          251
+        ]
+      }
+    },
+    {
+      "test": "RGB amber",
+      "requested": {
+        "rgb_color": [
+          255,
+          60,
+          0
+        ],
+        "brightness_pct": 10
+      },
+      "reported": {
+        "color_mode": "rgb",
+        "color_temp_kelvin": null,
+        "brightness": 26,
+        "rgb_color": [
+          255,
+          60,
+          0
+        ]
+      }
+    },
+    {
+      "test": "brightness retains RGB",
+      "requested": {
+        "brightness_pct": 20
+      },
+      "reported": {
+        "color_mode": "rgb",
+        "color_temp_kelvin": null,
+        "brightness": 51,
+        "rgb_color": [
+          255,
+          60,
+          0
+        ]
+      }
+    }
+  ],
+  "notes": [
+    "These are API/device-update read-backs, not calibrated measurements.",
+    "Later Bedtime feedback was brightness 23/255 (~9%) after a 10% request.",
+    "Original bulb settings restored and bulb left off."
+  ]
+}

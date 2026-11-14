@@ -1,3 +1,16 @@
+# MSL120D repair branch
+
+This fork contains a Meross MSL120D bulb-control repair based on release v1.3.12.
+**Hardware testing was only and strictly on MSL120D bulbs; the complete live command sequence exercised one physical bulb. Other models are unverified.**
+
+Read [what failed, how it was fixed, and how it was tested](docs/MSL120D-REPAIR.md). This was a combined human/AI debugging effort. The document explains each contribution and the testing limitations.
+
+The bulb wrapper is the exact file tested on the live system. Diffuser temperature handling remains outside the repair scope. This branch is a contribution candidate, not an official release.
+
+Run focused simulated-device tests with `python3 -m unittest discover -s tests -v` (Python 3.11+). They do not exercise the full Home Assistant runtime.
+
+---
+
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 ![Build](https://img.shields.io/azure-devops/build/albertogeniola/c4128d1b-c23c-418d-95c5-2de061954ee5/3/master?style=for-the-badge)
 
