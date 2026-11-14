@@ -1,0 +1,280 @@
+# Standalone example dashboard. Replace every example entity_id before saving.
+title: Meross lights
+views:
+- title: Meross
+  path: meross
+  icon: mdi:lightbulb-group
+  cards:
+  - type: markdown
+    content: 'Choose a temperature or adjust the sliders. Kelvin buttons retain brightness.
+      Bedtime: 2000 K at 10%. Amber: dim orange.'
+  - type: vertical-stack
+    cards:
+    - type: tile
+      entity: light.meross_entry
+      name: Entry 2
+      features:
+      - type: light-brightness
+      - type: light-color-temp
+      - type: light-color-favorites
+    - type: horizontal-stack
+      cards:
+      - type: button
+        name: 2000 K
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_entry
+          data:
+            color_temp_kelvin: 2000
+        hold_action:
+          action: none
+      - type: button
+        name: 2200 K
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_entry
+          data:
+            color_temp_kelvin: 2200
+        hold_action:
+          action: none
+      - type: button
+        name: 2700 K
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_entry
+          data:
+            color_temp_kelvin: 2700
+        hold_action:
+          action: none
+      - type: button
+        name: 4000 K
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_entry
+          data:
+            color_temp_kelvin: 4000
+        hold_action:
+          action: none
+    - type: horizontal-stack
+      cards:
+      - type: button
+        name: Bedtime
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_entry
+          data:
+            color_temp_kelvin: 2000
+            brightness_pct: 10
+        hold_action:
+          action: none
+      - type: button
+        name: Amber
+        icon: mdi:palette
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_entry
+          data:
+            rgb_color:
+            - 255
+            - 60
+            - 0
+            brightness_pct: 10
+        hold_action:
+          action: none
+  - type: vertical-stack
+    cards:
+    - type: tile
+      entity: light.meross_balcony
+      name: Balcony
+      features:
+      - type: light-brightness
+      - type: light-color-temp
+      - type: light-color-favorites
+    - type: horizontal-stack
+      cards:
+      - type: button
+        name: 2000 K
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_balcony
+          data:
+            color_temp_kelvin: 2000
+        hold_action:
+          action: none
+      - type: button
+        name: 2200 K
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_balcony
+          data:
+            color_temp_kelvin: 2200
+        hold_action:
+          action: none
+      - type: button
+        name: 2700 K
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_balcony
+          data:
+            color_temp_kelvin: 2700
+        hold_action:
+          action: none
+      - type: button
+        name: 4000 K
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_balcony
+          data:
+            color_temp_kelvin: 4000
+        hold_action:
+          action: none
+    - type: horizontal-stack
+      cards:
+      - type: button
+        name: Bedtime
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_balcony
+          data:
+            color_temp_kelvin: 2000
+            brightness_pct: 10
+        hold_action:
+          action: none
+      - type: button
+        name: Amber
+        icon: mdi:palette
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_balcony
+          data:
+            rgb_color:
+            - 255
+            - 60
+            - 0
+            brightness_pct: 10
+        hold_action:
+          action: none
+  - type: vertical-stack
+    cards:
+    - type: tile
+      entity: light.meross_third
+      name: Nick
+      features:
+      - type: light-brightness
+      - type: light-color-temp
+      - type: light-color-favorites
+    - type: horizontal-stack
+      cards:
+      - type: button
+        name: 2000 K
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_third
+          data:
+            color_temp_kelvin: 2000
+        hold_action:
+          action: none
+      - type: button
+        name: 2200 K
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_third
+          data:
+            color_temp_kelvin: 2200
+        hold_action:
+          action: none
+      - type: button
+        name: 2700 K
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_third
+          data:
+            color_temp_kelvin: 2700
+        hold_action:
+          action: none
+      - type: button
+        name: 4000 K
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_third
+          data:
+            color_temp_kelvin: 4000
+        hold_action:
+          action: none
+    - type: horizontal-stack
+      cards:
+      - type: button
+        name: Bedtime
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_third
+          data:
+            color_temp_kelvin: 2000
+            brightness_pct: 10
+        hold_action:
+          action: none
+      - type: button
+        name: Amber
+        icon: mdi:palette
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.meross_third
+          data:
+            rgb_color:
+            - 255
+            - 60
+            - 0
+            brightness_pct: 10
+        hold_action:
+          action: none

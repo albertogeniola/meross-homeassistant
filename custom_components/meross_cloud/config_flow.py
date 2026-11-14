@@ -373,7 +373,7 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
-        return MerossOptionsFlowHandler(config_entry=config_entry)
+        return MerossOptionsFlowHandler()
 
     @staticmethod
     async def _test_authorization(
@@ -398,10 +398,6 @@ class MerossFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
 class MerossOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle an options flow for Meross Component."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize Meross options flow."""
-        self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         """Handle the initial step."""

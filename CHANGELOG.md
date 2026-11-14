@@ -1,4 +1,11 @@
-# 1.3.10beta1 (2025-09-29)
+# 1.3.12 (2026-01-22)
+- Address #584 (fix HTTP API server breaking changes)
+- Address #576 (fix configflow explicit setter usage deprecation)
+
+# 1.3.1beta2 (2025-09-25)
+- Address #567 (fix SSL blocking call and ATTR_COLOR_TEMP_KELVIN deprecation)
+
+# 1.3.10beta1 (2025-09-21)
 - Update low-level dependency to 0.4.9.2, so to address #569
 - Attempt to address #479
 

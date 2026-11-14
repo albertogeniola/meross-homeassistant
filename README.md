@@ -1,3 +1,15 @@
+# MSL120D temperature-control fix
+
+Restores Kelvin temperature commands and correct colour-mode feedback in Meross Cloud IoT v1.3.12.
+
+**Hardware testing was only and strictly on MSL120D bulbs. Other models remain unverified.**
+
+[Patch explanation, test results, and upstream integration instructions](docs/MSL120D-REPAIR.md).
+
+Developed through combined human/AI debugging. Run the focused tests with `python3 -m unittest discover -s tests -v` (Python 3.11+).
+
+---
+
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 ![Build](https://img.shields.io/azure-devops/build/albertogeniola/c4128d1b-c23c-418d-95c5-2de061954ee5/3/master?style=for-the-badge)
 
