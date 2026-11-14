@@ -2,7 +2,7 @@
 
 Restores Kelvin temperature commands and correct colour-mode feedback in Meross Cloud IoT v1.3.12.
 
-**Hardware testing was only and strictly on MSL120D bulbs; the full live command sequence exercised one physical bulb. Other models remain unverified.**
+**Hardware testing was only and strictly on MSL120D bulbs. Other models remain unverified.**
 
 [Patch explanation, test results, and upstream integration instructions](docs/MSL120D-REPAIR.md).
 
