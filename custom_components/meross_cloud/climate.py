@@ -62,15 +62,15 @@ class ValveEntityWrapper(MerossDevice, ClimateEntity):
         await self._device.async_set_target_temperature(target)
 
     @property
-    def temperature_unit(self) -> str:
+    def native_temperature_unit(self) -> str:
         return UnitOfTemperature.CELSIUS
 
     @property
-    def current_temperature(self) -> Optional[float]:
+    def native_current_temperature(self) -> Optional[float]:
         return self._device.last_sampled_temperature
 
     @property
-    def target_temperature(self) -> Optional[float]:
+    def native_target_temperature(self) -> Optional[float]:
         return self._device.target_temperature
 
     @property
@@ -186,16 +186,16 @@ class ThermostatEntityWrapper(MerossDevice, ClimateEntity):
         await self._device.async_set_thermostat_config(channel=self._channel_id, mode=ThermostatMode.MANUAL, manual_temperature_celsius=target)
 
     @property
-    def temperature_unit(self) -> str:
+    def native_temperature_unit(self) -> str:
         # TODO: Check if there is a way for retrieving the Merasurement Unit from the library
         return UnitOfTemperature.CELSIUS
 
     @property
-    def current_temperature(self) -> Optional[float]:
+    def native_current_temperature(self) -> Optional[float]:
         return self._device.get_thermostat_state(channel=self._channel_id).current_temperature_celsius
 
     @property
-    def target_temperature(self) -> Optional[float]:
+    def native_target_temperature(self) -> Optional[float]:
         return self._device.get_thermostat_state(channel=self._channel_id).target_temperature_celsius
 
     @property
